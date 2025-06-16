@@ -134,7 +134,7 @@ export default function MyLayout(props: {
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.ctrlKey && e.key === "b") {
           setIsDrawerVisible(!isDrawerVisible());
-        } else if ((e.ctrlKey && && e.altKey && e.key === "h")) {
+        } else if (e.ctrlKey && e.altKey && e.key === "h") {
           setIsBottomVisible(!isBottomVisible());
         }
       };
