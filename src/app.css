@@ -172,3 +172,5 @@
   --depth: var(--depth-night);
   --noise: var(--noise-night);
 }
+
+@import "./wunderbaum.css";
