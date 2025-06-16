@@ -206,41 +206,6 @@
     transition: all var(--wb-transition-duration) var(--wb-transition-easing);
 }
 
-/* Subtle indent guidelines */
-.wb-indent::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: -10px;
-    bottom: -10px;
-    width: 1px;
-    transform: translateX(-50%);
-    background-color: var(--color-base-content);
-    opacity: 0.15;
-    transition: opacity var(--wb-transition-duration) var(--wb-transition-easing);
-}
-
-/* Enhanced guidelines for expanded nodes */
-.wb-expanded .wb-indent::before {
-    opacity: 0.25;
-    background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        var(--color-base-content) 20%,
-        var(--color-base-content) 80%,
-        transparent 100%
-    );
-}
-
-/* Hide guidelines on hover for cleaner look */
-.wb-row:hover .wb-indent::before {
-    opacity: 0.1;
-}
-
-/* Hide guidelines for leaf nodes */
-.wb-indent:last-of-type::before {
-    display: none;
-}
 
 /* Professional tree container styling */
 .wb-tree {
