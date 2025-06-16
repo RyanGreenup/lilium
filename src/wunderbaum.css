@@ -47,10 +47,10 @@
 
 /* Tree-specific variables */
 :root {
-    --wb-row-height: 24px;
-    --wb-indent-size: 18px;
-    --wb-icon-size: 14px;
-    --wb-border-radius: 4px;
+    --wb-row-height: 20px;
+    --wb-indent-size: 16px;
+    --wb-icon-size: 12px;
+    --wb-border-radius: 3px;
     --wb-transition-duration: 0.2s;
     --wb-transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
     --wb-hover-bg-opacity: 0.08;
@@ -64,15 +64,15 @@
     align-items: center;
     height: var(--wb-row-height);
     line-height: var(--wb-row-height);
-    padding: 0 8px;
+    padding: 0 6px;
     cursor: pointer;
     overflow: hidden;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 400;
     color: var(--color-base-content);
     background-color: transparent;
     border-radius: var(--wb-border-radius);
-    margin: 0 4px;
+    margin: 0 2px;
     transition: all var(--wb-transition-duration) var(--wb-transition-easing);
     position: relative;
     user-select: none;
@@ -129,7 +129,7 @@
 .wb-expander {
     width: var(--wb-icon-size);
     height: var(--wb-icon-size);
-    margin-right: 6px;
+    margin-right: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -159,7 +159,7 @@
 .wb-icon {
     width: var(--wb-icon-size);
     height: var(--wb-icon-size);
-    margin-right: 6px;
+    margin-right: 4px;
     flex-shrink: 0;
     opacity: 0.8;
     transition: all var(--wb-transition-duration) var(--wb-transition-easing);
@@ -207,8 +207,8 @@
     content: "";
     position: absolute;
     left: 50%;
-    top: -12px;
-    bottom: -12px;
+    top: -10px;
+    bottom: -10px;
     width: 1px;
     transform: translateX(-50%);
     background-color: var(--color-base-content);
@@ -243,7 +243,7 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background-color: var(--color-base-100);
     border-radius: var(--wb-border-radius);
-    padding: 4px 0;
+    padding: 2px 0;
     overflow: auto;
 }
 
