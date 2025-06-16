@@ -6,135 +6,111 @@
 /* @custom-variant dark (.dark &,[data-theme="night"] &); */
 
 @layer base {
-    :root {
-        /* Body styling */
-        * {
-            transition:
-                background-color 0.3s ease,
-                color 0.3s ease;
-        }
-
-        body {
-            background-color: var(--color-base-100);
-            color: var(--color-base-content);
-        }
-
-        /* Scrollbar styling for better theme integration */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--color-base-200);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--color-base-300);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--color-neutral);
-        }
+  :root {
+    /* Body styling */
+    * {
+      transition:
+        background-color 0.3s ease,
+        color 0.3s ease;
     }
+
+    body {
+      background-color: var(--color-base-100);
+      color: var(--color-base-content);
+    }
+
+    /* Scrollbar styling for better theme integration */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--color-base-200);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--color-base-300);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--color-neutral);
+    }
+  }
 }
 
 @theme {
-    /* Light theme (default) (adapted from Daisy UI) */
-    --color-base-100: oklch(100% 0 0);
-    --color-base-200: oklch(98% 0 0);
-    --color-base-300: oklch(95% 0 0);
-    --color-base-content: oklch(21% 0.006 285.885);
-    --color-primary: oklch(45% 0.24 277.023);
-    --color-primary-content: oklch(93% 0.034 272.788);
-    --color-secondary: oklch(65% 0.241 354.308);
-    --color-secondary-content: oklch(94% 0.028 342.258);
-    --color-accent: oklch(77% 0.152 181.912);
-    --color-accent-content: oklch(38% 0.063 188.416);
-    --color-neutral: oklch(14% 0.005 285.823);
-    --color-neutral-content: oklch(92% 0.004 286.32);
-    --color-info: oklch(74% 0.16 232.661);
-    --color-info-content: oklch(29% 0.066 243.157);
-    --color-success: oklch(76% 0.177 163.223);
-    --color-success-content: oklch(37% 0.077 168.94);
-    --color-warning: oklch(82% 0.189 84.429);
-    --color-warning-content: oklch(41% 0.112 45.904);
-    --color-error: oklch(71% 0.194 13.428);
-    --color-error-content: oklch(27% 0.105 12.094);
-    --radius-selector: 0.5rem;
-    --radius-field: 0.25rem;
-    --radius-box: 0.5rem;
-    --size-selector: 0.25rem;
-    --size-field: 0.25rem;
-    --border: 1px;
-    --depth: 1;
-    --noise: 0;
+  /* --spacing-top_header: 4rem; */
+  --spacing-bottom_header: 4rem;
+  --spacing-mobile_drawer_width: 16rem;
+  --spacing-main_content: 1rem;
+  --spacing-sidebar_width: 256;
+  /* Use dvh to handle url bar on chrome */
+  --spacing-between_headers: calc(100dvh - var(--spacing-bottom_header));
 
-    /* Night theme (adapted from DaisyUI) */
-    --color-base-100-night: oklch(20.768% 0.039 265.754);
-    --color-base-200-night: oklch(19.314% 0.037 265.754);
-    --color-base-300-night: oklch(17.86% 0.034 265.754);
-    --color-base-content-night: oklch(84.153% 0.007 265.754);
-    --color-primary-night: oklch(75.351% 0.138 232.661);
-    --color-primary-content-night: oklch(15.07% 0.027 232.661);
-    --color-secondary-night: oklch(68.011% 0.158 276.934);
-    --color-secondary-content-night: oklch(13.602% 0.031 276.934);
-    --color-accent-night: oklch(72.36% 0.176 350.048);
-    --color-accent-content-night: oklch(14.472% 0.035 350.048);
-    --color-neutral-night: oklch(27.949% 0.036 260.03);
-    --color-neutral-content-night: oklch(85.589% 0.007 260.03);
-    --color-info-night: oklch(68.455% 0.148 237.251);
-    --color-info-content-night: oklch(0% 0 0);
-    --color-success-night: oklch(78.452% 0.132 181.911);
-    --color-success-content-night: oklch(15.69% 0.026 181.911);
-    --color-warning-night: oklch(83.242% 0.139 82.95);
-    --color-warning-content-night: oklch(16.648% 0.027 82.95);
-    --color-error-night: oklch(71.785% 0.17 13.118);
-    --color-error-content-night: oklch(14.357% 0.034 13.118);
-    --radius-selector-night: 1rem;
-    --radius-field-night: 0.5rem;
-    --radius-box-night: 1rem;
-    --size-selector-night: 0.25rem;
-    --size-field-night: 0.25rem;
-    --border-night: 1px;
-    --depth-night: 0;
-    --noise-night: 0;
+  /* Light theme (default) (adapted from Daisy UI) */
+  --color-base-100: oklch(100% 0 0);
+  --color-base-200: oklch(98% 0 0);
+  --color-base-300: oklch(95% 0 0);
+  --color-base-content: oklch(21% 0.006 285.885);
+  --color-primary: oklch(45% 0.24 277.023);
+  --color-primary-content: oklch(93% 0.034 272.788);
+  --color-secondary: oklch(65% 0.241 354.308);
+  --color-secondary-content: oklch(94% 0.028 342.258);
+  --color-accent: oklch(77% 0.152 181.912);
+  --color-accent-content: oklch(38% 0.063 188.416);
+  --color-neutral: oklch(14% 0.005 285.823);
+  --color-neutral-content: oklch(92% 0.004 286.32);
+  --color-info: oklch(74% 0.16 232.661);
+  --color-info-content: oklch(29% 0.066 243.157);
+  --color-success: oklch(76% 0.177 163.223);
+  --color-success-content: oklch(37% 0.077 168.94);
+  --color-warning: oklch(82% 0.189 84.429);
+  --color-warning-content: oklch(41% 0.112 45.904);
+  --color-error: oklch(71% 0.194 13.428);
+  --color-error-content: oklch(27% 0.105 12.094);
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+
+  /* Night theme (adapted from DaisyUI) */
+  --color-base-100-night: oklch(20.768% 0.039 265.754);
+  --color-base-200-night: oklch(19.314% 0.037 265.754);
+  --color-base-300-night: oklch(17.86% 0.034 265.754);
+  --color-base-content-night: oklch(84.153% 0.007 265.754);
+  --color-primary-night: oklch(75.351% 0.138 232.661);
+  --color-primary-content-night: oklch(15.07% 0.027 232.661);
+  --color-secondary-night: oklch(68.011% 0.158 276.934);
+  --color-secondary-content-night: oklch(13.602% 0.031 276.934);
+  --color-accent-night: oklch(72.36% 0.176 350.048);
+  --color-accent-content-night: oklch(14.472% 0.035 350.048);
+  --color-neutral-night: oklch(27.949% 0.036 260.03);
+  --color-neutral-content-night: oklch(85.589% 0.007 260.03);
+  --color-info-night: oklch(68.455% 0.148 237.251);
+  --color-info-content-night: oklch(0% 0 0);
+  --color-success-night: oklch(78.452% 0.132 181.911);
+  --color-success-content-night: oklch(15.69% 0.026 181.911);
+  --color-warning-night: oklch(83.242% 0.139 82.95);
+  --color-warning-content-night: oklch(16.648% 0.027 82.95);
+  --color-error-night: oklch(71.785% 0.17 13.118);
+  --color-error-content-night: oklch(14.357% 0.034 13.118);
+  --radius-selector-night: 1rem;
+  --radius-field-night: 0.5rem;
+  --radius-box-night: 1rem;
+  --size-selector-night: 0.25rem;
+  --size-field-night: 0.25rem;
+  --border-night: 1px;
+  --depth-night: 0;
+  --noise-night: 0;
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
-        --color-base-100: var(--color-base-100-night);
-        --color-base-200: var(--color-base-200-night);
-        --color-base-300: var(--color-base-300-night);
-        --color-base-content: var(--color-base-content-night);
-        --color-primary: var(--color-primary-night);
-        --color-primary-content: var(--color-primary-content-night);
-        --color-secondary: var(--color-secondary-night);
-        --color-secondary-content: var(--color-secondary-content-night);
-        --color-accent: var(--color-accent-night);
-        --color-accent-content: var(--color-accent-content-night);
-        --color-neutral: var(--color-neutral-night);
-        --color-neutral-content: var(--color-neutral-content-night);
-        --color-info: var(--color-info-night);
-        --color-info-content: var(--color-info-content-night);
-        --color-success: var(--color-success-night);
-        --color-success-content: var(--color-success-content-night);
-        --color-warning: var(--color-warning-night);
-        --color-warning-content: var(--color-warning-content-night);
-        --color-error: var(--color-error-night);
-        --color-error-content: var(--color-error-content-night);
-        --radius-selector: var(--radius-selector-night);
-        --radius-field: var(--radius-field-night);
-        --radius-box: var(--radius-box-night);
-        --size-selector: var(--size-selector-night);
-        --size-field: var(--size-field-night);
-        --border: var(--border-night);
-        --depth: var(--depth-night);
-        --noise: var(--noise-night);
-    }
-}
-
-:root[data-theme="night"] {
+  :root {
     --color-base-100: var(--color-base-100-night);
     --color-base-200: var(--color-base-200-night);
     --color-base-300: var(--color-base-300-night);
@@ -163,4 +139,36 @@
     --border: var(--border-night);
     --depth: var(--depth-night);
     --noise: var(--noise-night);
+  }
+}
+
+:root[data-theme="night"] {
+  --color-base-100: var(--color-base-100-night);
+  --color-base-200: var(--color-base-200-night);
+  --color-base-300: var(--color-base-300-night);
+  --color-base-content: var(--color-base-content-night);
+  --color-primary: var(--color-primary-night);
+  --color-primary-content: var(--color-primary-content-night);
+  --color-secondary: var(--color-secondary-night);
+  --color-secondary-content: var(--color-secondary-content-night);
+  --color-accent: var(--color-accent-night);
+  --color-accent-content: var(--color-accent-content-night);
+  --color-neutral: var(--color-neutral-night);
+  --color-neutral-content: var(--color-neutral-content-night);
+  --color-info: var(--color-info-night);
+  --color-info-content: var(--color-info-content-night);
+  --color-success: var(--color-success-night);
+  --color-success-content: var(--color-success-content-night);
+  --color-warning: var(--color-warning-night);
+  --color-warning-content: var(--color-warning-content-night);
+  --color-error: var(--color-error-night);
+  --color-error-content: var(--color-error-content-night);
+  --radius-selector: var(--radius-selector-night);
+  --radius-field: var(--radius-field-night);
+  --radius-box: var(--radius-box-night);
+  --size-selector: var(--size-selector-night);
+  --size-field: var(--size-field-night);
+  --border: var(--border-night);
+  --depth: var(--depth-night);
+  --noise: var(--noise-night);
 }
