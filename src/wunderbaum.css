@@ -1,0 +1,315 @@
+/* Wunderbaum Tree Component - Modern Note-taking App Styling */
+
+/* Root container */
+.wunderbaum {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #374151;
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Tree node container */
+.wunderbaum-node {
+  position: relative;
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Node title/content area */
+.wunderbaum-title {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 1px 4px;
+  transition: all 0.15s ease-in-out;
+  user-select: none;
+  min-height: 36px;
+}
+
+.wunderbaum-title:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+/* Selected state */
+.wunderbaum-selected .wunderbaum-title {
+  background-color: #3b82f6;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.wunderbaum-selected .wunderbaum-title:hover {
+  background-color: #2563eb;
+}
+
+/* Active/focused state */
+.wunderbaum-active .wunderbaum-title {
+  background-color: #1d4ed8;
+  color: #ffffff;
+}
+
+/* Expander (folder toggle) */
+.wunderbaum-expander {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.wunderbaum-expander:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.wunderbaum-selected .wunderbaum-expander:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Expander icon */
+.wunderbaum-expander::before {
+  content: '▶';
+  font-size: 10px;
+  color: #6b7280;
+  transition: transform 0.15s ease-in-out;
+}
+
+.wunderbaum-expanded .wunderbaum-expander::before {
+  transform: rotate(90deg);
+}
+
+.wunderbaum-selected .wunderbaum-expander::before {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Hide expander for leaf nodes */
+.wunderbaum-node:not(.wunderbaum-folder) .wunderbaum-expander {
+  visibility: hidden;
+}
+
+/* Node icon */
+.wunderbaum-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+/* Default folder icons */
+.wunderbaum-folder .wunderbaum-icon::before {
+  content: '📁';
+  font-size: 14px;
+}
+
+.wunderbaum-folder.wunderbaum-expanded .wunderbaum-icon::before {
+  content: '📂';
+}
+
+/* Default file icon */
+.wunderbaum-node:not(.wunderbaum-folder) .wunderbaum-icon::before {
+  content: '📄';
+  font-size: 14px;
+}
+
+/* Node text */
+.wunderbaum-title-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+.wunderbaum-selected .wunderbaum-title-text {
+  font-weight: 500;
+}
+
+/* Children container */
+.wunderbaum-children {
+  margin-left: 20px;
+  border-left: 1px solid #e5e7eb;
+  position: relative;
+}
+
+/* Indent guides */
+.wunderbaum-children::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, #e5e7eb 0%, #e5e7eb 50%, transparent 50%);
+  background-size: 1px 20px;
+}
+
+/* Loading state */
+.wunderbaum-loading .wunderbaum-title {
+  opacity: 0.6;
+}
+
+.wunderbaum-loading .wunderbaum-title::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+  border: 2px solid #d1d5db;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error state */
+.wunderbaum-error .wunderbaum-title {
+  color: #dc2626;
+}
+
+.wunderbaum-error .wunderbaum-icon::before {
+  content: '⚠️';
+}
+
+/* Drag and drop states */
+.wunderbaum-drag-over {
+  background-color: #dbeafe !important;
+  border: 2px dashed #3b82f6;
+}
+
+.wunderbaum-drag-source {
+  opacity: 0.5;
+}
+
+/* Checkbox support */
+.wunderbaum-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  background: #ffffff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.wunderbaum-checkbox:hover {
+  border-color: #3b82f6;
+}
+
+.wunderbaum-selected .wunderbaum-checkbox {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.wunderbaum-checkbox.wunderbaum-checked {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.wunderbaum-checkbox.wunderbaum-checked::after {
+  content: '✓';
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .wunderbaum {
+    font-size: 16px;
+  }
+  
+  .wunderbaum-title {
+    padding: 12px 16px;
+    min-height: 44px;
+  }
+  
+  .wunderbaum-expander {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .wunderbaum-children {
+    margin-left: 24px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .wunderbaum {
+    color: #e5e7eb;
+    background: #1f2937;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  }
+  
+  .wunderbaum-title:hover {
+    background-color: #374151;
+    color: #f9fafb;
+  }
+  
+  .wunderbaum-expander::before {
+    color: #9ca3af;
+  }
+  
+  .wunderbaum-children::before {
+    background: linear-gradient(to bottom, #4b5563 0%, #4b5563 50%, transparent 50%);
+    background-size: 1px 20px;
+  }
+  
+  .wunderbaum-checkbox {
+    border-color: #6b7280;
+    background: #374151;
+  }
+  
+  .wunderbaum-selected .wunderbaum-checkbox {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Focus styles for accessibility */
+.wunderbaum-title:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+.wunderbaum-selected .wunderbaum-title:focus {
+  outline-color: #ffffff;
+}
+
+/* Smooth animations */
+.wunderbaum-children {
+  transition: all 0.2s ease-in-out;
+}
+
+.wunderbaum-node.wunderbaum-collapsed .wunderbaum-children {
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.wunderbaum-node.wunderbaum-expanded .wunderbaum-children {
+  height: auto;
+  opacity: 1;
+}
