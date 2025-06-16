@@ -4,7 +4,13 @@ export default function Counter() {
   const [count, setCount] = createSignal(0);
   return (
     <button
-      class="w-[200px] rounded-full bg-gray-100 border-2 border-gray-300 focus:border-gray-400 active:border-gray-400 px-[2rem] py-[1rem]" 
+      classList={{
+        // Colors
+        " rounded-box bg-primary text-primary-content border-border border-base-300":
+          true,
+        // Size
+        "px-4 py-3 min-w-fit h-auto": true,
+      }}
       onClick={() => setCount(count() + 1)}
     >
       Clicks: {count()}
