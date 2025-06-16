@@ -61,9 +61,6 @@
     --wb-font-size: 14px;
     --wb-expander-right-margin: 4px;
     --wb-icon-right-margin: 8px;
-    --wb-guide-line-color: color-mix(in srgb, var(--color-base-content) 0.15, transparent);
-    --wb-guide-line-width: 1px;
-    --wb-guide-line-offset: calc(var(--wb-indent-size) / 2);
 }
 
 .wb-row {
@@ -202,57 +199,6 @@
     position: relative;
 }
 
-/* Indent guide lines */
-.wb-indent::before {
-    content: '';
-    position: absolute;
-    left: var(--wb-guide-line-offset);
-    top: 0;
-    bottom: 0;
-    width: var(--wb-guide-line-width);
-    background-color: var(--wb-guide-line-color);
-    transition: background-color var(--wb-transition-duration) var(--wb-transition-easing);
-}
-
-/* Hide guide line for root level items */
-.wb-row[data-wb-level="0"] .wb-indent::before {
-    display: none;
-}
-
-/* Horizontal connector line for non-root items */
-.wb-indent::after {
-    content: '';
-    position: absolute;
-    left: var(--wb-guide-line-offset);
-    top: calc(var(--wb-row-height) / 2);
-    width: calc(var(--wb-indent-size) / 2);
-    height: var(--wb-guide-line-width);
-    background-color: var(--wb-guide-line-color);
-    transition: background-color var(--wb-transition-duration) var(--wb-transition-easing);
-}
-
-/* Hide horizontal connector for root level items */
-.wb-row[data-wb-level="0"] .wb-indent::after {
-    display: none;
-}
-
-/* For last child items, only show guide line up to the middle */
-.wb-row.wb-last-child .wb-indent::before {
-    bottom: calc(100% - var(--wb-row-height) / 2);
-}
-
-/* Enhanced guide line visibility on hover */
-.wb-row:hover .wb-indent::before,
-.wb-row:hover .wb-indent::after {
-    background-color: color-mix(in srgb, var(--color-base-content) 0.25, transparent);
-}
-
-/* Active row guide line styling */
-.wb-row.wb-active .wb-indent::before,
-.wb-row.wb-active .wb-indent::after {
-    background-color: color-mix(in srgb, var(--color-primary-content) 0.4, transparent);
-}
-
 .wb-node {
     display: flex;
     align-items: center;
@@ -260,6 +206,41 @@
     transition: all var(--wb-transition-duration) var(--wb-transition-easing);
 }
 
+/* Subtle indent guidelines */
+.wb-indent::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -10px;
+    bottom: -10px;
+    width: 1px;
+    transform: translateX(-50%);
+    background-color: var(--color-base-content);
+    opacity: 0.15;
+    transition: opacity var(--wb-transition-duration) var(--wb-transition-easing);
+}
+
+/* Enhanced guidelines for expanded nodes */
+.wb-expanded .wb-indent::before {
+    opacity: 0.25;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        var(--color-base-content) 20%,
+        var(--color-base-content) 80%,
+        transparent 100%
+    );
+}
+
+/* Hide guidelines on hover for cleaner look */
+.wb-row:hover .wb-indent::before {
+    opacity: 0.1;
+}
+
+/* Hide guidelines for leaf nodes */
+.wb-indent:last-of-type::before {
+    display: none;
+}
 
 /* Professional tree container styling */
 .wb-tree {
