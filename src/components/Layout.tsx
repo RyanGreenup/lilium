@@ -132,9 +132,9 @@ export default function MyLayout(props: {
     // Add keyboard event listener
     createEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "1" || (e.ctrlKey && e.key === "1")) {
+        if (e.ctrlKey && e.key === "b") {
           setIsDrawerVisible(!isDrawerVisible());
-        } else if (e.key === "2" || (e.ctrlKey && e.key === "1")) {
+        } else if ((e.ctrlKey && && e.altKey && e.key === "h")) {
           setIsBottomVisible(!isBottomVisible());
         }
       };
@@ -188,7 +188,7 @@ export default function MyLayout(props: {
           "md:-translate-x-full md:translate-y-0": !isDrawerVisible(),
 
           // Animate movements
-          "transition-translate duration-300 ease-in-out": !isResizing(),
+          "transition-transform duration-300 ease-in-out": !isResizing(),
           "transition-none": isResizing(),
         }}
       >
