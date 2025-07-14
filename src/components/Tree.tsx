@@ -1,380 +1,257 @@
-// import { Wunderbaum } from "wunderbaum";
-// npm install bootstrap-icons
-import { useNavigate } from "@solidjs/router";
-import "bootstrap-icons/font/bootstrap-icons.css";
-import { onMount } from "solid-js";
-//  npm install --save @fortawesome/fontawesome-free
-import "@fortawesome/fontawesome-free/css/all.css";
-import { WbCancelableEventResultType, WbKeydownEventType } from "types";
-import { WunderbaumNode } from "wb_node";
-import { Wunderbaum } from "wunderbaum";
+import { createSignal } from "solid-js";
+import { StatusDisplay } from "~/components/StatusDisplay";
+import { TreeViewRef } from "~/components/tree/types";
+import { TreeCard } from "~/components/TreeCard";
+import { TreeNode } from "~/components/TreeView";
+import { SQLiteTreeView } from "~/components/SQLiteTreeView";
 
-const data = [
-  {
-    title: "Navigation",
-    expanded: true,
-    children: [
-      {
-        title: "Home",
-        content: "Home Page",
-        link: "/",
-      },
-      {
-        title: "About",
-        content: "About Page",
-        link: "about",
-      },
-    ],
-  },
-  {
-    title: "Core Content",
-    expanded: true,
-    children: [
-      {
-        title: "Components",
-        expanded: true,
-        children: [
-          {
-            title: "Splitter",
-            content: "A Splitter like the Qt Splitter",
-            link: "splitter",
-          },
-          {
-            title: "Layout",
-            content: "A Layout Example",
-            link: "layout",
-          },
-          {
-            title: "Chart",
-            content: "Example of a Chart",
-            link: "static_chart",
-          },
-          {
-            title: "Slider",
-            content: "Example of a Slider",
-            link: "slider_example",
-          },
-          {
-            title: "KaTeX",
-            content: "Example of KaTeX",
-            link: "katex",
-          },
-          {
-            title: "CK Editor 5",
-            content: "Example of CK Editor",
-            link: "ckeditor",
-          },
+export default function TreeExampleSQLite() {
+  const [selectedItem, setSelectedItem] = createSignal<TreeNode | null>(null);
+  const [focusedItem, setFocusedItem] = createSignal<TreeNode | null>(null);
+  const [expandedItems, setExpandedItems] = createSignal<string[]>([]);
 
-          {
-            title: "Full Calendar io",
-            content: "Example of Full Calendar IO",
-            link: "calendar",
-          },
-          {
-            title: "Tailwind Sidebar",
-            content: "Example of Tailwind Sidebar",
-            link: "tailwind_sidebar",
-          },
-          {
-            title: "Radial Context Menu",
-            content: "Radial Context Menu minimizes right click distance",
-            link: "radial_menu/radial_menu",
-          },
-          {
-            title: "Command Palette",
-            content: "Professional command palette with fuzzy search",
-            link: "command_palette",
-          },
-        ],
-      },
-    ],
-  },
+  let treeViewRef: TreeViewRef | undefined;
 
-  {
-    title: "Layouts",
-    expanded: true,
-    children: [
-      {
-        title: "Overview",
-        content: "",
-        link: "layout_examples/overview",
-      },
-      {
-        title: "Accordian",
-        content:
-          "An accordian layout, benefit of this is it's extremely simple",
-        link: "layout_examples/accordian/accordian_example",
-      },
-      {
-        title: "Side Drawer With Sidebar",
-        expanded: true,
-        children: [
-          {
-            title: "Sandbox",
-            content: "",
-            link: "layout_examples/side_drawer/side_drawer_sandbox",
-          },
-          {
-            title: "Polished",
-            content: "",
-            link: "layout_examples/side_drawer/side_drawer_polished",
-          },
-        ],
-      },
-      {
-        title: "Bottom Drawer With Sidebar",
-        expanded: true,
-        children: [
-          {
-            title: "Sandbox",
-            content: "",
-            link: "layout_examples/bottom_drawer/sandbox_bottom_drawer",
-          },
-          {
-            title: "Polished",
-            content: "",
-            link: "layout_examples/bottom_drawer/polished_bottom_drawer",
-          },
-        ],
-      },
-    ],
-  },
-
-  {
-    title: "DataTables",
-    expanded: true,
-    children: [
-      {
-        title: "TanStack",
-        expanded: true,
-        children: [
-          {
-            title: "In Place",
-            expanded: true,
-            children: [
-              {
-                title: "Simple",
-                content: "Example of Tanstack Sidebar",
-                link: "datatable",
-              },
-              {
-                title: "Sortable",
-                content: "Example of Tanstack Sidebar",
-                link: "datatable_sortable",
-              },
-              {
-                title: "Paginated",
-                content: "Example of Tanstack Sidebar",
-                link: "datatable_paginated",
-              },
-            ],
-          },
-          {
-            title: "Component",
-            expanded: true,
-            children: [
-              {
-                title: "Paginated Using Component",
-                content: "Example of Tanstack Sidebar",
-                link: "datatable_component_examples/datatable_paginated",
-              },
-              {
-                title: "Dynamic",
-                content: "Example of Tanstack Sidebar",
-                link: "datatable_component_examples/datatable_dynamic",
-              },
-              {
-                title: "With Chart",
-                content: "Example of Tanstack Sidebar",
-                link: "datatable_component_examples/datatable_dynamic_with_chart",
-              },
-              {
-                title: "SQLite",
-                content: "Example of Tanstack Sidebar",
-                link: "datatable_component_examples/datatable_paginated_sqlite",
-              },
-              {
-                title: "SQLite With Chart",
-                content: "Example of Tanstack Sidebar",
-                link: "datatable_component_examples/datatable_paginated_sqlite_with_chart",
-              },
-              {
-                title: "Virtual Scrolling Using Component",
-                content: "Example of Tanstack Sidebar",
-                link: "datatable_component_examples/datatable_virtual_scroll",
-              },
-              {
-                title: "Virtual Scrolling Using Component",
-                content: "Example of Tanstack Sidebar",
-                link: "datatable_component_examples/datatable_virtual_scroll_keyboard",
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-
-  {
-    title: "Compositional Content",
-    expanded: true,
-    children: [
-      {
-        title: "Dynamic Chart",
-        content: "Example of a Chart",
-        link: "dynamicChart",
-      },
-    ],
-  },
-];
-
-export default function NavTree() {
-  let tree_ref!: HTMLDivElement;
-  let treeInstance: Wunderbaum | null = null;
-  const navigate = useNavigate();
-
-  let getNode = (e: MouseEvent): WunderbaumNode | null => {
-    return null;
+  const handleSelect = (node: TreeNode) => {
+    setSelectedItem(node);
+    console.log("Selected:", node);
   };
 
-  const onGetProperties = (e: MouseEvent) => {
-    // const node: WunderbaumNode = treeInstance?.constructor.getNode(e) || null;
-    const node: WunderbaumNode | null = getNode(e);
-    if (node) {
-      alert(
-        `Node details: ${JSON.stringify(
-          {
-            key: node?.key,
-            title: node?.title,
-            type: node?.type,
-          },
-          null,
-          2,
-        )}`,
-      );
-    } else {
-      alert("The node is null");
-    }
+  const handleFocus = (node: TreeNode) => {
+    setFocusedItem(node);
+    console.log("Focused:", node);
   };
 
-  const items = [
+  const handleExpand = (nodeId: string) => {
+    setExpandedItems((prev) =>
+      prev.includes(nodeId)
+        ? prev.filter((id) => id !== nodeId)
+        : [...prev, nodeId],
+    );
+    console.log("Expanded/Collapsed:", nodeId);
+  };
+
+  // Helper function to create tree action buttons
+  const createTreeButton = (
+    label: string,
+    onClick: () => void,
+    extraClasses = "",
+  ) => (
+    <button class={`btn btn-outline btn-sm ${extraClasses}`} onClick={onClick}>
+      {label}
+    </button>
+  );
+
+  // Helper function to create info rows
+  const createInfoRow = (label: string, content: any) => (
+    <div class="flex items-center justify-between">
+      <span class="text-sm">{label}</span>
+      {content}
+    </div>
+  );
+
+  // Helper function to create keyboard shortcut rows
+  const createShortcutRow = (label: string, keys: string | string[]) => (
+    <div class="flex items-center justify-between">
+      <span class="text-sm">{label}</span>
+      {Array.isArray(keys) ? (
+        <div class="space-x-1">
+          {keys.map((key) => (
+            <kbd class="kbd kbd-xs">{key}</kbd>
+          ))}
+        </div>
+      ) : (
+        <kbd class="kbd kbd-xs">{keys}</kbd>
+      )}
+    </div>
+  );
+
+  // Tree action buttons configuration
+  const treeActions = [
+    { label: "Expand All", action: () => treeViewRef?.expandAll() },
+    { label: "Collapse All", action: () => treeViewRef?.collapseAll() },
     {
-      label: "Edit",
-      icon: "✏️",
-      onClick: () => alert("Edit"),
+      label: "Collapse All Except Focused",
+      action: () => treeViewRef?.collapseAllExceptFocused(),
+      classes: "whitespace-nowrap",
     },
     {
-      label: "Copy",
-      icon: "📋",
-      onClick: () => alert("Copy"),
+      label: "Collapse All Except Selected",
+      action: () => treeViewRef?.collapseAllExceptSelected(),
+      classes: "whitespace-nowrap",
+    },
+    { label: "Collapse Some", action: () => treeViewRef?.collapseSome() },
+    { label: "Fold-Cycle", action: () => treeViewRef?.foldCycle() },
+    { label: "Clear Cut", action: () => treeViewRef?.clearCut() },
+    { label: "Rename Focused", action: () => treeViewRef?.rename() },
+    {
+      label: "Create New Note",
+      action: () => treeViewRef?.createNew(),
+      classes: "btn-success",
     },
     {
-      label: "Delete",
-      icon: "🗑️",
-      onClick: () => alert("Delete"),
-    },
-    {
-      label: "Properties",
-      icon: "ℹ️",
-      onClick: (e: MouseEvent) => {
-        onGetProperties(e);
+      label: "Delete Focused",
+      action: () => {
+        const focused = focusedItem();
+        if (
+          focused &&
+          confirm(
+            `Are you sure you want to delete "${focused.label}" and all its children?`,
+          )
+        ) {
+          treeViewRef?.delete();
+        }
       },
+      classes: "btn-error",
+    },
+    { label: "Refresh Tree", action: () => treeViewRef?.refreshTree(), classes: "btn-accent" },
+  ];
+
+  // Database info configuration
+  const databaseInfo = [
+    {
+      label: "Database Type",
+      content: <div class="badge badge-secondary">SQLite</div>,
+    },
+    {
+      label: "Schema",
+      content: (
+        <div class="space-x-1">
+          <div class="badge badge-outline badge-sm">
+            notes (id, label, parent_id)
+          </div>
+        </div>
+      ),
+    },
+    {
+      label: "Data Loading",
+      content: <div class="badge badge-success">Server-side</div>,
     },
   ];
 
-  onMount(async () => {
-    const { Wunderbaum } = await import("wunderbaum");
-
-    getNode = (e: MouseEvent) => {
-      console.log(e);
-      return Wunderbaum.getNode(e);
-    };
-
-    treeInstance = new Wunderbaum({
-      element: tree_ref,
-      source: data,
-      iconMap: "fontawesome6",
-      init: (e) => {
-        e.tree.setFocus();
-      },
-      activate: (e) => {
-        // alert(`Opened: ${e.node.title}`);
-        if (e.node.data?.link) {
-          navigate(e.node.data.link);
-        }
-      },
-      keydown: (e: WbKeydownEventType): WbCancelableEventResultType => {
-        switch (e.event.key) {
-          case "j":
-            if (!e.tree.isEditingTitle()) {
-              replaceKeyPress(e.event, e.tree.element, "ArrowDown");
-              return false;
-            }
-          case "k":
-            if (!e.tree.isEditingTitle()) {
-              replaceKeyPress(e.event, e.tree.element, "ArrowUp");
-              return false;
-            }
-          case "h":
-            if (!e.tree.isEditingTitle()) {
-              replaceKeyPress(e.event, e.tree.element, "ArrowLeft");
-              return false;
-            }
-          case "l":
-            if (!e.tree.isEditingTitle()) {
-              replaceKeyPress(e.event, e.tree.element, "ArrowRight");
-              return false;
-            }
-        }
-      },
-
-      render: (e) => {
-        // Add custom styling for different node types
-        const node = e.node;
-        const nodeElement = e.nodeElem;
-        const rowElement = nodeElement?.closest(".wb-row") as HTMLElement;
-
-        // Add hover effects and modern styling
-        if (nodeElement) {
-          nodeElement.style.borderRadius = "4px";
-          nodeElement.style.transition = "all 0.15s ease";
-          // Ensure the node key is available for retrieval
-          if (node?.key) {
-            nodeElement.setAttribute("data-key", node.key);
-          }
-        }
-      },
-    });
-  });
+  // Keyboard shortcuts configuration
+  const keyboardShortcuts = [
+    { label: "Navigate", keys: ["↑", "↓"] },
+    { label: "Expand/Child", keys: "→" },
+    { label: "Collapse/Parent", keys: "←" },
+    { label: "Select", keys: ["Enter", "Space"] },
+    { label: "First/Last", keys: ["Home", "End"] },
+    { label: "Cut/Paste", keys: ["Ctrl+X", "Ctrl+V"] },
+    { label: "Move to Root", keys: "Ctrl+Shift+R" },
+    { label: "Clear Cut", keys: "Esc" },
+    { label: "Rename", keys: "F2" },
+    { label: "Create New", keys: "Insert" },
+    { label: "Delete", keys: "Delete" },
+  ];
 
   return (
-    <div
-      class="h-screen p-4
-      bg-[var(--color-base-100)]
-      dark:bg-[var(--color-base-100)]
-      text-[var(--foreground-rgb)]
-      dark:text-[var(--foreground-rgb)]
-      font-sans
-      outline-none"
-    >
-      <div
-        ref={tree_ref}
-        class="wb-skeleton wb-initializing wb-fade-expander wb-no-select outline-none"
-      />
+    <div class="container mx-auto p-8 space-y-8">
+      <div class="hero bg-base-200 rounded-box">
+        <div class="hero-content text-center">
+          <div class="max-w-md">
+            <h1 class="text-4xl font-bold">TreeView with SQLite</h1>
+            <p class="py-6">
+              Professional tree component connected to SQLite database with
+              hierarchical notes.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div class="xl:col-span-2">
+          <TreeCard title="Notes Explorer">
+            <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-4 gap-4">
+              <div>
+                <p class="text-sm opacity-70">
+                  Connected to SQLite database - Click to select, use keyboard
+                  arrows to navigate
+                </p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                {treeActions.map((action) =>
+                  createTreeButton(
+                    action.label,
+                    action.action,
+                    action.classes || "",
+                  ),
+                )}
+              </div>
+            </div>
+            <SQLiteTreeView
+              onSelect={handleSelect}
+              onFocus={handleFocus}
+              onExpand={handleExpand}
+              ref={(ref) => (treeViewRef = ref)}
+            />
+          </TreeCard>
+        </div>
+
+        <div class="space-y-6">
+          <TreeCard title="Current Status">
+            <div class="space-y-4">
+              <StatusDisplay
+                title="FOCUSED ITEM"
+                data={
+                  focusedItem()
+                    ? {
+                        id: focusedItem()!.id,
+                        label: focusedItem()!.label,
+                        level: focusedItem()!.level || 0,
+                        type: focusedItem()!.type || "unknown",
+                      }
+                    : null
+                }
+              />
+
+              <StatusDisplay
+                title="SELECTED ITEM"
+                data={
+                  selectedItem()
+                    ? {
+                        id: selectedItem()!.id,
+                        label: selectedItem()!.label,
+                        hasChildren: selectedItem()!.hasChildren,
+                        type: selectedItem()!.type || "unknown",
+                      }
+                    : null
+                }
+              />
+
+              <div>
+                <h3 class="font-semibold text-sm text-base-content/70 mb-2">
+                  EXPANDED NODES
+                </h3>
+                <div class="flex flex-wrap gap-1">
+                  {expandedItems().length > 0 ? (
+                    expandedItems().map((id) => (
+                      <div class="badge badge-primary badge-sm">{id}</div>
+                    ))
+                  ) : (
+                    <div class="badge badge-ghost badge-sm">None</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </TreeCard>
+
+          <TreeCard title="Database Info">
+            <div class="space-y-3">
+              {databaseInfo.map((info) =>
+                createInfoRow(info.label, info.content),
+              )}
+            </div>
+          </TreeCard>
+
+          <TreeCard title="Keyboard Shortcuts">
+            <div class="space-y-3">
+              {keyboardShortcuts.map((shortcut) =>
+                createShortcutRow(shortcut.label, shortcut.keys),
+              )}
+            </div>
+          </TreeCard>
+        </div>
+      </div>
     </div>
   );
-}
-
-function replaceKeyPress(
-  event: KeyboardEvent,
-  element: HTMLDivElement,
-  key: string,
-) {
-  // Prevent default behavior (like scrolling)
-  event.preventDefault();
-  // Simulate down arrow key press
-  const downEvent = new KeyboardEvent("keydown", {
-    key: key,
-  });
-  element.dispatchEvent(downEvent);
 }
