@@ -3,14 +3,15 @@ import { StatusDisplay } from "~/components/StatusDisplay";
 import { TreeViewRef } from "~/components/tree/types";
 import { TreeCard } from "~/components/TreeCard";
 import { TreeNode } from "~/components/TreeView";
-import { SQLiteTreeView } from "~/components/SQLiteTreeView";
+import { SQLiteTreeViewWithHoisting } from "~/components/SQLiteTreeViewWithHoisting";
 
 export default function TreeExampleSQLite() {
   const [selectedItem, setSelectedItem] = createSignal<TreeNode | null>(null);
   const [focusedItem, setFocusedItem] = createSignal<TreeNode | null>(null);
   const [expandedItems, setExpandedItems] = createSignal<string[]>([]);
+  const [hoistedRoot, setHoistedRoot] = createSignal<string>("__virtual_root__");
 
-  let treeViewRef: TreeViewRef | undefined;
+  let treeViewRef: TreeViewRef & { hoistToNode: (nodeId: string) => void; navigateUp: () => void; resetToRoot: () => void } | undefined;
 
   const handleSelect = (node: TreeNode) => {
     setSelectedItem(node);
@@ -104,6 +105,18 @@ export default function TreeExampleSQLite() {
       },
       classes: "btn-error",
     },
+    {
+      label: "Hoist Focused",
+      action: () => {
+        const focused = focusedItem();
+        if (focused) {
+          treeViewRef?.hoistToNode(focused.id);
+        }
+      },
+      classes: "btn-info",
+    },
+    { label: "Navigate Up", action: () => treeViewRef?.navigateUp(), classes: "btn-secondary" },
+    { label: "Reset to Root", action: () => treeViewRef?.resetToRoot(), classes: "btn-warning" },
     { label: "Refresh Tree", action: () => treeViewRef?.refreshTree(), classes: "btn-accent" },
   ];
 
@@ -127,6 +140,21 @@ export default function TreeExampleSQLite() {
       label: "Data Loading",
       content: <div class="badge badge-success">Server-side</div>,
     },
+    {
+      label: "Current Root",
+      content: (
+        <div class="space-x-1">
+          <div class={`badge badge-sm ${hoistedRoot() === "__virtual_root__" ? "badge-neutral" : "badge-info"}`}>
+            {hoistedRoot() === "__virtual_root__" ? "True Root" : "Hoisted"}
+          </div>
+          {hoistedRoot() !== "__virtual_root__" && (
+            <div class="badge badge-outline badge-sm font-mono">
+              {hoistedRoot()}
+            </div>
+          )}
+        </div>
+      ),
+    },
   ];
 
   // Keyboard shortcuts configuration
@@ -142,6 +170,9 @@ export default function TreeExampleSQLite() {
     { label: "Rename", keys: "F2" },
     { label: "Create New", keys: "Insert" },
     { label: "Delete", keys: "Delete" },
+    { label: "Hoist (Context Menu)", keys: "Right Click → 7" },
+    { label: "Navigate Up", keys: "Use buttons" },
+    { label: "Reset to Root", keys: "Use buttons" },
   ];
 
   return (
@@ -178,10 +209,14 @@ export default function TreeExampleSQLite() {
                 )}
               </div>
             </div>
-            <SQLiteTreeView
+            
+            <SQLiteTreeViewWithHoisting
               onSelect={handleSelect}
               onFocus={handleFocus}
               onExpand={handleExpand}
+              hoistedRoot={hoistedRoot}
+              setHoistedRoot={setHoistedRoot}
+              setExpandedItems={setExpandedItems}
               ref={(ref) => (treeViewRef = ref)}
             />
           </TreeCard>
