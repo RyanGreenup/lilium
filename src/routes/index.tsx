@@ -1,52 +1,44 @@
 import { A } from "@solidjs/router";
-import Counter from "~/components/Counter";
 
 export default function Home() {
   return (
-    <main class="bg-base-100 text-center mx-auto p-4">
-      <h1 class="max-6-xs text-6xl text-primary   uppercase my-16">
-        Hello world!
-      </h1>
-
-      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center p-6">
-        <Counter />
-
-        <button
-          onClick={() => {
-            if (typeof document !== "undefined") {
-              const currentTheme =
-                document.documentElement.getAttribute("data-theme");
-              if (currentTheme === "night") {
-                document.documentElement.removeAttribute("data-theme");
-              } else {
-                document.documentElement.setAttribute("data-theme", "night");
-              }
-            }
-          }}
-          class=" rounded-box bg-primary text-primary-content border-border border-base-300 px-4 py-3 min-w-fit h-auto"
-        >
-          Toggle Night Theme
-        </button>
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-4xl font-bold mb-6">Welcome</h1>
+      
+      <div class="prose prose-lg max-w-none text-base-content">
+        <p class="text-lg mb-6">
+          This is your new <em>vault</em>.
+        </p>
+        
+        <p class="mb-6">
+          Make a note of something,{" "}
+          <A href="/about" class="text-primary hover:underline">
+            create a link
+          </A>
+          , or try{" "}
+          <A href="/about" class="text-primary hover:underline">
+            the Importer
+          </A>
+          !
+        </p>
+        
+        <p class="mb-6">
+          When you're ready, delete this note and make the vault your own.
+        </p>
+        
+        <div class="space-y-2">
+          <p>
+            <A href="/" class="text-primary hover:underline">
+              foo
+            </A>
+          </p>
+          <p>
+            <A href="/about" class="text-primary hover:underline">
+              bar
+            </A>
+          </p>
+        </div>
       </div>
-
-      <p class="mt-8">
-        Visit{" "}
-        <a
-          href="https://solidjs.com"
-          target="_blank"
-          class="text-sky-600 hover:underline"
-        >
-          solidjs.com
-        </a>{" "}
-        to learn how to build Solid apps.
-      </p>
-      <p class="my-4">
-        <span>Home</span>
-        {" - "}
-        <A href="/about" class="text-sky-600 hover:underline">
-          About Page
-        </A>{" "}
-      </p>
-    </main>
+    </div>
   );
 }
