@@ -206,7 +206,7 @@ export default function MyLayout(props: {
               </button>
             </div>
           </div>
-          <div class="flex-1 p-4 overflow-y-auto">{props.sidebarContent}</div>
+          <div class="flex-1 p-4 overflow-hidden">{props.sidebarContent}</div>
         </div>
         {/* Resize Handle */}
         <div

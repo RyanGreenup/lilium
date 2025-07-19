@@ -88,7 +88,7 @@ export const TreeView = (props: TreeViewProps) => {
     <TreeContext.Provider value={contextValue()}>
       <ul
         ref={treeRef}
-        class={`menu bg-base-200 rounded-box w-full h-96 overflow-y-auto flex-nowrap ${local.class || ""}`}
+        class={`menu bg-base-200 rounded-box w-full h-full overflow-y-auto flex-nowrap ${local.class || ""}`}
         role="tree"
         aria-label="Tree View"
         tabIndex={0}

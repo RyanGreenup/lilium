@@ -249,11 +249,11 @@ export const SQLiteTreeViewWithHoisting: Component<SQLiteTreeViewWithHoistingPro
   props.ref?.(exposedRef);
 
   return (
-    <div>
+    <div class="flex flex-col h-full">
       {/* Breadcrumb Navigation */}
-      <div class="mb-4">
+      <div class="flex-shrink-0 mb-2">
         <div class="breadcrumbs text-sm">
-          <ul>
+          <ul class="flex-wrap">
             <Suspense fallback={<li><span class="loading loading-spinner loading-sm"></span></li>}>
               <For each={breadcrumbPath()}>
                 {(pathNode, index) => (
@@ -281,18 +281,20 @@ export const SQLiteTreeViewWithHoisting: Component<SQLiteTreeViewWithHoistingPro
         )}
       </div>
 
-      <TreeView
-        onSelect={props.onSelect}
-        onFocus={props.onFocus}
-        onExpand={props.onExpand}
-        loadChildren={loadChildren}
-        onCreate={handleCreateNew}
-        onMoveItemToNewParent={handleMoveItemToNewParent}
-        onRename={handleRename}
-        onDelete={handleDelete}
-        onContextMenu={handleContextMenu}
-        ref={(ref) => (treeViewRef = ref)}
-      />
+      <div class="flex-1 min-h-0">
+        <TreeView
+          onSelect={props.onSelect}
+          onFocus={props.onFocus}
+          onExpand={props.onExpand}
+          loadChildren={loadChildren}
+          onCreate={handleCreateNew}
+          onMoveItemToNewParent={handleMoveItemToNewParent}
+          onRename={handleRename}
+          onDelete={handleDelete}
+          onContextMenu={handleContextMenu}
+          ref={(ref) => (treeViewRef = ref)}
+        />
+      </div>
     </div>
   );
 };
