@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@plugin "daisyui";
 
 /* Some Stuff from solid-ui to look at */
 /* @plugin '@kobalte/tailwindcss'; */

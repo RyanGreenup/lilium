@@ -4,14 +4,14 @@ import { Suspense } from "solid-js";
 import Nav from "~/components/Nav";
 import "./app.css";
 import MyLayout from "~/components/Layout";
-import NavTree from "./components/Tree";
+import { SQLiteTreeViewWithHoisting } from "./views/NavTree";
 
 export default function App() {
   return (
     <Router
       root={(props) => (
         <>
-        <MyLayout sidebarContent={<NavTree/>}>
+        <MyLayout sidebarContent={<SQLiteTreeViewWithHoisting/>}>
           <Suspense>{props.children}</Suspense>
          </MyLayout>
         </>

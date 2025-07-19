@@ -11,8 +11,12 @@
     "@solidjs/router": "^0.15.0",
     "@solidjs/start": "^1.1.0",
     "@tailwindcss/typography": "^0.5.16",
+    "@types/better-sqlite3": "^7.6.13",
+    "better-sqlite3": "^12.2.0",
     "bootstrap-icons": "^1.13.1",
+    "daisyui": "^5.0.46",
     "solid-js": "^1.9.5",
+    "solid-transition-group": "^0.3.0",
     "vinxi": "^0.5.3",
     "wunderbaum": "^0.13.0"
   },
