@@ -1,5 +1,6 @@
 import { createSignal, JSXElement, Switch, Match, For } from "solid-js";
 import { tv } from "tailwind-variants";
+import { Transition } from "solid-transition-group";
 import FileText from "lucide-solid/icons/file-text";
 import Search from "lucide-solid/icons/search";
 import Link from "lucide-solid/icons/link";
@@ -29,6 +30,7 @@ const sidebarTabs = tv({
     tab: "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
     content: "flex-1 overflow-hidden",
     placeholder: "p-4 text-center text-base-content/50",
+    transition: "transition-all duration-200 ease-in-out",
   },
   variants: {
     active: {
@@ -37,6 +39,14 @@ const sidebarTabs = tv({
       },
       false: {
         tab: "border-transparent text-base-content/70 hover:text-base-content hover:border-base-300",
+      },
+    },
+    entering: {
+      true: {
+        transition: "opacity-0 transform translate-x-2",
+      },
+      false: {
+        transition: "opacity-100 transform translate-x-0",
       },
     },
   },
@@ -122,17 +132,26 @@ export const SidebarTabs = (props: SidebarTabsProps) => {
 
       {/* Tab Content */}
       <div class={styles.content()}>
-        <Switch>
-          <For each={tabs}>
-            {(tab) => (
-              <Match when={activeTab() === tab.id}>
-                {tab.content(props) || (
-                  <div class={styles.placeholder()}>{tab.placeholder}</div>
-                )}
-              </Match>
-            )}
-          </For>
-        </Switch>
+        <Transition
+          enterClass={styles.transition({ entering: true })}
+          enterToClass={styles.transition({ entering: false })}
+          exitClass={styles.transition({ entering: false })}
+          exitToClass={styles.transition({ entering: true })}
+        >
+          <Switch>
+            <For each={tabs}>
+              {(tab) => (
+                <Match when={activeTab() === tab.id}>
+                  <div class={styles.transition()}>
+                    {tab.content(props) || (
+                      <div class={styles.placeholder()}>{tab.placeholder}</div>
+                    )}
+                  </div>
+                </Match>
+              )}
+            </For>
+          </Switch>
+        </Transition>
       </div>
     </div>
   );
