@@ -3,6 +3,13 @@
 import Database from "better-sqlite3";
 import type { TreeNode } from "~/components/tree/types";
 
+interface DbNote {
+  id: string;
+  label: string;
+  parent_id: string | null;
+}
+
+
 let db: Database.Database | null = null;
 
 /*
@@ -36,14 +43,6 @@ interface DbNote {
   parent_id: string | null;
 }
 
-function hasChildrenInDb(database: Database.Database, parentId: string): boolean {
-  const count = database
-    .prepare(`SELECT COUNT(*) as count FROM notes WHERE parent_id = ?`)
-    .get(parentId) as { count: number };
-
-  return count.count > 0;
-}
-
 export async function getNoteDetails(noteId: string): Promise<TreeNode | null> {
   if (noteId === "__virtual_root__") {
     return {
@@ -66,14 +65,16 @@ export async function getNoteDetails(noteId: string): Promise<TreeNode | null> {
       return null;
     }
 
-    const hasChildren = hasChildrenInDb(database, note.id);
+    const hasChildrenResult = database
+      .prepare(`SELECT EXISTS(SELECT 1 FROM notes WHERE parent_id = ?) as has_children`)
+      .get(note.id) as { has_children: number };
     
     return {
       id: note.id,
       label: note.label || "Untitled",
-      hasChildren,
+      hasChildren: hasChildrenResult.has_children === 1,
       level: 0,
-      type: "note"
+      type: hasChildrenResult.has_children === 1 ? "folder" : "note"
     };
   } catch (error) {
     console.error("Error getting note details:", error);
@@ -104,13 +105,15 @@ export async function getNotePath(noteId: string): Promise<TreeNode[]> {
       
       if (!note) break;
 
-      const hasChildren = hasChildrenInDb(database, note.id);
+      const hasChildrenResult = database
+        .prepare(`SELECT EXISTS(SELECT 1 FROM notes WHERE parent_id = ?) as has_children`)
+        .get(note.id) as { has_children: number };
       path.unshift({
         id: note.id,
         label: note.label || "Untitled",
-        hasChildren,
+        hasChildren: hasChildrenResult.has_children === 1,
         level: 0,
-        type: "note"
+        type: hasChildrenResult.has_children === 1 ? "folder" : "note"
       });
 
       currentId = note.parent_id;
@@ -137,51 +140,60 @@ export async function getNotePath(noteId: string): Promise<TreeNode[]> {
 export async function loadTreeChildren(nodeId: string): Promise<TreeNode[]> {
   const database = getDb();
 
-  // Handle virtual root - return top-level items (parent_id IS NULL)
+  let parentCondition: string;
+  let params: any[];
+
   if (nodeId === "__virtual_root__") {
-    const notes = database
-      .prepare(`
-        SELECT * FROM notes
-        WHERE parent_id IS NULL
-        ORDER BY label
-      `)
-      .all() as DbNote[];
-
-    const result: TreeNode[] = [];
-
-    for (const note of notes) {
-      const hasChildren = hasChildrenInDb(database, note.id);
-      result.push({
-        id: note.id,
-        label: note.label || "Untitled",
-        hasChildren,
-        level: 0,
-        type: "note"
-      });
-    }
-
-    return result;
+    parentCondition = "parent_id IS NULL";
+    params = [];
+  } else {
+    parentCondition = "parent_id = ?";
+    params = [nodeId];
   }
 
-  // Find children for a specific parent
-  const notes = database
-    .prepare(`
-      SELECT * FROM notes
-      WHERE parent_id = ?
-      ORDER BY label
-    `)
-    .all(nodeId) as DbNote[];
+  // Use a CTE to calculate hasChildren and sort properly
+  const query = `
+    WITH note_children AS (
+      SELECT 
+        n.id,
+        n.label,
+        n.parent_id,
+        CASE 
+          WHEN EXISTS (SELECT 1 FROM notes child WHERE child.parent_id = n.id) 
+          THEN 1 
+          ELSE 0 
+        END as has_children
+      FROM notes n
+      WHERE ${parentCondition}
+    )
+    SELECT 
+      id,
+      label,
+      parent_id,
+      has_children
+    FROM note_children
+    ORDER BY 
+      has_children DESC,  -- Items with children first (1 before 0)
+      label ASC           -- Then alphabetically
+  `;
+
+  const notes = database.prepare(query).all(...params) as Array<{
+    id: string;
+    label: string;
+    parent_id: string;
+    has_children: number;
+  }>;
 
   const result: TreeNode[] = [];
 
   for (const note of notes) {
-    const hasChildren = hasChildrenInDb(database, note.id);
+    const hasChildren = note.has_children === 1;
     result.push({
       id: note.id,
       label: note.label || "Untitled",
       hasChildren,
       level: 0,
-      type: "note"
+      type: hasChildren ? "folder" : "note"
     });
   }
 
