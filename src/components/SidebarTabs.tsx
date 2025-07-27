@@ -28,7 +28,7 @@ const sidebarTabs = tv({
     container: "flex flex-col h-full",
     tabList: "flex border-b border-base-300 overflow-x-auto",
     tab: "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
-    content: "flex-1 overflow-hidden",
+    content: "flex-1 overflow-y-auto",
     placeholder: "p-4 text-center text-base-content/50",
     transition: "transition-all duration-200 ease-in-out",
   },
