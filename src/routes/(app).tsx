@@ -1,6 +1,8 @@
 import { createEffect, createSignal, JSXElement, onMount } from "solid-js";
 import Menu from 'lucide-solid/icons/menu';
 import Grid3x3 from 'lucide-solid/icons/grid-3x3';
+import { SQLiteTreeViewWithHoisting } from "~/views/NavTree";
+import { SidebarTabs } from "~/components/SidebarTabs";
 // import "~/app.css";
 
 function LayoutContainer(props: { children: JSXElement }) {
@@ -33,7 +35,6 @@ const Z_INDICES = {
 
 export default function MyLayout(props: {
   children: JSXElement;
-  sidebarContent: JSXElement;
 }) {
   const [drawerWidth, setDrawerWidth] = createSignal(256); // Default 256px (w-64)
   const [isBottomVisible, setIsBottomVisible] = createSignal(true);
@@ -208,7 +209,11 @@ export default function MyLayout(props: {
               </button>
             </div>
           </div>
-          <div class="flex-1 p-4 overflow-hidden">{props.sidebarContent}</div>
+          <div class="flex-1 p-4 overflow-hidden">
+            <SidebarTabs 
+              filesContent={<SQLiteTreeViewWithHoisting/>}
+            />
+          </div>
         </div>
         {/* Resize Handle */}
         <div
