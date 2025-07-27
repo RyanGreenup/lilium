@@ -1,4 +1,4 @@
-import { createSignal, JSXElement, Switch, Match, For } from "solid-js";
+import { createSignal, JSXElement, Switch, Match, For, onMount } from "solid-js";
 import { tv } from "tailwind-variants";
 import { Transition } from "solid-transition-group";
 import FileText from "lucide-solid/icons/file-text";
@@ -80,6 +80,7 @@ export const SidebarTabs = (props: SidebarTabsProps) => {
     props.activeTab || "files",
   );
   const styles = sidebarTabs();
+  let tabListRef: HTMLDivElement | undefined;
 
   const handleTabChange = (tabId: SidebarTabId) => {
     setActiveTab(tabId);
@@ -106,14 +107,20 @@ export const SidebarTabs = (props: SidebarTabsProps) => {
     }
   };
 
+  onMount(() => {
+    if (tabListRef) {
+      tabListRef.addEventListener("keydown", handleKeyDown);
+    }
+  });
+
   return (
     <div class={styles.container()}>
       {/* Tab Navigation */}
       <div
+        ref={tabListRef}
         class={styles.tabList()}
         role="tablist"
         tabIndex={0}
-        onKeyDown={handleKeyDown}
       >
         <For each={tabs}>
           {(tab) => (
