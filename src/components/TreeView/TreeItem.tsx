@@ -96,13 +96,45 @@ export const TreeItem = (props: TreeItemProps) => {
   };
 
   const handleCreateNew = () => {
-    // Note: Create new operation would be handled by parent component
-    // For now, we just trigger the context menu callback
+    ctx.onCreateNew(props.node.id);
   };
 
   const handleDelete = () => {
-    // Note: Delete operation would be handled by parent component
-    // For now, we just trigger the context menu callback
+    ctx.onDelete(props.node.id);
+  };
+
+  const handleExpandAll = () => {
+    ctx.onExpandAll();
+  };
+
+  const handleCollapseAll = () => {
+    ctx.onCollapseAll();
+  };
+
+  const handleCollapseAllExceptFocused = () => {
+    ctx.onCollapseAllExceptFocused();
+  };
+
+  const handleCollapseAllExceptSelected = () => {
+    ctx.onCollapseAllExceptSelected();
+  };
+
+  const handleFoldCycle = () => {
+    ctx.onFoldCycle();
+  };
+
+  const handleRefreshTree = () => {
+    ctx.onRefreshTree();
+  };
+
+  const handleFocusAndReveal = () => {
+    ctx.onFocusAndReveal(props.node.id);
+  };
+
+  const handleHoistHere = () => {
+    if (ctx.onHoistHere) {
+      ctx.onHoistHere(props.node.id);
+    }
   };
 
   const handleExpandClick = (e: MouseEvent) => {
@@ -174,7 +206,16 @@ export const TreeItem = (props: TreeItemProps) => {
       onRename={handleRename}
       onCreateNew={handleCreateNew}
       onDelete={handleDelete}
+      onExpandAll={handleExpandAll}
+      onCollapseAll={handleCollapseAll}
+      onCollapseAllExceptFocused={handleCollapseAllExceptFocused}
+      onCollapseAllExceptSelected={handleCollapseAllExceptSelected}
+      onFoldCycle={handleFoldCycle}
+      onRefreshTree={handleRefreshTree}
+      onHoistHere={handleHoistHere}
+      onFocusAndReveal={handleFocusAndReveal}
       canPaste={!!ctx.cutNodeId()}
+      hasChildren={props.node.hasChildren}
     >
       <li>
         <a

@@ -50,6 +50,16 @@ export interface TreeContextValue {
   onRename: (nodeId: string) => void;
   onRenameCommit: (nodeId: string, newLabel: string) => void;
   onRenameCancel: () => void;
+  onExpandAll: () => void;
+  onCollapseAll: () => void;
+  onCollapseAllExceptFocused: () => void;
+  onCollapseAllExceptSelected: () => void;
+  onFoldCycle: () => void;
+  onRefreshTree: () => void;
+  onFocusAndReveal: (nodeId: string) => Promise<void>;
+  onCreateNew: (parentId?: string) => void;
+  onDelete: (nodeId?: string) => void;
+  onHoistHere?: (nodeId: string) => void;
   onContextMenu?: TreeContextMenuHandler;
   loadChildren?: TreeChildrenLoader;
 }
@@ -64,6 +74,7 @@ export interface TreeViewProps {
   onCreate?: TreeCreateHandler;
   onDelete?: TreeDeleteHandler;
   onContextMenu?: TreeContextMenuHandler;
+  onHoistHere?: (nodeId: string) => void;
   class?: string;
   /**
    * Callback function that receives the TreeViewRef instance for programmatic control.

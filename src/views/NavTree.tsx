@@ -291,6 +291,7 @@ export const SQLiteTreeViewWithHoisting: Component<SQLiteTreeViewWithHoistingPro
           onMoveItemToNewParent={handleMoveItemToNewParent}
           onRename={handleRename}
           onDelete={handleDelete}
+          onHoistHere={hoistToNode}
           onContextMenu={handleContextMenu}
           ref={(ref) => (treeViewRef = ref)}
         />
