@@ -1,4 +1,4 @@
-import { createSignal, JSXElement } from "solid-js";
+import { createSignal, JSXElement, Switch, Match, For } from "solid-js";
 import { tv } from "tailwind-variants";
 
 export type SidebarTabId = "files" | "search" | "backlinks";
@@ -9,6 +9,13 @@ interface SidebarTabsProps {
   filesContent: JSXElement;
   searchContent?: JSXElement;
   backlinksContent?: JSXElement;
+}
+
+interface TabConfig {
+  id: SidebarTabId;
+  label: string;
+  content: (props: SidebarTabsProps) => JSXElement;
+  placeholder?: string;
 }
 
 const sidebarTabs = tv({
@@ -31,6 +38,26 @@ const sidebarTabs = tv({
   },
 });
 
+const tabs: TabConfig[] = [
+  {
+    id: "files",
+    label: "Files",
+    content: (props) => props.filesContent,
+  },
+  {
+    id: "search",
+    label: "Search",
+    content: (props) => props.searchContent,
+    placeholder: "Search functionality coming soon",
+  },
+  {
+    id: "backlinks",
+    label: "Backlinks",
+    content: (props) => props.backlinksContent,
+    placeholder: "Backlinks functionality coming soon",
+  },
+];
+
 export const SidebarTabs = (props: SidebarTabsProps) => {
   const [activeTab, setActiveTab] = createSignal<SidebarTabId>(
     props.activeTab || "files",
@@ -42,57 +69,38 @@ export const SidebarTabs = (props: SidebarTabsProps) => {
     props.onTabChange?.(tabId);
   };
 
-  const renderTabContent = () => {
-    switch (activeTab()) {
-      case "files":
-        return props.filesContent;
-      case "search":
-        return (
-          props.searchContent || (
-            <div class={styles.placeholder()}>
-              Search functionality coming soon
-            </div>
-          )
-        );
-      case "backlinks":
-        return (
-          props.backlinksContent || (
-            <div class={styles.placeholder()}>
-              Backlinks functionality coming soon
-            </div>
-          )
-        );
-      default:
-        return props.filesContent;
-    }
-  };
-
   return (
     <div class={styles.container()}>
       {/* Tab Navigation */}
       <div class={styles.tabList()}>
-        <button
-          class={styles.tab({ active: activeTab() === "files" })}
-          onClick={() => handleTabChange("files")}
-        >
-          Files
-        </button>
-        <button
-          class={styles.tab({ active: activeTab() === "search" })}
-          onClick={() => handleTabChange("search")}
-        >
-          Search
-        </button>
-        <button
-          class={styles.tab({ active: activeTab() === "backlinks" })}
-          onClick={() => handleTabChange("backlinks")}
-        >
-          Backlinks
-        </button>
+        <For each={tabs}>
+          {(tab) => (
+            <button
+              class={styles.tab({ active: activeTab() === tab.id })}
+              onClick={() => handleTabChange(tab.id)}
+            >
+              {tab.label}
+            </button>
+          )}
+        </For>
       </div>
 
       {/* Tab Content */}
-      <div class={styles.content()}>{renderTabContent()}</div>
+      <div class={styles.content()}>
+        <Switch>
+          <For each={tabs}>
+            {(tab) => (
+              <Match when={activeTab() === tab.id}>
+                {tab.content(props) || (
+                  <div class={styles.placeholder()}>
+                    {tab.placeholder}
+                  </div>
+                )}
+              </Match>
+            )}
+          </For>
+        </Switch>
+      </div>
     </div>
   );
 };
