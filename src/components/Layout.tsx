@@ -1,4 +1,6 @@
 import { createEffect, createSignal, JSXElement, onMount } from "solid-js";
+import Menu from 'lucide-solid/icons/menu';
+import Grid3x3 from 'lucide-solid/icons/grid-3x3';
 // import "~/app.css";
 
 function LayoutContainer(props: { children: JSXElement }) {
@@ -275,7 +277,7 @@ export default function MyLayout(props: {
           >
             {/* Application grid icon */}
             <div class="flex justify-center items-center w-full">
-              <MenuIcon />
+              <Menu class="w-5 h-5 text-white" />
             </div>
           </button>
         </div>
@@ -284,21 +286,6 @@ export default function MyLayout(props: {
   );
 }
 
-const ApplicationGridIcon = () => {
-  return (
-    <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z" />
-    </svg>
-  );
-};
-
-const MenuIcon = () => {
-  return (
-    <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
-    </svg>
-  );
-};
 
 const SidebarContent = () => {
   return (
