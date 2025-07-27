@@ -1,5 +1,8 @@
 import { createSignal, JSXElement, Switch, Match, For } from "solid-js";
 import { tv } from "tailwind-variants";
+import FileText from "lucide-solid/icons/file-text";
+import Search from "lucide-solid/icons/search";
+import Link from "lucide-solid/icons/link";
 
 export type SidebarTabId = "files" | "search" | "backlinks";
 
@@ -14,6 +17,7 @@ interface SidebarTabsProps {
 interface TabConfig {
   id: SidebarTabId;
   label: string;
+  icon: typeof FileText;
   content: (props: SidebarTabsProps) => JSXElement;
   placeholder?: string;
 }
@@ -42,17 +46,20 @@ const tabs: TabConfig[] = [
   {
     id: "files",
     label: "Files",
+    icon: FileText,
     content: (props) => props.filesContent,
   },
   {
     id: "search",
     label: "Search",
+    icon: Search,
     content: (props) => props.searchContent,
     placeholder: "Search functionality coming soon",
   },
   {
     id: "backlinks",
     label: "Backlinks",
+    icon: Link,
     content: (props) => props.backlinksContent,
     placeholder: "Backlinks functionality coming soon",
   },
@@ -79,7 +86,7 @@ export const SidebarTabs = (props: SidebarTabsProps) => {
               class={styles.tab({ active: activeTab() === tab.id })}
               onClick={() => handleTabChange(tab.id)}
             >
-              {tab.label}
+              <tab.icon size={16} />
             </button>
           )}
         </For>
