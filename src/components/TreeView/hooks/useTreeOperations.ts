@@ -2,7 +2,7 @@ import { createMemo } from "solid-js";
 import { TreeNode, TreeViewProps } from "../types";
 import { TreeState } from "./useTreeState";
 import { VIRTUAL_ROOT_ID, REFRESH_TREE_AFTER_RENAME } from "../constants";
-import { getParentId, getPathToNode, findNodeInChildren } from "../utils";
+import { getParentId, getPathToNode, findNodeInChildren, flattenTree } from "../utils";
 
 export interface TreeOperations {
   handleSelect: (node: TreeNode) => void;
@@ -268,6 +268,29 @@ export const useTreeOperations = (
     const targetNodeId = nodeId || state.focusedNode()?.id;
     if (!targetNodeId || !props.onDelete) return;
 
+    // Before deleting, find the item to focus next
+    let itemToFocusNext: TreeNode | null = null;
+    
+    if (state.focusedNode()?.id === targetNodeId) {
+      // Get flattened tree to find previous/next item
+      const rootChildren = state.loadedChildren().get(VIRTUAL_ROOT_ID);
+      if (rootChildren) {
+        const flattened = flattenTree(rootChildren, 0, state.expandedNodes, state.loadedChildren);
+        const currentIndex = flattened.findIndex(n => n.id === targetNodeId);
+        
+        if (currentIndex !== -1) {
+          // Try to focus the previous item
+          if (currentIndex > 0) {
+            itemToFocusNext = flattened[currentIndex - 1];
+          }
+          // If it's the first item, focus the next one
+          else if (currentIndex < flattened.length - 1) {
+            itemToFocusNext = flattened[currentIndex + 1];
+          }
+        }
+      }
+    }
+
     try {
       const success = await props.onDelete(targetNodeId);
       if (success) {
@@ -275,11 +298,17 @@ export const useTreeOperations = (
         const parentId = getParentIdFn(targetNodeId) || VIRTUAL_ROOT_ID;
 
         // Clear states if they were on the deleted node
-        if (state.focusedNode()?.id === targetNodeId) state.setFocusedNode(null);
         if (state.selectedNode()?.id === targetNodeId) state.setSelectedNode(null);
         if (state.cutNodeId() === targetNodeId) state.setCutNodeId(undefined);
 
         refreshParents([parentId]);
+
+        // Focus the next item if we found one
+        if (itemToFocusNext) {
+          state.setFocusedNode(itemToFocusNext);
+        } else if (state.focusedNode()?.id === targetNodeId) {
+          state.setFocusedNode(null);
+        }
       }
     } catch (error) {
       console.warn("Delete operation failed:", error);
