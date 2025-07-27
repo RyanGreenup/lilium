@@ -231,7 +231,9 @@ export default function MyLayout(props: {
       <div
         classList={{
           // Basic Layout
-          "flex justify-center items-center p-4": true,
+          "min-h-full max-w-full": true,
+          // This caused a stripe in the login page.
+          // "flex justify-center items-center p-4": false,
           // Desktop Layout
           "mb-bottom_header": isBottomVisible(),
           "md:ml-sidebar_width": isDrawerVisible(),
