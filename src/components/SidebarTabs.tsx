@@ -76,14 +76,42 @@ export const SidebarTabs = (props: SidebarTabsProps) => {
     props.onTabChange?.(tabId);
   };
 
+  const handleKeyDown = (event: KeyboardEvent) => {
+    const currentIndex = tabs.findIndex((tab) => tab.id === activeTab());
+    let newIndex: number;
+
+    switch (event.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        event.preventDefault();
+        newIndex = (currentIndex + 1) % tabs.length;
+        handleTabChange(tabs[newIndex].id);
+        break;
+      case "ArrowLeft":
+      case "ArrowUp":
+        event.preventDefault();
+        newIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+        handleTabChange(tabs[newIndex].id);
+        break;
+    }
+  };
+
   return (
     <div class={styles.container()}>
       {/* Tab Navigation */}
-      <div class={styles.tabList()}>
+      <div
+        class={styles.tabList()}
+        role="tablist"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+      >
         <For each={tabs}>
           {(tab) => (
             <button
               class={styles.tab({ active: activeTab() === tab.id })}
+              role="tab"
+              tabIndex={-1}
+              aria-selected={activeTab() === tab.id}
               onClick={() => handleTabChange(tab.id)}
             >
               <tab.icon size={16} />
