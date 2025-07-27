@@ -1,4 +1,5 @@
 import { createEffect, createSignal, JSXElement, onMount } from "solid-js";
+import { tv } from "tailwind-variants";
 // import "~/app.css";
 
 function LayoutContainer(props: { children: JSXElement }) {
@@ -29,6 +30,97 @@ const Z_INDICES = {
   sidebar: "z-10",
 };
 
+const layoutVariants = tv({
+  slots: {
+    overlay: [
+      "fixed inset-0",
+      "bg-black/50",
+      "backdrop-blur-sm",
+      Z_INDICES.overlay,
+      "transition-opacity duration-300 ease-in-out",
+      "md:hidden"
+    ].join(" "),
+    sidebar: [
+      "bg-base-200 border border-base-300",
+      "fixed",
+      "inset-x-0",
+      "bottom-0",
+      Z_INDICES.mobileDrawer,
+      "md:w-sidebar_width",
+      "md:top-0",
+      "md:left-0",
+      "md:inset-y-0"
+    ].join(" "),
+    sidebarInner: "flex flex-col h-full",
+    dragHandle: "md:hidden",
+    dragButton: "bg-transparent hover:bg-gray-200/20 rounded-full w-16 h-8 flex items-center justify-center transition-colors",
+    dragBar: "bg-gray-300 hover:bg-gray-400 rounded-full w-12 h-1 transition-colors",
+    sidebarContent: "flex-1 p-4 overflow-hidden",
+    resizeHandle: [
+      "hidden md:block",
+      "absolute right-0 top-0",
+      "w-1 h-full",
+      "bg-base-300 hover:bg-secondary cursor-col-resize transition-colors"
+    ].join(" "),
+    mainContent: [
+      "flex justify-center items-center p-4"
+    ].join(" "),
+    bottomBar: [
+      "bg-base-200 border border-base-300",
+      "fixed",
+      "inset-x-0 h-bottom_header bottom-0",
+      Z_INDICES.bottomHeader,
+      "transition-all duration-300 ease-in-out"
+    ].join(" "),
+    menuButton: "flex items-center space-x-2 bg-primary hover:bg-primary/80 px-4 h-full transition-colors w-24",
+    menuIcon: "flex justify-center items-center w-full"
+  },
+  variants: {
+    drawerVisible: {
+      true: {
+        overlay: "opacity-100 pointer-events-auto",
+        sidebar: "",
+        mainContent: "md:ml-sidebar_width"
+      },
+      false: {
+        overlay: "opacity-0 pointer-events-none",
+        sidebar: "translate-y-full md:-translate-x-full md:translate-y-0",
+        mainContent: ""
+      }
+    },
+    drawerMaximized: {
+      true: {
+        sidebar: "h-between_headers"
+      },
+      false: {
+        sidebar: "h-1/2 md:h-auto"
+      }
+    },
+    bottomVisible: {
+      true: {
+        sidebar: "mb-bottom_header",
+        mainContent: "mb-bottom_header",
+        bottomBar: ""
+      },
+      false: {
+        sidebar: "",
+        mainContent: "",
+        bottomBar: "translate-y-full"
+      }
+    },
+    resizing: {
+      true: {
+        sidebar: "transition-none",
+        mainContent: "transition-none"
+      },
+      false: {
+        sidebar: "transition-transform duration-300 ease-in-out",
+        mainContent: "transition-all duration-300 ease-in-out"
+      }
+    }
+  }
+});
+
 export default function MyLayout(props: {
   children: JSXElement;
   sidebarContent: JSXElement;
@@ -38,6 +130,13 @@ export default function MyLayout(props: {
   const [isDrawerVisible, setIsDrawerVisible] = createSignal(false);
   const [isDrawerMaximized, setIsDrawerMaximized] = createSignal(false);
   const [isResizing, setIsResizing] = createSignal(false);
+  
+  const styles = () => layoutVariants({
+    drawerVisible: isDrawerVisible(),
+    drawerMaximized: isDrawerMaximized(),
+    bottomVisible: isBottomVisible(),
+    resizing: isResizing()
+  });
 
   let resizeRef!: HTMLDivElement;
   let startX = 0;
@@ -151,115 +250,51 @@ export default function MyLayout(props: {
     <div>
       {/* Overlay */}
       <div
-        classList={{
-          "fixed inset-0": true,
-          "bg-black/50 ": true,
-          "backdrop-blur-sm": DRAWER_BLUR,
-          [Z_INDICES.overlay]: true,
-          "opacity-0 pointer-events-none": !isDrawerVisible(),
-          "opacity-100": isDrawerVisible(),
-          "pointer-events-auto": isDrawerVisible(),
-          "transition-opacity duration-300 ease-in-out": true,
-          "md:hidden": true,
-        }}
+        class={styles().overlay()}
         onclick={() => setIsDrawerVisible(false)}
       />
 
       {/* Sidebar */}
       <div
-        classList={{
-          "bg-base-200 border border-base-300": true,
-          fixed: true,
-          "inset-x-0": true,
-          "bottom-0": true,
-          "mb-bottom_header": isBottomVisible(),
-          "translate-y-full": !isDrawerVisible(),
-          [Z_INDICES.mobileDrawer]: true,
-
-          // If full lower drawer
-          "h-1/2 md:h-auto": !isDrawerMaximized(),
-          "h-between_headers": isDrawerMaximized(),
-
-          // Now Handle Desktop
-          "md:w-sidebar_width": true,
-          "md:top-0": true,
-          "md:left-0": true,
-          "md:inset-y-0": true,
-          "md:-translate-x-full md:translate-y-0": !isDrawerVisible(),
-
-          // Animate movements
-          "transition-transform duration-300 ease-in-out": !isResizing(),
-          "transition-none": isResizing(),
-        }}
+        class={styles().sidebar()}
+        style={{ width: `${drawerWidth()}px` }}
       >
-        <div class="flex flex-col h-full">
+        <div class={styles().sidebarInner()}>
           <div class="flex justify-center">
             {/* Drag Handle */}
-            <div class="md:hidden">
+            <div class={styles().dragHandle()}>
               <button
-                class="bg-transparent hover:bg-gray-200/20 rounded-full w-16 h-8 flex items-center justify-center transition-colors"
+                class={styles().dragButton()}
                 onclick={() => {
                   setIsDrawerMaximized(!isDrawerMaximized());
                 }}
               >
-                <div class="bg-gray-300 hover:bg-gray-400 rounded-full w-12 h-1 transition-colors"></div>
+                <div class={styles().dragBar()}></div>
               </button>
             </div>
           </div>
-          <div class="flex-1 p-4 overflow-hidden">{props.sidebarContent}</div>
+          <div class={styles().sidebarContent()}>{props.sidebarContent}</div>
         </div>
         {/* Resize Handle */}
         <div
           ref={resizeRef}
+          class={styles().resizeHandle()}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
-          classList={{
-            // Visibility & Responsive
-            "hidden md:block": true,
-            // Positioning
-            "absolute right-0 top-0": true,
-            // Sizing
-            "w-1 h-full": true,
-            // Styling & Interaction
-            "bg-base-300 hover:bg-secondary cursor-col-resize transition-colors":
-              true,
-          }}
         />
       </div>
 
       {/* Main Content */}
-      <div
-        classList={{
-          // Basic Layout
-          "flex justify-center items-center p-4": true,
-          // Desktop Layout
-          "mb-bottom_header": isBottomVisible(),
-          "md:ml-sidebar_width": isDrawerVisible(),
-          "transition-all duration-300 ease-in-out": !isResizing(),
-          "transition-none": isResizing(),
-        }}
-      >
+      <div class={styles().mainContent()}>
         {props.children}
       </div>
 
       {/* Bottom */}
-      <div
-        classList={{
-          "bg-base-200 border border-base-300": true,
-          fixed: true,
-          "inset-x-0 h-bottom_header bottom-0": true,
-
-          [Z_INDICES.bottomHeader]: true,
-
-          // Allow Hiding Bottm
-          "translate-y-full": !isBottomVisible(),
-          "transition-all duration-300 ease-in-out": true,
-        }}
-      >
-        <div class="h-full flex justify-end  md:justify-start">
+      <div class={styles().bottomBar()}>
+        <div class="h-full flex justify-end md:justify-start">
           {/* KDE Plasma-style start menu button */}
           <button
-            class="flex items-center space-x-2 bg-primary hover:bg-primary/80 px-4 h-full transition-colors w-24"
+            class={styles().menuButton()}
             onclick={() => {
               setIsDrawerVisible(!isDrawerVisible());
             }}
@@ -272,7 +307,7 @@ export default function MyLayout(props: {
             }}
           >
             {/* Application grid icon */}
-            <div class="flex justify-center items-center w-full">
+            <div class={styles().menuIcon()}>
               <MenuIcon />
             </div>
           </button>
@@ -282,17 +317,23 @@ export default function MyLayout(props: {
   );
 }
 
+const iconVariants = tv({
+  base: "w-5 h-5 text-white"
+});
+
 const ApplicationGridIcon = () => {
+  const iconClass = iconVariants();
   return (
-    <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+    <svg class={iconClass} fill="currentColor" viewBox="0 0 24 24">
       <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z" />
     </svg>
   );
 };
 
 const MenuIcon = () => {
+  const iconClass = iconVariants();
   return (
-    <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+    <svg class={iconClass} fill="currentColor" viewBox="0 0 24 24">
       <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
     </svg>
   );
@@ -330,6 +371,10 @@ const Article = () => {
   );
 };
 
+const sliderVariants = tv({
+  base: "w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+});
+
 const Slider = (props: {
   value: number;
   onInput: (value: number) => void;
@@ -338,6 +383,7 @@ const Slider = (props: {
   step?: number;
   class?: string;
 }) => {
+  const sliderClass = sliderVariants();
   return (
     <input
       type="range"
@@ -345,7 +391,7 @@ const Slider = (props: {
       min={props.min ?? 0}
       max={props.max ?? 100}
       step={props.step ?? 1}
-      class={`w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider ${props.class || ""}`}
+      class={`${sliderClass} ${props.class || ""}`}
       onInput={(e) => props.onInput(Number(e.currentTarget.value))}
     />
   );
