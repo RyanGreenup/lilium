@@ -1,11 +1,15 @@
 import { createSignal, JSXElement, Switch, Match, For, onMount } from "solid-js";
 import { tv } from "tailwind-variants";
 import { Transition } from "solid-transition-group";
+import { useSubmission } from "@solidjs/router";
 import FileText from "lucide-solid/icons/file-text";
 import Search from "lucide-solid/icons/search";
 import Link from "lucide-solid/icons/link";
+import LogOut from "lucide-solid/icons/log-out";
+import User from "lucide-solid/icons/user";
+import { logout } from "~/lib/auth";
 
-export type SidebarTabId = "files" | "search" | "backlinks";
+export type SidebarTabId = "files" | "search" | "backlinks" | "settings";
 
 interface SidebarTabsProps {
   activeTab?: SidebarTabId;
@@ -13,6 +17,7 @@ interface SidebarTabsProps {
   filesContent: JSXElement;
   searchContent?: JSXElement;
   backlinksContent?: JSXElement;
+  settingsContent?: JSXElement;
 }
 
 interface TabConfig {
@@ -52,7 +57,7 @@ const sidebarTabs = tv({
   },
 });
 
-const tabs: TabConfig[] = [
+const getTabsConfig = (loggingOut: any): TabConfig[] => [
   {
     id: "files",
     label: "Files",
@@ -73,6 +78,25 @@ const tabs: TabConfig[] = [
     content: (props) => props.backlinksContent,
     placeholder: "Backlinks functionality coming soon",
   },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: User,
+    content: (props) => props.settingsContent || (
+      <div class="p-4">
+        <form action={logout} method="post">
+          <button
+            type="submit"
+            class="px-3 py-2 text-error w-full text-left flex items-center hover:bg-error/10 rounded-lg transition-colors"
+            disabled={loggingOut.pending}
+          >
+            <LogOut size={16} class="mr-2" />
+            {loggingOut.pending ? "Logging out..." : "Logout"}
+          </button>
+        </form>
+      </div>
+    ),
+  },
 ];
 
 export const SidebarTabs = (props: SidebarTabsProps) => {
@@ -80,6 +104,8 @@ export const SidebarTabs = (props: SidebarTabsProps) => {
     props.activeTab || "files",
   );
   const styles = sidebarTabs();
+  const loggingOut = useSubmission(logout);
+  const tabs = getTabsConfig(loggingOut);
   let tabListRef: HTMLDivElement | undefined;
 
   const handleTabChange = (tabId: SidebarTabId) => {
