@@ -21,7 +21,7 @@ interface TabConfig {
 const sidebarTabs = tv({
   slots: {
     container: "flex flex-col h-full",
-    tabList: "flex border-b border-base-300",
+    tabList: "flex border-b border-base-300 overflow-x-auto",
     tab: "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
     content: "flex-1 overflow-hidden",
     placeholder: "p-4 text-center text-base-content/50",
@@ -92,9 +92,7 @@ export const SidebarTabs = (props: SidebarTabsProps) => {
             {(tab) => (
               <Match when={activeTab() === tab.id}>
                 {tab.content(props) || (
-                  <div class={styles.placeholder()}>
-                    {tab.placeholder}
-                  </div>
+                  <div class={styles.placeholder()}>{tab.placeholder}</div>
                 )}
               </Match>
             )}
