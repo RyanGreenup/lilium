@@ -2,6 +2,41 @@ import { ContextMenu as KobalteContextMenu } from "@kobalte/core/context-menu";
 import { TreeNode } from "./types";
 import { JSX } from "solid-js";
 import { useTreeContext } from "./context";
+import { tv } from "tailwind-variants";
+
+// Tailwind Variants for context menu styling
+const contextMenuStyles = tv({
+  slots: {
+    trigger: "w-full",
+    content: [
+      "z-50 min-w-48 rounded-md bg-base-100 p-1 shadow-lg border border-base-300",
+      "animate-in fade-in-0 zoom-in-95"
+    ],
+    subContent: [
+      "z-50 min-w-32 rounded-md bg-base-100 p-1 shadow-lg border border-base-300",
+      "animate-in fade-in-0 zoom-in-95"
+    ],
+    item: [
+      "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
+      "hover:bg-base-200 focus:bg-base-200",
+      "data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+    ],
+    subTrigger: [
+      "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
+      "hover:bg-base-200 focus:bg-base-200 data-[state=open]:bg-base-200"
+    ],
+    separator: "my-1 h-px bg-base-300",
+    icon: "ml-auto h-4 w-4"
+  },
+  variants: {
+    intent: {
+      default: {},
+      destructive: {
+        item: "text-error"
+      }
+    }
+  }
+});
 
 export interface ContextMenuProps {
   children: JSX.Element;
@@ -26,6 +61,7 @@ export interface ContextMenuProps {
 
 export const ContextMenu = (props: ContextMenuProps) => {
   const ctx = useTreeContext();
+  const styles = contextMenuStyles();
 
   const handleOpenChange = (open: boolean) => {
     ctx.setContextMenuOpen(open);
@@ -105,22 +141,22 @@ export const ContextMenu = (props: ContextMenuProps) => {
 
   return (
     <KobalteContextMenu onOpenChange={handleOpenChange}>
-      <KobalteContextMenu.Trigger class="w-full">
+      <KobalteContextMenu.Trigger class={styles.trigger()}>
         {props.children}
       </KobalteContextMenu.Trigger>
       
       <KobalteContextMenu.Portal>
-        <KobalteContextMenu.Content class="z-50 min-w-48 rounded-md bg-base-100 p-1 shadow-lg border border-base-300 animate-in fade-in-0 zoom-in-95">
+        <KobalteContextMenu.Content class={styles.content()}>
           {/* Cut/Paste Operations */}
           <KobalteContextMenu.Item
-            class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+            class={styles.item()}
             onSelect={handleCut}
           >
             Cut
           </KobalteContextMenu.Item>
           
           <KobalteContextMenu.Item
-            class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+            class={styles.item()}
             onSelect={handlePaste}
             disabled={!props.canPaste}
           >
@@ -128,67 +164,67 @@ export const ContextMenu = (props: ContextMenuProps) => {
           </KobalteContextMenu.Item>
 
           <KobalteContextMenu.Item
-            class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+            class={styles.item()}
             onSelect={handleMoveToRoot}
           >
             Move to Root
           </KobalteContextMenu.Item>
           
-          <KobalteContextMenu.Separator class="my-1 h-px bg-base-300" />
+          <KobalteContextMenu.Separator class={styles.separator()} />
           
           {/* CRUD Operations */}
           <KobalteContextMenu.Item
-            class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+            class={styles.item()}
             onSelect={handleRename}
           >
             Rename
           </KobalteContextMenu.Item>
           
           <KobalteContextMenu.Item
-            class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+            class={styles.item()}
             onSelect={handleCreateNew}
           >
             New Item
           </KobalteContextMenu.Item>
           
-          <KobalteContextMenu.Separator class="my-1 h-px bg-base-300" />
+          <KobalteContextMenu.Separator class={styles.separator()} />
 
           {/* Expansion Controls */}
           <KobalteContextMenu.Sub>
-            <KobalteContextMenu.SubTrigger class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200 data-[state=open]:bg-base-200">
+            <KobalteContextMenu.SubTrigger class={styles.subTrigger()}>
               Expand/Collapse
-              <svg class="ml-auto h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class={styles.icon()} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
             </KobalteContextMenu.SubTrigger>
             <KobalteContextMenu.Portal>
-              <KobalteContextMenu.SubContent class="z-50 min-w-32 rounded-md bg-base-100 p-1 shadow-lg border border-base-300 animate-in fade-in-0 zoom-in-95">
+              <KobalteContextMenu.SubContent class={styles.subContent()}>
                 <KobalteContextMenu.Item
-                  class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200"
+                  class={styles.item()}
                   onSelect={handleExpandAll}
                 >
                   Expand All
                 </KobalteContextMenu.Item>
                 <KobalteContextMenu.Item
-                  class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200"
+                  class={styles.item()}
                   onSelect={handleCollapseAll}
                 >
                   Collapse All
                 </KobalteContextMenu.Item>
                 <KobalteContextMenu.Item
-                  class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200"
+                  class={styles.item()}
                   onSelect={handleCollapseAllExceptFocused}
                 >
                   Collapse All Except Focused
                 </KobalteContextMenu.Item>
                 <KobalteContextMenu.Item
-                  class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200"
+                  class={styles.item()}
                   onSelect={handleCollapseAllExceptSelected}
                 >
                   Collapse All Except Selected
                 </KobalteContextMenu.Item>
                 <KobalteContextMenu.Item
-                  class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200"
+                  class={styles.item()}
                   onSelect={handleFoldCycle}
                 >
                   Fold Cycle
@@ -199,14 +235,14 @@ export const ContextMenu = (props: ContextMenuProps) => {
 
           {/* Navigation & Special Operations */}
           <KobalteContextMenu.Item
-            class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+            class={styles.item()}
             onSelect={handleFocusAndReveal}
           >
             Focus and Reveal
           </KobalteContextMenu.Item>
 
           <KobalteContextMenu.Item
-            class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+            class={styles.item()}
             onSelect={handleHoistHere}
             disabled={!props.hasChildren}
           >
@@ -214,17 +250,17 @@ export const ContextMenu = (props: ContextMenuProps) => {
           </KobalteContextMenu.Item>
 
           <KobalteContextMenu.Item
-            class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200"
+            class={styles.item()}
             onSelect={handleRefreshTree}
           >
             Refresh Tree
           </KobalteContextMenu.Item>
           
-          <KobalteContextMenu.Separator class="my-1 h-px bg-base-300" />
+          <KobalteContextMenu.Separator class={styles.separator()} />
           
           {/* Destructive Operations */}
           <KobalteContextMenu.Item
-            class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-base-200 focus:bg-base-200 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 text-error"
+            class={styles.item({ intent: "destructive" })}
             onSelect={handleDelete}
           >
             Delete
