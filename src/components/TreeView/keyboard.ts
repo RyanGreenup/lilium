@@ -21,8 +21,12 @@ export const createKeyboardHandler = (
   currentNodeIndex: Accessor<number>,
   expandedNodes: Accessor<Set<string>>,
   handlers: KeyboardHandlers,
+  contextMenuOpen: Accessor<boolean>
 ) => {
   return (e: KeyboardEvent): void => {
+    // Don't handle keyboard events when context menu is open
+    if (contextMenuOpen()) return;
+    
     const flattened = flattenedNodes();
     const currentNode = focusedNode();
     if (!currentNode) return;

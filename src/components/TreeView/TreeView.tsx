@@ -1,4 +1,4 @@
-import { createMemo, For, onMount, splitProps, Suspense } from "solid-js";
+import { createMemo, createSignal, For, onMount, splitProps, Suspense } from "solid-js";
 
 import { TreeItem } from "./TreeItem";
 import { VIRTUAL_ROOT_ID } from "./constants";
@@ -19,6 +19,9 @@ export const TreeView = (props: TreeViewProps) => {
 
   let treeRef: HTMLUListElement | undefined;
 
+  // Context menu state
+  const [contextMenuOpen, setContextMenuOpen] = createSignal(false);
+
   // Initialize hooks
   const state = useTreeState(others);
   const operations = useTreeOperations(state, others, {
@@ -26,7 +29,7 @@ export const TreeView = (props: TreeViewProps) => {
       return treeRef;
     },
   });
-  const { handleKeyDown } = useTreeKeyboard(state, operations);
+  const { handleKeyDown } = useTreeKeyboard(state, operations, contextMenuOpen);
 
   // Setup effects (Auto Scrolling Etc.)
   useTreeEffects(state, operations, {
@@ -68,6 +71,8 @@ export const TreeView = (props: TreeViewProps) => {
       loadedChildren: state.loadedChildren,
       cutNodeId: state.cutNodeId,
       editingNodeId: state.editingNodeId,
+      contextMenuOpen,
+      setContextMenuOpen,
       onSelect: operations.handleSelect,
       onFocus: operations.handleFocus,
       onExpand: operations.handleExpand,

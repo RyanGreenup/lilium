@@ -12,7 +12,8 @@ export interface TreeKeyboardHandlers {
 
 export const useTreeKeyboard = (
   state: TreeState,
-  operations: TreeOperations
+  operations: TreeOperations,
+  contextMenuOpen: Accessor<boolean>
 ): TreeKeyboardHandlers => {
   const flattenedNodes = createMemo(() => {
     const children = state.loadedChildren().get(VIRTUAL_ROOT_ID);
@@ -46,7 +47,8 @@ export const useTreeKeyboard = (
     state.focusedNode,
     currentNodeIndex,
     state.expandedNodes,
-    keyboardHandlers
+    keyboardHandlers,
+    contextMenuOpen
   );
 
   return {

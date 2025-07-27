@@ -40,6 +40,8 @@ export interface TreeContextValue {
   loadedChildren: Accessor<Map<string, TreeNode[]>>;
   cutNodeId: Accessor<string | undefined>;
   editingNodeId: Accessor<string | undefined>;
+  contextMenuOpen: Accessor<boolean>;
+  setContextMenuOpen: (open: boolean) => void;
   onSelect: TreeSelectHandler;
   onFocus: TreeFocusHandler;
   onExpand: TreeExpandHandler;

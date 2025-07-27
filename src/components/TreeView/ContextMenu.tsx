@@ -1,6 +1,7 @@
 import { ContextMenu as KobalteContextMenu } from "@kobalte/core/context-menu";
 import { TreeNode } from "./types";
 import { JSX } from "solid-js";
+import { useTreeContext } from "./context";
 
 export interface ContextMenuProps {
   children: JSX.Element;
@@ -24,6 +25,12 @@ export interface ContextMenuProps {
 }
 
 export const ContextMenu = (props: ContextMenuProps) => {
+  const ctx = useTreeContext();
+
+  const handleOpenChange = (open: boolean) => {
+    ctx.setContextMenuOpen(open);
+  };
+
   const handleCut = () => {
     if (props.node) {
       props.onCut?.(props.node.id);
@@ -97,7 +104,7 @@ export const ContextMenu = (props: ContextMenuProps) => {
   };
 
   return (
-    <KobalteContextMenu>
+    <KobalteContextMenu onOpenChange={handleOpenChange}>
       <KobalteContextMenu.Trigger class="w-full">
         {props.children}
       </KobalteContextMenu.Trigger>
