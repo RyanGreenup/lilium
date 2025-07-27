@@ -11,6 +11,7 @@ import { TreeItemProps } from "./types";
 import { useTreeContext } from "./context";
 import { ANIMATION_CLASSES } from "./constants";
 import { LoadingTreeItem } from "./LoadingTreeItem";
+import { ContextMenu } from "./ContextMenu";
 
 const ExpandCollapseIcon = (props: { expanded: boolean; class?: string }) => (
   <svg
@@ -78,9 +79,30 @@ export const TreeItem = (props: TreeItemProps) => {
     ctx.onSelect(props.node);
   };
 
-  const handleContextMenu = (e: MouseEvent) => {
-    e.preventDefault();
-    ctx.onContextMenu?.(props.node, e);
+  const handleCut = () => {
+    ctx.onCut(props.node.id);
+  };
+
+  const handlePaste = () => {
+    ctx.onPaste(props.node.id);
+  };
+
+  const handleMoveToRoot = () => {
+    ctx.onMoveToRoot(props.node.id);
+  };
+
+  const handleRename = () => {
+    ctx.onRename(props.node.id);
+  };
+
+  const handleCreateNew = () => {
+    // Note: Create new operation would be handled by parent component
+    // For now, we just trigger the context menu callback
+  };
+
+  const handleDelete = () => {
+    // Note: Delete operation would be handled by parent component
+    // For now, we just trigger the context menu callback
   };
 
   const handleExpandClick = (e: MouseEvent) => {
@@ -90,12 +112,15 @@ export const TreeItem = (props: TreeItemProps) => {
 
   const startEditing = () => {
     setEditingLabel(props.node.label);
-    setTimeout(() => {
-      if (inputRef) {
-        inputRef.focus();
-        inputRef.select();
-      }
-    }, 0);
+    // Use requestAnimationFrame to ensure DOM is updated before focusing
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (inputRef) {
+          inputRef.focus();
+          inputRef.select();
+        }
+      });
+    });
   };
 
   const commitEdit = () => {
@@ -121,77 +146,100 @@ export const TreeItem = (props: TreeItemProps) => {
   };
 
   const handleInputBlur = () => {
-    commitEdit();
+    // Only commit if we have a valid value
+    const trimmed = editingLabel().trim();
+    if (trimmed) {
+      commitEdit();
+    } else {
+      cancelEdit();
+    }
   };
 
   // Start editing when node becomes the editing target
-  createEffect(() => {
-    if (isEditing()) {
+  createEffect((prevEditing) => {
+    const currentlyEditing = isEditing();
+    // Only start editing if we weren't editing before and now we are
+    if (!prevEditing && currentlyEditing) {
       startEditing();
     }
-  });
+    return currentlyEditing;
+  }, false);
 
   return (
-    <li>
-      <a
-        classList={{
-          "items-center gap-2 flex": true,
-          active: isSelected(),
-          "bg-primary/20": isFocused() && !isSelected(),
-          "bg-primary text-primary-content": isSelected(),
-          "opacity-50 bg-warning text-warning-content": isCut(),
-        }}
-        onClick={handleClick}
-        onContextMenu={handleContextMenu}
-        data-node-id={props.node.id}
-        role="treeitem"
-        aria-expanded={expanded()}
-        aria-level={level() + 1}
-        aria-selected={isSelected()}
-      >
-        <Show
-          when={props.node.hasChildren}
-          fallback={<div class="w-4 h-4 opacity-0" />}
+    <ContextMenu
+      node={props.node}
+      onCut={handleCut}
+      onPaste={handlePaste}
+      onMoveToRoot={handleMoveToRoot}
+      onRename={handleRename}
+      onCreateNew={handleCreateNew}
+      onDelete={handleDelete}
+      canPaste={!!ctx.cutNodeId()}
+    >
+      <li>
+        <a
+          classList={{
+            "items-center gap-2 flex w-full": true,
+            active: isSelected(),
+            "hover:bg-base-300": !isSelected() && !isFocused(),
+            "bg-primary/20": isFocused() && !isSelected(),
+            "bg-primary text-primary-content": isSelected(),
+            "opacity-50 bg-warning text-warning-content": isCut(),
+          }}
+          style={{ "padding-left": `${level() * 1.5 + 0.5}rem` }}
+          onClick={handleClick}
+          data-node-id={props.node.id}
+          role="treeitem"
+          aria-expanded={expanded()}
+          aria-level={level() + 1}
+          aria-selected={isSelected()}
         >
-          <button
-            class="btn btn-ghost btn-xs btn-square"
-            onClick={handleExpandClick}
-            tabIndex={-1}
-            aria-label={expanded() ? "Collapse" : "Expand"}
+          <Show
+            when={props.node.hasChildren}
+            fallback={<div class="w-4 h-4 opacity-0" />}
           >
-            <ExpandCollapseIcon expanded={expanded()} />
-          </button>
-        </Show>
-        <Show
-          when={isEditing()}
-          fallback={<span class="flex-1">{props.node.label}</span>}
-        >
-          <input
-            ref={inputRef}
-            type="text"
-            class="input input-sm flex-1 min-w-0 text-base-content"
-            value={editingLabel()}
-            onInput={(e) => setEditingLabel(e.currentTarget.value)}
-            onKeyDown={handleInputKeyDown}
-            onBlur={handleInputBlur}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </Show>
-      </a>
+            <button
+              class="btn btn-ghost btn-xs btn-square"
+              onClick={handleExpandClick}
+              tabIndex={-1}
+              aria-label={expanded() ? "Collapse" : "Expand"}
+            >
+              <ExpandCollapseIcon expanded={expanded()} />
+            </button>
+          </Show>
+          <Show
+            when={isEditing()}
+            fallback={<span class="flex-1">{props.node.label}</span>}
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              class="input input-sm flex-1 min-w-0 text-base-content"
+              value={editingLabel()}
+              onInput={(e) => setEditingLabel(e.currentTarget.value)}
+              onKeyDown={handleInputKeyDown}
+              onBlur={handleInputBlur}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onFocus={(e) => e.stopPropagation()}
+            />
+          </Show>
+        </a>
 
-      <TreeElementTransition>
-        <Show when={expanded() && props.node.hasChildren}>
-          <ul>
-            <Suspense fallback={<LoadingTreeItem />}>
-              <For each={childrenResource()}>
-                {(child) => (
-                  <TreeItem node={{ ...child, level: level() + 1 }} />
-                )}
-              </For>
-            </Suspense>
-          </ul>
-        </Show>
-      </TreeElementTransition>
-    </li>
+        <TreeElementTransition>
+          <Show when={expanded() && props.node.hasChildren}>
+            <ul>
+              <Suspense fallback={<LoadingTreeItem />}>
+                <For each={childrenResource()}>
+                  {(child) => (
+                    <TreeItem node={{ ...child, level: level() + 1 }} />
+                  )}
+                </For>
+              </Suspense>
+            </ul>
+          </Show>
+        </TreeElementTransition>
+      </li>
+    </ContextMenu>
   );
 };
