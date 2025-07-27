@@ -7,8 +7,7 @@ init:
 
 run:
     mkdir -p .data && \
-    npm run dev
-    DB_PATH=./notes.sqlite pnpm run dev -- --host
+    npm run dev -- --host
 
 admin:
     SUDO_MODE="true" \
