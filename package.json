@@ -12,6 +12,7 @@
     "@solidjs/start": "^1.1.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/better-sqlite3": "^7.6.13",
+    "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.2.0",
     "bootstrap-icons": "^1.13.1",
     "daisyui": "^5.0.46",
