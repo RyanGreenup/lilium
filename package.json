@@ -17,6 +17,7 @@
     "daisyui": "^5.0.46",
     "solid-js": "^1.9.5",
     "solid-transition-group": "^0.3.0",
+    "tailwind-variants": "^1.0.0",
     "vinxi": "^0.5.3",
     "wunderbaum": "^0.13.0"
   },
