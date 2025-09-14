@@ -60,5 +60,8 @@ export async function register(username: string, password: string) {
 export function getSession() {
   return useSession({
     password: SESSION_SECRET,
+    cookie: {
+      secure: false, // Allow HTTP for managed VPN environments
+    },
   });
 }
