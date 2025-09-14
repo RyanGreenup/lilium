@@ -37,7 +37,7 @@ export const route = {
 
 export default function ConsumptionTracker() {
   const [showOnlyOverdue, setShowOnlyOverdue] = createSignal(false);
-  
+
   // Load real data from database
   const allConsumptions = createAsync(() => loadConsumptionItems());
   const overdueConsumptions = createAsync(() => loadOverdueConsumptionItems());
@@ -96,26 +96,51 @@ const ToggleComponent = (props: {
 
 const TimeStampToDateString = (timestamp: string | null, includeTime?: boolean) => {
   if (!timestamp) return "Never";
-  const date = new Date(timestamp + "Z");
+
+  // Handle different timestamp formats
+  let date: Date;
+  if (timestamp.includes('T')) {
+    // ISO format: "2025-09-07T00:00:00.000Z" or "2025-09-07T00:00:00.000"
+    if (!timestamp.endsWith('Z')) {
+      date = new Date(timestamp + 'Z');
+    } else {
+      date = new Date(timestamp);
+    }
+  } else {
+    // SQLite format: "2025-09-14 08:04:38"
+    date = new Date(timestamp + 'Z');
+  }
+
   if (includeTime) {
     return date.toLocaleString("en-AU", {
       timeZone: "Australia/Sydney",
       weekday: "short",
       day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     });
   }
   return date.toLocaleDateString("en-AU", {
     timeZone: "Australia/Sydney",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
 };
 
 const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
   const [notes, setNotes] = createSignal("");
   const [quantity, setQuantity] = createSignal(1);
-  const [consumptionDate, setConsumptionDate] = createSignal(new Date().toISOString().split('T')[0]);
-  
+  // Initialize with today's date
+  const getToday = () => {
+    const now = new Date();
+    // Use standard toISOString and extract date portion
+    return now.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+  };
+  const [consumptionDate, setConsumptionDate] = createSignal(getToday());
+
   // Load consumption history
   const history = createAsync(() => getConsumptionHistory(props.item.id, 10));
 
@@ -144,7 +169,7 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
       setAddSuccess(true);
       setNotes("");
       setQuantity(1);
-      setConsumptionDate(new Date().toISOString().split('T')[0]);
+      setConsumptionDate(getToday());
       setTimeout(() => setAddSuccess(false), 3000);
     } catch (error) {
       setAddError(true);
@@ -199,9 +224,9 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
 
   const statusColor = props.item.is_overdue ? "border-error" : "border-success";
   const lastConsumed = TimeStampToDateString(props.item.last_consumed_at, true);
-  const intervalText = props.item.interval_days >= 30 
+  const intervalText = props.item.interval_days >= 30
     ? `${Math.floor(props.item.interval_days / 30)} month${Math.floor(props.item.interval_days / 30) !== 1 ? 's' : ''}`
-    : props.item.interval_days >= 7 
+    : props.item.interval_days >= 7
       ? `${Math.floor(props.item.interval_days / 7)} week${Math.floor(props.item.interval_days / 7) !== 1 ? 's' : ''}`
       : `${props.item.interval_days} day${props.item.interval_days !== 1 ? 's' : ''}`;
 
@@ -262,16 +287,16 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
                 <p class="text-xs mb-1"><strong>Quantity:</strong> {selectedHistoryEntry()?.quantity}</p>
                 <p class="text-xs mb-3"><strong>Notes:</strong> {selectedHistoryEntry()?.notes || "No notes"}</p>
                 <div class="flex gap-2">
-                  <Button 
-                    size="xs" 
+                  <Button
+                    size="xs"
                     color="secondary"
                     onClick={() => startEditingEntry(selectedHistoryEntry())}
                   >
                     Edit
                   </Button>
-                  <Button 
-                    size="xs" 
-                    color="error" 
+                  <Button
+                    size="xs"
+                    color="error"
                     onClick={() => handleDeleteConsumption(selectedHistoryEntry()?.id)}
                   >
                     Delete
@@ -279,7 +304,7 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
                 </div>
               </div>
             </Show>
-            
+
             <Show when={isEditingEntry()}>
               <form action={updateConsumptionAction} method="post" onSubmit={handleUpdateConsumption}>
                 <input type="hidden" name="entryId" value={selectedHistoryEntry()?.id} />
@@ -291,7 +316,7 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
                   onInput={(e) => setEditDate(e.currentTarget.value)}
                   class="mb-2 text-xs"
                 />
-                
+
                 <Label class="text-xs">Edit Quantity</Label>
                 <Input
                   type="number"
@@ -302,7 +327,7 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
                   onInput={(e) => setEditQuantity(parseFloat(e.currentTarget.value) || 1)}
                   class="mb-2 text-xs"
                 />
-                
+
                 <Label class="text-xs">Edit Notes</Label>
                 <Textarea
                   name="notes"
@@ -312,14 +337,14 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
                   rows="2"
                   class="mb-3 text-xs font-mono"
                 />
-                
+
                 <div class="flex gap-2">
                   <Button type="submit" size="xs" color="primary">
                     Save
                   </Button>
-                  <Button 
-                    type="button" 
-                    size="xs" 
+                  <Button
+                    type="button"
+                    size="xs"
                     color="ghost"
                     onClick={cancelEditingEntry}
                   >
@@ -330,7 +355,7 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
             </Show>
           </div>
         </Show>
-        
+
         <Show when={updateSuccess()}>
           <Alert color="success" class="alert-sm mt-2">
             <span class="text-xs">Updated!</span>
@@ -346,8 +371,7 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
       {/* Add New Consumption Form */}
       <form class="mt-4" action={createConsumptionAction} method="post" onSubmit={handleAddConsumption}>
         <input type="hidden" name="consumptionItemId" value={props.item.id} />
-        <Label>New Consumption</Label>
-        
+
         <Label class="text-xs">Date</Label>
         <Input
           type="date"

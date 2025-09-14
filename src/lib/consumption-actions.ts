@@ -55,7 +55,8 @@ export const createConsumptionAction = action(async (formData: FormData) => {
   const notes = formData.get("notes") as string;
 
   // Convert date input (YYYY-MM-DD) to ISO datetime string
-  const consumedAtISO = new Date(consumedAt + 'T00:00:00.000Z').toISOString();
+  // Use noon UTC to avoid timezone edge cases while preserving the intended date
+  const consumedAtISO = new Date(consumedAt + 'T12:00:00.000Z').toISOString();
   
   const result = await dbCreateConsumptionEntry(
     consumptionItemId, 
@@ -74,7 +75,8 @@ export const updateConsumptionAction = action(async (formData: FormData) => {
   const notes = formData.get("notes") as string;
 
   // Convert date input (YYYY-MM-DD) to ISO datetime string
-  const consumedAtISO = new Date(consumedAt + 'T00:00:00.000Z').toISOString();
+  // Use noon UTC to avoid timezone edge cases while preserving the intended date
+  const consumedAtISO = new Date(consumedAt + 'T12:00:00.000Z').toISOString();
   
   const result = await dbUpdateConsumptionEntry(
     entryId, 
