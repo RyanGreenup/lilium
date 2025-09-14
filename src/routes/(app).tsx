@@ -1,4 +1,5 @@
 import { A, RouteDefinition } from "@solidjs/router";
+import { Candy } from "lucide-solid";
 import BrushCleaning from "lucide-solid/icons/brush-cleaning";
 
 import Camera from "lucide-solid/icons/camera";
@@ -70,8 +71,8 @@ const SidebarItems: VoidComponent = () => (
           },
           {
             name: "Consumption",
-            icon: <Cigarette class="w-4 h-4" />,
-            link: "tools/consumption",
+            icon: <Candy class="w-4 h-4" />,
+            link: "tools/consumption/report",
           },
         ]}
       >

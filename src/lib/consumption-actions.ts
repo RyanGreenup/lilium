@@ -101,3 +101,59 @@ export const updateConsumptionItemIntervalAction = action(async (formData: FormD
   const result = await dbUpdateConsumptionItemInterval(consumptionItemId, intervalDays);
   return result;
 });
+
+////////////////////////////////////////////////////////////////////////////////
+// Report Analytics ////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+export const loadConsumptionAnalytics = cache(async () => {
+  "use server";
+  const items = await getConsumptionItemsWithStatus();
+  
+  const analytics = await Promise.all(
+    items.map(async (item) => {
+      const stats = await dbGetConsumptionStats(item.id, 90);
+      return {
+        ...item,
+        ...stats,
+        // Calculate days until next allowed consumption
+        days_until_next: item.last_consumed_at 
+          ? Math.max(0, Math.ceil((new Date(item.next_allowed_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+          : 0,
+        // Calculate consumption frequency (consumptions per month)
+        consumption_frequency: stats.total_consumptions > 0 && stats.avg_days_between 
+          ? Math.round((30 / stats.avg_days_between) * 10) / 10 
+          : 0,
+      };
+    })
+  );
+  
+  return analytics;
+}, "consumption-analytics");
+
+export const loadConsumptionSummary = cache(async () => {
+  "use server";
+  const items = await getConsumptionItemsWithStatus();
+  const totalItems = items.length;
+  const overdueItems = items.filter(item => item.is_overdue).length;
+  const onTimeItems = totalItems - overdueItems;
+  
+  // Get total consumptions this week across all items
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  
+  let consumptionsThisWeek = 0;
+  for (const item of items) {
+    const history = await dbGetConsumptionHistory(item.id, 50);
+    consumptionsThisWeek += history.filter(entry => 
+      new Date(entry.consumed_at) >= oneWeekAgo
+    ).length;
+  }
+  
+  return {
+    total_items: totalItems,
+    overdue_items: overdueItems,
+    on_time_items: onTimeItems,
+    consumptions_this_week: consumptionsThisWeek,
+  };
+}, "consumption-summary");
