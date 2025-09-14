@@ -1,14 +1,24 @@
+import { createAsync, RouteDefinition } from "@solidjs/router";
 import {
   Accessor,
   createSignal,
   For,
   JSXElement,
   Setter,
-  Suspense,
   Show,
+  Suspense,
 } from "solid-js";
-import { createAsync, RouteDefinition } from "@solidjs/router";
 import { VoidComponent } from "solid-js/types/server/rendering.js";
+import { getUser } from "~/lib/auth";
+import {
+  completeChoreAction,
+  getCompletions,
+  loadChores,
+  loadOverdueChores,
+  undoChoreAction,
+  updateDurationAction,
+} from "~/lib/chore-actions";
+import { type ChoreCompletion, type ChoreWithStatus } from "~/lib/db";
 import { Alert } from "~/solid-daisy-components/components/Alert";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { Fieldset, Label } from "~/solid-daisy-components/components/Fieldset";
@@ -17,16 +27,6 @@ import { Input } from "~/solid-daisy-components/components/Input";
 import { Select } from "~/solid-daisy-components/components/Select";
 import { Textarea } from "~/solid-daisy-components/components/Textarea";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
-import { type ChoreWithStatus, type ChoreCompletion } from "~/lib/db";
-import {
-  loadChores,
-  loadOverdueChores,
-  completeChoreAction,
-  undoChoreAction,
-  updateDurationAction,
-  getCompletions,
-} from "~/lib/chore-actions";
-import { getUser } from "~/lib/auth";
 
 export const route = {
   preload() {
@@ -51,12 +51,14 @@ export default function Home() {
           <div class="loading loading-spinner loading-lg mx-auto"></div>
         }
       >
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8 auto-rows-max">
-          <Show when={chores()} fallback={<div>Loading chores...</div>}>
-            <For each={chores() || []}>
-              {(chore) => <ChoreForm chore={chore} />}
-            </For>
-          </Show>
+        <div class="flex justify-center">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8 auto-rows-max">
+            <Show when={chores()} fallback={<div>Loading chores...</div>}>
+              <For each={chores() || []}>
+                {(chore) => <ChoreForm chore={chore} />}
+              </For>
+            </Show>
+          </div>
         </div>
       </Suspense>
     </main>
