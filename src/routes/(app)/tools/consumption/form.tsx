@@ -27,6 +27,7 @@ import {
   getConsumptionHistory,
 } from "~/lib/consumption-actions";
 import { getUser } from "~/lib/auth";
+import { FirstLetterAvatar } from "~/components/FirstLetterAvatar";
 
 export const route = {
   preload() {
@@ -248,7 +249,11 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
     <Fieldset
       class={`w-xs bg-base-200 border ${statusColor} p-4 rounded-box ${formAnimationClasses()}`}
     >
-      <Fieldset.Legend>{props.item.name}</Fieldset.Legend>
+      <Fieldset.Legend>
+        <div class="flex items-center gap-2">
+          <FirstLetterAvatar name={props.item.name} />
+        </div>
+      </Fieldset.Legend>
 
       <p class="label">
         Last Consumed: {lastConsumed}
