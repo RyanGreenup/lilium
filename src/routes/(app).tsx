@@ -1,9 +1,8 @@
 import { A, RouteDefinition } from "@solidjs/router";
-import { Candy } from "lucide-solid";
 import BrushCleaning from "lucide-solid/icons/brush-cleaning";
+import Candy from "lucide-solid/icons/candy";
 
 import Camera from "lucide-solid/icons/camera";
-import Cigarette from "lucide-solid/icons/cigarette";
 import Menu from "lucide-solid/icons/menu";
 import MessageCircleIcon from "lucide-solid/icons/message-circle";
 import NotebookPen from "lucide-solid/icons/notebook-pen";
