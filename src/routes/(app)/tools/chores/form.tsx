@@ -31,7 +31,7 @@ export default function Home() {
       <HeroComponent />
       <ToggleComponent getChecked={checked} setChecked={setChecked} />
       <Suspense fallback={<div class="loading loading-spinner loading-lg mx-auto"></div>}>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-8 auto-rows-max">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8 auto-rows-max">
           <Show when={chores()} fallback={<div>Loading chores...</div>}>
             <For each={chores() || []}>
               {(chore) => (

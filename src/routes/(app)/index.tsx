@@ -1,9 +1,11 @@
-import { RouteDefinition } from "@solidjs/router";
+import { A, RouteDefinition } from "@solidjs/router";
+import Heart from "lucide-solid/icons/heart";
 import { JSXElement } from "solid-js";
 import { VoidComponent } from "solid-js/types/server/rendering.js";
 import { getUser } from "~/lib/auth";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { Card } from "~/solid-daisy-components/components/Card";
+import { Hero } from "~/solid-daisy-components/components/Hero";
 
 export const route = {
   preload() {
@@ -13,26 +15,110 @@ export const route = {
 
 export default function Home() {
   return (
-    <main class="  max-w-260">
-      <div class="prose dark:prose-invert">
-        <h1> Welcome the Chronicles</h1>
-      </div>
-      <Thumbnail>
-        <ShaiImage />
-      </Thumbnail>
-      <div class="prose dark:prose-invert">
-        <p>
-          {" "}
-          We can use this for our chores list and any other associated stuff
-          too!
-        </p>
-      </div>
+    <main class="max-w-6xl mx-auto space-y-8">
+      <Hero
+        class="min-h-96 rounded"
+        style={{
+          "background-image":
+            "url(https://immich.vidar/api/assets/4374d4dd-5b32-40ae-9593-5c6f85a1885e/thumbnail?slug=iadslkjslkdfjewuoikdkdididslkijsdaflkdsfajkl&size=preview&c=EQgKDYLfd3l0qnh1aaiJdrRqUFYH)",
+        }}
+      >
+        <Hero.Overlay class="rounded" />
+        <Hero.Content
+          class="text-center text-white"
+          title="Welcome to Chronicles"
+          description="Something for us"
+        ></Hero.Content>
+      </Hero>
+
+      {/* Quick Access Tools */}
+      <section>
+        <h2 class="text-2xl font-bold mb-6">Quick Access</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <ChoreCards />
+        </div>
+      </section>
+
+      {/* Content */}
+
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div class="prose dark:prose-invert max-w-none">
+          <h3>About</h3>
+          <p>
+            Chronicles is our forever companion. We'll Track our chores, monitor
+            habits, build things together
+            <Heart class="w-4rem h-4rem animate-bounce inline-block mr-1" />
+            and stay on top of our responsibilities??
+          </p>
+          <p>I've already started with some tools above.</p>
+        </div>
+      </section>
     </main>
   );
 }
 
+const ChoreCards: VoidComponent = () => (
+  <>
+    {/* Chore Management Card */}
+    <Card class="bg-base-100 shadow-lg hover:shadow-xl transition-shadow">
+      <Card.Body>
+        <Card.Title class="flex items-center gap-2">
+          📋 Chore Management
+        </Card.Title>
+        <p class="text-sm text-base-content/70">
+          Mark chores as complete, update schedules, and manage your daily
+          tasks.
+        </p>
+        <Card.Actions>
+          <A href="/tools/chores/form">
+            <Button color="primary" size="sm" class="w-full">
+              Manage Chores
+            </Button>
+          </A>
+        </Card.Actions>
+      </Card.Body>
+    </Card>
+
+    {/* Chore Reports Card */}
+    <Card class="bg-base-100 shadow-lg hover:shadow-xl transition-shadow">
+      <Card.Body>
+        <Card.Title class="flex items-center gap-2">
+          📊 Chore Reports
+        </Card.Title>
+        <p class="text-sm text-base-content/70">
+          View analytics, completion trends, and performance insights.
+        </p>
+        <Card.Actions>
+          <A href="/tools/chores/report">
+            <Button color="secondary" size="sm" class="w-full">
+              View Reports
+            </Button>
+          </A>
+        </Card.Actions>
+      </Card.Body>
+    </Card>
+
+    {/* Quick Stats Card */}
+    <Card class="bg-gradient-to-br from-primary/10 to-secondary/10 shadow-lg">
+      <Card.Body>
+        <Card.Title class="flex items-center gap-2">⚡ Quick Stats</Card.Title>
+        <p class="text-sm text-base-content/70">
+          Get a quick overview of your chore completion status.
+        </p>
+        <div class="mt-4 space-y-2">
+          <div class="text-xs text-base-content/60">
+            Check the reports section for detailed analytics
+          </div>
+        </div>
+      </Card.Body>
+    </Card>
+  </>
+);
+
 const Thumbnail = (props: { children: JSXElement }) => (
-  <div class="float-right ml-4 my-4">{props.children}</div>
+  <div class="w-full flex justify-center lg:justify-start">
+    {props.children}
+  </div>
 );
 
 const ShaiImage: VoidComponent = () => (
@@ -44,7 +130,7 @@ const ShaiImage: VoidComponent = () => (
       />
     </figure>
     <Card.Body>
-      <Card.Title>Shoes!</Card.Title>
+      <Card.Title>Us Time!</Card.Title>
       <p>We need more days like this.</p>
       <Card.Actions>
         <FancyHover>
