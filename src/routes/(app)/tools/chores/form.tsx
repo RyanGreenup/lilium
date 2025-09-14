@@ -103,6 +103,21 @@ const TimeStampToDateString = (timestamp: number, includeTime?: boolean) => {
   }
   return date.toDateString();
 };
+
+// Markdown rendering function
+const renderMarkdown = async (markdownContent: string): Promise<string> => {
+  if (!markdownContent.trim()) return "No notes";
+  
+  try {
+    // Dynamically import the marked library to parse markdown to HTML
+    const { marked } = await import("marked");
+    // Convert the markdown content to HTML and return it
+    return marked(markdownContent);
+  } catch (error) {
+    console.error("Failed to render markdown:", error);
+    return markdownContent; // Fallback to plain text
+  }
+};
 const ChoreForm = (props: { chore: ChoreWithStatus }) => {
   const [notes, setNotes] = createSignal("");
   const [duration, setDuration] = createSignal(props.chore.duration_hours);
@@ -110,6 +125,13 @@ const ChoreForm = (props: { chore: ChoreWithStatus }) => {
   const [selectedCompletion, setSelectedCompletion] = createSignal<
     ChoreCompletion | undefined
   >();
+
+  // Create reactive markdown rendering for selected completion notes
+  const renderedNotes = createAsync(async () => {
+    const completion = selectedCompletion();
+    const notesContent = completion?.notes || "";
+    return renderMarkdown(notesContent);
+  });
 
   // Form feedback signals
   const [durationSuccess, setDurationSuccess] = createSignal(false);
@@ -227,8 +249,15 @@ const ChoreForm = (props: { chore: ChoreWithStatus }) => {
         </Select>
 
         <Label>Notes from Selected Completion</Label>
-        <div class="bg-base-100 border border-base-300 p-3 rounded-box max-h-[6.25rem] overflow-auto mb-4">
-          {selectedCompletion()?.notes || "No notes"}
+        <div class="bg-base-100 border border-base-300 p-3 rounded-box max-h-80 overflow-auto mb-4 prose prose-sm dark:prose-invert max-w-none">
+          <Show when={selectedCompletion()}>
+            <Suspense fallback={<div>Rendering notes...</div>}>
+              <div innerHTML={renderedNotes() || "No notes"} />
+            </Suspense>
+          </Show>
+          <Show when={!selectedCompletion()}>
+            <div>No notes</div>
+          </Show>
         </div>
 
         <form
