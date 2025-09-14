@@ -223,11 +223,23 @@ export async function seedChoresIfEmpty(): Promise<void> {
 
   if (result.count === 0) {
     const sampleChores = [
-      { name: "Vacuum Living Room", duration_hours: 168 }, // Weekly
-      { name: "Take Out Trash", duration_hours: 72 }, // 3 days
-      { name: "Do Laundry", duration_hours: 48 }, // 2 days
-      { name: "Clean Kitchen", duration_hours: 24 }, // Daily
+      { name: "Take Out Trash", duration_hours: 12 }, // 3 days
+      { name: "Start Washing Machine", duration_hours: 4 }, // 2 days
+      { name: "Load Dryer", duration_hours: 4 }, // 2 days
+      { name: "Fold Clothes", duration_hours: 4 }, // 2 days
+      { name: "Clean Kitchen", duration_hours: 5 }, // Daily
       { name: "Water Plants", duration_hours: 48 }, // 2 days
+      { name: "Load Dishwasher", duration_hours: 6 },
+      { name: "Empty Dishes", duration_hours: 6 },
+      { name: "Change Zel's Toilet", duration_hours: 24 * 3 },
+      { name: "Vacuum", duration_hours: 24 },
+      { name: "Mop", duration_hours: 48 },
+      { name: "Clean Toilet", duration_hours: 24 },
+      { name: "Clean Oven", duration_hours: 72 },
+      { name: "Clear Filters", duration_hours: 72 },
+      { name: "Update NAS", duration_hours: 72 },
+      { name: "Clean Windows", duration_hours: 24 },
+      { name: "Walk the dog", duration_hours: 12 },
     ];
 
     for (const chore of sampleChores) {
@@ -281,27 +293,34 @@ export async function getChoreStatistics(): Promise<ChoreStats[]> {
     first_completed?: string;
   }>;
 
-  return results.map(row => {
+  return results.map((row) => {
     const now = Date.now();
-    const lastCompleted = row.last_completed ? new Date(row.last_completed).getTime() : null;
-    const firstCompleted = row.first_completed ? new Date(row.first_completed).getTime() : null;
-    
-    const days_since_last = lastCompleted 
+    const lastCompleted = row.last_completed
+      ? new Date(row.last_completed).getTime()
+      : null;
+    const firstCompleted = row.first_completed
+      ? new Date(row.first_completed).getTime()
+      : null;
+
+    const days_since_last = lastCompleted
       ? Math.floor((now - lastCompleted) / (1000 * 60 * 60 * 24))
       : 999;
-    
-    const total_days = firstCompleted && lastCompleted && row.total_completions > 1
-      ? Math.floor((lastCompleted - firstCompleted) / (1000 * 60 * 60 * 24))
-      : 0;
-    
-    const average_days_between = total_days > 0 && row.total_completions > 1
-      ? total_days / (row.total_completions - 1)
-      : row.duration_hours / 24;
+
+    const total_days =
+      firstCompleted && lastCompleted && row.total_completions > 1
+        ? Math.floor((lastCompleted - firstCompleted) / (1000 * 60 * 60 * 24))
+        : 0;
+
+    const average_days_between =
+      total_days > 0 && row.total_completions > 1
+        ? total_days / (row.total_completions - 1)
+        : row.duration_hours / 24;
 
     const expected_frequency_days = row.duration_hours / 24;
-    const completion_rate = average_days_between > 0 
-      ? Math.min(100, (expected_frequency_days / average_days_between) * 100)
-      : 0;
+    const completion_rate =
+      average_days_between > 0
+        ? Math.min(100, (expected_frequency_days / average_days_between) * 100)
+        : 0;
 
     return {
       name: row.name,
@@ -309,7 +328,7 @@ export async function getChoreStatistics(): Promise<ChoreStats[]> {
       days_since_last_completion: days_since_last,
       average_days_between: Math.round(average_days_between * 10) / 10,
       is_overdue: isChoreOverdue(row.last_completed, row.duration_hours),
-      completion_rate: Math.round(completion_rate)
+      completion_rate: Math.round(completion_rate),
     };
   });
 }
@@ -346,7 +365,7 @@ export async function getSummaryStats() {
     ) WHERE last_completed IS NULL OR 
     (julianday('now') - julianday(last_completed)) * 24 > duration_hours
   `);
-  
+
   const completionsThisWeekStmt = db.prepare(`
     SELECT COUNT(*) as count 
     FROM chore_completions 
@@ -361,6 +380,6 @@ export async function getSummaryStats() {
     total_chores: total.count,
     overdue_chores: overdue.count,
     completions_this_week: thisWeek.count,
-    on_time_chores: total.count - overdue.count
+    on_time_chores: total.count - overdue.count,
   };
 }
