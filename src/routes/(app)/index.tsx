@@ -51,6 +51,7 @@ export default function Home() {
             and stay on top of our responsibilities??
           </p>
           <p>I've already started with some tools above.</p>
+          <p>We've both been marked as collaborators in <a href="https://gitea.vidar/ryan/Chronicles/">gitea.vidar/ryan/Chronicles/</a></p>
         </div>
       </section>
     </main>
