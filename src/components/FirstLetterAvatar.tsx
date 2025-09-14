@@ -2,6 +2,7 @@ import {
   Apple,
   Candy,
   DollarSign,
+  Flower,
   Heart,
   Pill,
   PillBottle,
@@ -19,27 +20,22 @@ export const FirstLetterAvatar: Component<FirstLetterAvatarProps> = (props) => {
 
   // Get appropriate icon based on food name
   const getIcon = (): JSXElement => {
-    const name = props.name.toLowerCase();
+    const id = props.name.toLowerCase();
     const iconProps = { size: 16, class: "text-primary" };
 
-    if (name.includes("lemon") || name.includes("citrus"))
+    if (id.includes("lemon") || id.includes("citrus"))
       return <Candy {...iconProps} />;
-    if (
-      name.includes("meat") ||
-      name.includes("beef") ||
-      name.includes("chicken")
-    )
+    if (id.includes("meat") || id.includes("beef") || id.includes("chicken"))
       return <Heart {...iconProps} />;
-    if (name.includes("candy") || name.includes("sweet"))
+    if (id.includes("candy") || id.includes("sweet"))
       return <DollarSign {...iconProps} />;
-    if (
-      name.includes("kale") ||
-      name.includes("lettuce") ||
-      name.includes("salad")
-    )
+    if (id.includes("kale") || id.includes("lettuce") || id.includes("salad"))
       return <PillBottle {...iconProps} />;
-    if (name.includes("turmeric") || name.includes("supplement"))
+    if (id.includes("turmeric") || id.includes("supplement"))
       return <Pill {...iconProps} />;
+
+    if (id.includes("watermelon") || id.includes("supplement"))
+      return <Flower {...iconProps} />;
 
     // Default icon for unknown foods
     return <Apple {...iconProps} />;

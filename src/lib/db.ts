@@ -233,23 +233,36 @@ export async function seedChoresIfEmpty(): Promise<void> {
 
   if (result.count === 0) {
     const sampleChores = [
-      { name: "Take Out Trash", duration_hours: 12 }, // 3 days
-      { name: "Start Washing Machine", duration_hours: 4 }, // 2 days
-      { name: "Load Dryer", duration_hours: 4 }, // 2 days
-      { name: "Fold Clothes", duration_hours: 4 }, // 2 days
-      { name: "Clean Kitchen", duration_hours: 5 }, // Daily
-      { name: "Water Plants", duration_hours: 48 }, // 2 days
+      { name: "Take Out Trash", duration_hours: 12 },
+      { name: "Start Washing Machine", duration_hours: 4 },
+      { name: "Load Dryer", duration_hours: 4 },
+      { name: "Fold Clothes", duration_hours: 4 },
+      { name: "Clean Kitchen", duration_hours: 5 },
+      { name: "Water Plants", duration_hours: 48 },
       { name: "Load Dishwasher", duration_hours: 6 },
       { name: "Empty Dishes", duration_hours: 6 },
+      { name: "Change Zel's Grass", duration_hours: 24 },
       { name: "Change Zel's Toilet", duration_hours: 24 * 3 },
       { name: "Vacuum", duration_hours: 24 },
       { name: "Mop", duration_hours: 48 },
       { name: "Clean Toilet", duration_hours: 24 },
       { name: "Clean Oven", duration_hours: 72 },
-      { name: "Clear Filters", duration_hours: 72 },
       { name: "Update NAS", duration_hours: 72 },
       { name: "Clean Windows", duration_hours: 24 },
       { name: "Walk the dog", duration_hours: 12 },
+      { name: "Wash the dog", duration_hours: 24 * 3},
+      { name: "Dog Flea Tablet", duration_hours: 24 * 30},
+      { name: "Medication", duration_hours: 24},
+      { name: "Change The Sheets", duration_hours: 24 * 3},
+      { name: "Wash Couch Cushions", duration_hours: 24 * 7 * 2},
+      { name: "Clean Dishwasher Filter", duration_hours: 24 * 2},
+      { name: "Clean Washing Machine Filter", duration_hours: 24 * 7},
+      { name: "Grocery Shopping", duration_hours: 24 * 2},
+      { name: "Dust Surfaces and TV Unit", duration_hours: 24 * 2},
+      { name: "Meal Prep", duration_hours: 24 * 2},
+      { name: "Clean Out Fridge", duration_hours: 24 * 7},
+      { name: "Polish Boots", duration_hours: 24 * 7},
+      { name: "Update Computers", duration_hours: 24 * 2},
     ];
 
     for (const chore of sampleChores) {
@@ -281,7 +294,7 @@ export interface CompletionTrend {
  */
 export async function getChoreStatistics(): Promise<ChoreStats[]> {
   const stmt = db.prepare(`
-    SELECT 
+    SELECT
       c.name,
       c.duration_hours,
       c.id,
@@ -348,10 +361,10 @@ export async function getChoreStatistics(): Promise<ChoreStats[]> {
  */
 export async function getCompletionTrends(): Promise<CompletionTrend[]> {
   const stmt = db.prepare(`
-    SELECT 
+    SELECT
       DATE(completed_at) as date,
       COUNT(*) as completions
-    FROM chore_completions 
+    FROM chore_completions
     WHERE completed_at >= datetime('now', '-30 days')
     GROUP BY DATE(completed_at)
     ORDER BY date
@@ -372,13 +385,13 @@ export async function getSummaryStats() {
       LEFT JOIN chore_completions cc ON c.id = cc.chore_id
       LEFT JOIN chore_completions cc2 ON c.id = cc2.chore_id AND cc.completed_at < cc2.completed_at
       WHERE cc2.id IS NULL
-    ) WHERE last_completed IS NULL OR 
+    ) WHERE last_completed IS NULL OR
     (julianday('now') - julianday(last_completed)) * 24 > duration_hours
   `);
 
   const completionsThisWeekStmt = db.prepare(`
-    SELECT COUNT(*) as count 
-    FROM chore_completions 
+    SELECT COUNT(*) as count
+    FROM chore_completions
     WHERE completed_at >= datetime('now', '-7 days')
   `);
 

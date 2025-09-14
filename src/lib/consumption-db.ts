@@ -42,12 +42,12 @@ db.exec(`
 
 // Create indexes for better performance
 db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_consumption_entries_item_date 
+  CREATE INDEX IF NOT EXISTS idx_consumption_entries_item_date
   ON consumption_entries(consumption_item_id, consumed_at DESC)
 `);
 
 db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_consumption_entries_consumed_at 
+  CREATE INDEX IF NOT EXISTS idx_consumption_entries_consumed_at
   ON consumption_entries(consumed_at DESC)
 `);
 
@@ -109,7 +109,7 @@ export async function getConsumptionItemsWithStatus(): Promise<ConsumptionItemWi
     throw redirect("/login");
   }
   const stmt = db.prepare(`
-    SELECT 
+    SELECT
       ci.id,
       ci.name,
       ci.interval_days,
@@ -117,25 +117,25 @@ export async function getConsumptionItemsWithStatus(): Promise<ConsumptionItemWi
       ci.updated_at,
       ce.last_consumed_at,
       ce.last_quantity,
-      CASE 
+      CASE
         WHEN ce.last_consumed_at IS NULL THEN 0
         WHEN datetime('now') > datetime(ce.last_consumed_at, '+' || ci.interval_days || ' days') THEN 1
         ELSE 0
       END as is_overdue,
-      CASE 
+      CASE
         WHEN ce.last_consumed_at IS NULL THEN datetime('now')
         ELSE datetime(ce.last_consumed_at, '+' || ci.interval_days || ' days')
       END as next_allowed_at
     FROM consumption_items ci
     LEFT JOIN (
-      SELECT 
+      SELECT
         consumption_item_id,
         MAX(consumed_at) as last_consumed_at,
         quantity as last_quantity
       FROM consumption_entries ce1
       WHERE consumed_at = (
-        SELECT MAX(consumed_at) 
-        FROM consumption_entries ce2 
+        SELECT MAX(consumed_at)
+        FROM consumption_entries ce2
         WHERE ce2.consumption_item_id = ce1.consumption_item_id
       )
       GROUP BY consumption_item_id
@@ -275,13 +275,13 @@ export async function getConsumptionStats(
   days_back: number = 90,
 ): Promise<ConsumptionStats> {
   const stmt = db.prepare(`
-    SELECT 
+    SELECT
       COUNT(*) as total_consumptions,
       AVG(quantity) as avg_quantity,
       SUM(quantity) as total_quantity,
       MIN(consumed_at) as first_consumption,
       MAX(consumed_at) as last_consumption,
-      CASE 
+      CASE
         WHEN COUNT(*) > 1 THEN
           CAST((julianday(MAX(consumed_at)) - julianday(MIN(consumed_at))) / (COUNT(*) - 1) AS INTEGER)
         ELSE NULL
@@ -308,23 +308,23 @@ export async function validateConsumption(
   proposed_date?: string,
 ): Promise<ConsumptionValidation> {
   const stmt = db.prepare(`
-    SELECT 
+    SELECT
       ci.name,
       ci.interval_days,
       ce.last_consumed_at,
       datetime(COALESCE(?, datetime('now'))) as proposed_consumption_date,
-      CASE 
+      CASE
         WHEN ce.last_consumed_at IS NULL THEN 1
         WHEN datetime(COALESCE(?, datetime('now'))) >= datetime(ce.last_consumed_at, '+' || ci.interval_days || ' days') THEN 1
         ELSE 0
       END as is_allowed,
-      CASE 
+      CASE
         WHEN ce.last_consumed_at IS NOT NULL THEN datetime(ce.last_consumed_at, '+' || ci.interval_days || ' days')
         ELSE NULL
       END as next_allowed_date
     FROM consumption_items ci
     LEFT JOIN (
-      SELECT 
+      SELECT
         consumption_item_id,
         MAX(consumed_at) as last_consumed_at
       FROM consumption_entries
@@ -336,7 +336,7 @@ export async function validateConsumption(
 
   const proposedDateTime = proposed_date || new Date().toISOString();
   const result = stmt.get(proposedDateTime, proposedDateTime, consumption_item_id, consumption_item_id) as ConsumptionValidation;
-  
+
   if (!result) throw new Error("Consumption item not found");
   return result;
 }
@@ -375,12 +375,14 @@ export async function seedConsumptionItemsIfEmpty(): Promise<void> {
   const result = stmt.get() as { count: number };
 
   if (result.count === 0) {
+      // See also the consumption schema in ../../sql/consumption_schema.sql
     const medicalItems = [
       { id: "lemons", name: "Lemons", interval_days: 30 },
       { id: "meat", name: "Meat", interval_days: 90 },
       { id: "candy", name: "Candy", interval_days: 14 },
       { id: "kale", name: "Kale", interval_days: 14 },
       { id: "turmeric", name: "Turmeric", interval_days: 14 },
+      { id: "watermelon", name: "Watermelon", interval_days: 7 },
     ];
 
     const insertStmt = db.prepare(

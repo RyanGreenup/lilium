@@ -26,9 +26,11 @@ CREATE INDEX idx_consumption_entries_item_date ON consumption_entries(consumptio
 CREATE INDEX idx_consumption_entries_consumed_at ON consumption_entries(consumed_at DESC);
 
 -- Insert the initial medical dietary restriction items
+-- See also seedConsumptionItemsIfEmpty in ../src/lib/consumption-db.ts
 INSERT INTO consumption_items (id, name, interval_days) VALUES
-    ('lemons', 'Lemons', 30),
+    ('lemons', 'Lemons', 42),
     ('meat', 'Meat', 90),
     ('candy', 'Candy', 14),
     ('kale', 'Kale', 14),
-    ('turmeric', 'Turmeric', 14);
+    ('turmeric', 'Turmeric', 14),
+    ('watermelon', 'Watermelon', 7);
