@@ -3,6 +3,7 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 import LogOut from "lucide-solid/icons/log-out";
 import { Show } from "solid-js";
 import { getUser, logout } from "~/lib/auth";
+import { Avatar } from "~/solid-daisy-components/components/Avatar";
 import { Button } from "~/solid-daisy-components/components/Button";
 
 const ICON = "w-4 h-4 mr-2";
@@ -25,7 +26,7 @@ export function UserDropdown() {
           </li>
           <li>
             <a class="px-3 py-2 text-sm text-base-content/70 cursor-default hover:bg-transparent">
-              {user()?.username}
+              <p>{user()?.username}</p>
             </a>
           </li>
           <div class="divider my-1"></div>
@@ -33,7 +34,7 @@ export function UserDropdown() {
             <form action={logout} method="post">
               <button
                 type="submit"
-                class="px-3 py-2 text-error w-full text-left flex items-center hover:bg-error/10 rounded-lg transition-colors"
+                class="px-3 py-2 text-error w-full text-left flex items-center  rounded-lg transition-colors"
                 disabled={loggingOut.pending}
               >
                 <LogOut class={ICON} />
@@ -49,7 +50,13 @@ export function UserDropdown() {
 function DropdownButton(props: { username: string }) {
   return (
     <Button variant="ghost" tabindex="0">
-      <span class="text-sm">{props.username}</span>
+      <Avatar
+        shape="circle"
+        src={`/users/${props.username}.png`}
+        alt="User avatar"
+        size="xs"
+      />
+
       <ChevronDown class="ml-1 w-4 h-4" />
     </Button>
   );

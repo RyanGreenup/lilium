@@ -14,7 +14,6 @@ export default function Home() {
     <main class="text-center mx-auto  p-4">
       <div class="prose dark:prose-invert">
         <h1> Welcome the Chronicles</h1>
-        <UserDropdown />
       </div>
     </main>
   );
