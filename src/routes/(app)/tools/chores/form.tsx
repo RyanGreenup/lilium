@@ -1,6 +1,7 @@
 import { Accessor, createSignal, For, JSXElement, Setter, Suspense, Show } from "solid-js";
 import { createAsync, RouteDefinition } from "@solidjs/router";
 import { VoidComponent } from "solid-js/types/server/rendering.js";
+import { Alert } from "~/solid-daisy-components/components/Alert";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { Fieldset, Label } from "~/solid-daisy-components/components/Fieldset";
 import { Hero } from "~/solid-daisy-components/components/Hero";
@@ -92,6 +93,61 @@ const ChoreForm = (props: {
   const [duration, setDuration] = createSignal(props.chore.duration_hours);
   const completions = createAsync(() => getCompletions(props.chore.id, 5));
   const [selectedCompletion, setSelectedCompletion] = createSignal<ChoreCompletion | undefined>();
+  
+  // Form feedback signals
+  const [durationSuccess, setDurationSuccess] = createSignal(false);
+  const [durationError, setDurationError] = createSignal(false);
+  const [completeSuccess, setCompleteSuccess] = createSignal(false);
+  const [completeError, setCompleteError] = createSignal(false);
+  const [undoSuccess, setUndoSuccess] = createSignal(false);
+  const [undoError, setUndoError] = createSignal(false);
+
+  // Form submission handlers
+  const handleDurationSubmit = async (event: Event) => {
+    event.preventDefault();
+    const form = event.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    try {
+      await fetch(form.action, { method: "POST", body: formData });
+      setDurationSuccess(true);
+      setTimeout(() => setDurationSuccess(false), 3000);
+    } catch (error) {
+      setDurationError(true);
+      setTimeout(() => setDurationError(false), 3000);
+    }
+  };
+
+  const handleCompleteSubmit = async (event: Event) => {
+    event.preventDefault();
+    const form = event.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    try {
+      await fetch(form.action, { method: "POST", body: formData });
+      setCompleteSuccess(true);
+      setNotes("");
+      setTimeout(() => setCompleteSuccess(false), 3000);
+    } catch (error) {
+      setCompleteError(true);
+      setTimeout(() => setCompleteError(false), 3000);
+    }
+  };
+
+  const handleUndoSubmit = async (event: Event) => {
+    event.preventDefault();
+    const form = event.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    try {
+      await fetch(form.action, { method: "POST", body: formData });
+      setUndoSuccess(true);
+      setTimeout(() => setUndoSuccess(false), 3000);
+    } catch (error) {
+      setUndoError(true);
+      setTimeout(() => setUndoError(false), 3000);
+    }
+  };
 
   const statusColor = props.chore.is_overdue ? "border-error" : "border-success";
   const lastCompleted = props.chore.last_completed
@@ -130,7 +186,7 @@ const ChoreForm = (props: {
         </div>
       </Details>
 
-      <form action={updateDurationAction} method="post">
+      <form action={updateDurationAction} method="post" onSubmit={handleDurationSubmit}>
         <input type="hidden" name="choreId" value={props.chore.id} />
         <Label>Duration Interval (H)</Label>
         <Input
@@ -140,17 +196,28 @@ const ChoreForm = (props: {
           onInput={(e) => setDuration(parseInt(e.currentTarget.value) || 24)}
           placeholder="Duration Between Completion"
         />
-        <Button
-          type="submit"
-          size="sm"
-          color="secondary"
-          class="mt-2"
-        >
-          Update Duration
-        </Button>
+        <div class="flex items-center gap-2 mt-2">
+          <Button
+            type="submit"
+            size="sm"
+            color="secondary"
+          >
+            Update Duration
+          </Button>
+          <Show when={durationSuccess()}>
+            <Alert color="success" class="alert-sm">
+              <span class="text-xs">Updated!</span>
+            </Alert>
+          </Show>
+          <Show when={durationError()}>
+            <Alert color="error" class="alert-sm">
+              <span class="text-xs">Error!</span>
+            </Alert>
+          </Show>
+        </div>
       </form>
 
-      <form action={completeChoreAction} method="post" class="mt-4">
+      <form action={completeChoreAction} method="post" class="mt-4" onSubmit={handleCompleteSubmit}>
         <input type="hidden" name="choreId" value={props.chore.id} />
         <Label>Notes</Label>
         <Textarea
@@ -160,7 +227,7 @@ const ChoreForm = (props: {
           onInput={(e) => setNotes(e.currentTarget.value)}
           placeholder="Add notes for this completion..."
         />
-        <div class="flex gap-2 mt-4">
+        <div class="flex items-center gap-2 mt-4">
           <Button
             type="submit"
             size="sm"
@@ -168,19 +235,41 @@ const ChoreForm = (props: {
           >
             Mark Completed
           </Button>
+          <Show when={completeSuccess()}>
+            <Alert color="success" class="alert-sm">
+              <span class="text-xs">Completed!</span>
+            </Alert>
+          </Show>
+          <Show when={completeError()}>
+            <Alert color="error" class="alert-sm">
+              <span class="text-xs">Error!</span>
+            </Alert>
+          </Show>
         </div>
       </form>
 
-      <form action={undoChoreAction} method="post" class="mt-2">
+      <form action={undoChoreAction} method="post" class="mt-2" onSubmit={handleUndoSubmit}>
         <input type="hidden" name="choreId" value={props.chore.id} />
-        <Button
-          type="submit"
-          size="sm"
-          color="error"
-          disabled={!props.chore.last_completed}
-        >
-          Mark Not Completed
-        </Button>
+        <div class="flex items-center gap-2">
+          <Button
+            type="submit"
+            size="sm"
+            color="error"
+            disabled={!props.chore.last_completed}
+          >
+            Mark Not Completed
+          </Button>
+          <Show when={undoSuccess()}>
+            <Alert color="success" class="alert-sm">
+              <span class="text-xs">Undone!</span>
+            </Alert>
+          </Show>
+          <Show when={undoError()}>
+            <Alert color="error" class="alert-sm">
+              <span class="text-xs">Error!</span>
+            </Alert>
+          </Show>
+        </div>
       </form>
     </Fieldset>
   );
