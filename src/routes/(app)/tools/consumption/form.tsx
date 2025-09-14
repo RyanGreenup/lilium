@@ -1,6 +1,7 @@
 import { createAsync, RouteDefinition } from "@solidjs/router";
 import {
   Accessor,
+  children,
   createSignal,
   For,
   JSXElement,
@@ -40,7 +41,8 @@ export const route = {
 
 export default function ConsumptionTracker() {
   const [showOnlyOverdue, setShowOnlyOverdue] = createSignal(false);
-  
+  const [expandAll, setExpandAll] = createSignal(false);
+
   // Global refresh trigger for all consumption data
   const [globalRefreshTrigger, setGlobalRefreshTrigger] = createSignal(0);
 
@@ -50,7 +52,7 @@ export default function ConsumptionTracker() {
     return loadConsumptionItems();
   });
   const overdueConsumptions = createAsync(() => {
-    globalRefreshTrigger(); // Subscribe to global refresh  
+    globalRefreshTrigger(); // Subscribe to global refresh
     return loadOverdueConsumptionItems();
   });
 
@@ -64,6 +66,8 @@ export default function ConsumptionTracker() {
       <ToggleComponent
         getChecked={showOnlyOverdue}
         setChecked={setShowOnlyOverdue}
+        expandAll={expandAll}
+        setExpandAll={setExpandAll}
       />
       <Suspense
         fallback={
@@ -77,7 +81,15 @@ export default function ConsumptionTracker() {
               fallback={<div>Loading consumption items...</div>}
             >
               <For each={consumptions() || []}>
-                {(item) => <ConsumptionForm item={item} onDataChange={() => setGlobalRefreshTrigger(prev => prev + 1)} />}
+                {(item) => (
+                  <ConsumptionForm
+                    item={item}
+                    onDataChange={() =>
+                      setGlobalRefreshTrigger((prev) => prev + 1)
+                    }
+                    expandAll={expandAll}
+                  />
+                )}
               </For>
             </Show>
           </div>
@@ -100,19 +112,36 @@ const HeroComponent: VoidComponent = () => (
 const ToggleComponent = (props: {
   getChecked: Accessor<boolean>;
   setChecked: Setter<boolean>;
+  expandAll: Accessor<boolean>;
+  setExpandAll: Setter<boolean>;
   onChange?: () => void;
 }) => (
-  <Fieldset class="w-xs bg-base-100 border border-base-300 p-4 rounded-box">
-    <Fieldset.Legend>Filter Options</Fieldset.Legend>
-    <Label>Show Only Overdue</Label>
-    <Toggle
-      checked={props.getChecked()}
-      onChange={(e) => {
-        props.setChecked(e.currentTarget.checked);
-        props.onChange?.();
-      }}
-    />
-  </Fieldset>
+  <div class="flex gap-4 items-start">
+    <Fieldset class="w-xs bg-base-100 border border-base-300 p-4 rounded-box">
+      <Fieldset.Legend>Filter Options</Fieldset.Legend>
+      <Label>Show Only Overdue</Label>
+      <Toggle
+        checked={props.getChecked()}
+        onChange={(e) => {
+          props.setChecked(e.currentTarget.checked);
+          props.onChange?.();
+        }}
+      />
+    </Fieldset>
+
+    <Fieldset class="w-xs bg-base-100 border border-base-300 p-4 rounded-box">
+      <Fieldset.Legend>View Options</Fieldset.Legend>
+      <div class="flex items-center gap-2">
+        <Button
+          size="sm"
+          color={props.expandAll() ? "primary" : "ghost"}
+          onClick={() => props.setExpandAll(!props.expandAll())}
+        >
+          {props.expandAll() ? "Collapse All" : "Expand All"}
+        </Button>
+      </div>
+    </Fieldset>
+  </div>
 );
 
 const TimeStampToDateString = (
@@ -154,9 +183,10 @@ const TimeStampToDateString = (
   });
 };
 
-const ConsumptionForm = (props: { 
+const ConsumptionForm = (props: {
   item: ConsumptionItemWithStatus;
   onDataChange?: () => void;
+  expandAll: Accessor<boolean>;
 }) => {
   const [notes, setNotes] = createSignal("");
   const [quantity, setQuantity] = createSignal(1);
@@ -203,13 +233,13 @@ const ConsumptionForm = (props: {
       setNotes("");
       setQuantity(1);
       setConsumptionDate(getToday());
-      
+
       // Refresh history data
-      setRefreshTrigger(prev => prev + 1);
-      
+      setRefreshTrigger((prev) => prev + 1);
+
       // Refresh main consumption data
       props.onDataChange?.();
-      
+
       setTimeout(() => setAddSuccess(false), 3000);
     } catch (error) {
       setAddError(true);
@@ -226,13 +256,13 @@ const ConsumptionForm = (props: {
       await fetch(form.action, { method: "POST", body: formData });
       setUpdateSuccess(true);
       setIsEditingEntry(false);
-      
+
       // Refresh history data
-      setRefreshTrigger(prev => prev + 1);
-      
+      setRefreshTrigger((prev) => prev + 1);
+
       // Refresh main consumption data
       props.onDataChange?.();
-      
+
       setTimeout(() => setUpdateSuccess(false), 3000);
     } catch (error) {
       setUpdateError(true);
@@ -265,13 +295,13 @@ const ConsumptionForm = (props: {
       await fetch(form.action, { method: "POST", body: formData });
       setDeleteSuccess(true);
       setSelectedHistoryEntry(undefined); // Clear selection after delete
-      
+
       // Force refresh the history data by updating the trigger
-      setRefreshTrigger(prev => prev + 1);
-      
+      setRefreshTrigger((prev) => prev + 1);
+
       // Refresh main consumption data
       props.onDataChange?.();
-      
+
       setTimeout(() => setDeleteSuccess(false), 3000);
     } catch (error) {
       console.error("Delete error:", error);
@@ -307,238 +337,253 @@ const ConsumptionForm = (props: {
     <Fieldset
       class={`w-xs bg-base-200 border ${statusColor} p-4 rounded-box ${formAnimationClasses()}`}
     >
-      <Fieldset.Legend>
-        <div class="flex items-center gap-2">
-          <FirstLetterAvatar name={props.item.id} showIcon={true} />
-          {/*Leave this, I like it without*/}
-          <span>{props.item.name}</span>
-        </div>
-      </Fieldset.Legend>
+      <Details
+        title={
+          <Fieldset.Legend>
+            <div class="flex items-center gap-2">
+              <FirstLetterAvatar name={props.item.id} showIcon={true} />
+              {/*Leave this, I like it without*/}
+              <span>{props.item.name}</span>
+            </div>
+          </Fieldset.Legend>
+        }
+        open={props.expandAll}
+      >
+        <p class="label">
+          Last Consumed: {lastConsumed}
+          {props.item.is_overdue && (
+            <span class="text-error ml-2">(Overdue)</span>
+          )}
+        </p>
+        <p class="text-sm opacity-70 mb-2">Interval: {intervalText}</p>
 
-      <p class="label">
-        Last Consumed: {lastConsumed}
-        {props.item.is_overdue && (
-          <span class="text-error ml-2">(Overdue)</span>
-        )}
-      </p>
-      <p class="text-sm opacity-70 mb-2">Interval: {intervalText}</p>
+        <Details title={<p>History & Details</p>} open={props.expandAll}>
+          <Label>Previous Consumptions</Label>
+          <Select
+            onChange={(e) => {
+              const entryId = e.currentTarget.value;
+              const entry = history()?.find((h) => h.id === entryId);
+              setSelectedHistoryEntry(entry);
+            }}
+          >
+            <option value="">Select entry...</option>
+            <For each={history() || []}>
+              {(entry) => (
+                <option value={entry.id}>
+                  {TimeStampToDateString(entry.consumed_at)} - Qty:{" "}
+                  {entry.quantity}
+                </option>
+              )}
+            </For>
+          </Select>
 
-      <Details title="History & Details">
-        <Label>Previous Consumptions</Label>
-        <Select
-          onChange={(e) => {
-            const entryId = e.currentTarget.value;
-            const entry = history()?.find((h) => h.id === entryId);
-            setSelectedHistoryEntry(entry);
-          }}
-        >
-          <option value="">Select entry...</option>
-          <For each={history() || []}>
-            {(entry) => (
-              <option value={entry.id}>
-                {TimeStampToDateString(entry.consumed_at)} - Qty:{" "}
-                {entry.quantity}
-              </option>
-            )}
-          </For>
-        </Select>
-
-        <Show when={selectedHistoryEntry()}>
-          <div class="mt-2 p-3 bg-base-100 rounded border">
-            <Show when={!isEditingEntry()}>
-              <div>
-                <p class="text-xs mb-1">
-                  <strong>Date:</strong>{" "}
-                  {TimeStampToDateString(
-                    selectedHistoryEntry()?.consumed_at,
-                    true,
-                  )}
-                </p>
-                <p class="text-xs mb-1">
-                  <strong>Quantity:</strong> {selectedHistoryEntry()?.quantity}
-                </p>
-                <p class="text-xs mb-3">
-                  <strong>Notes:</strong>{" "}
-                  {selectedHistoryEntry()?.notes || "No notes"}
-                </p>
-                <div class="flex gap-2">
-                  <Button
-                    size="xs"
-                    color="secondary"
-                    onClick={() => startEditingEntry(selectedHistoryEntry())}
-                  >
-                    Edit
-                  </Button>
-                  <form
-                    action={deleteConsumptionAction}
-                    method="post"
-                    onSubmit={handleDeleteConsumption}
-                    style="display: inline;"
-                  >
-                    <input
-                      type="hidden"
-                      name="entryId"
-                      value={selectedHistoryEntry()?.id}
-                    />
+          <Show when={selectedHistoryEntry()}>
+            <div class="mt-2 p-3 bg-base-100 rounded border">
+              <Show when={!isEditingEntry()}>
+                <div>
+                  <p class="text-xs mb-1">
+                    <strong>Date:</strong>{" "}
+                    {TimeStampToDateString(
+                      selectedHistoryEntry()?.consumed_at,
+                      true,
+                    )}
+                  </p>
+                  <p class="text-xs mb-1">
+                    <strong>Quantity:</strong>{" "}
+                    {selectedHistoryEntry()?.quantity}
+                  </p>
+                  <p class="text-xs mb-3">
+                    <strong>Notes:</strong>{" "}
+                    {selectedHistoryEntry()?.notes || "No notes"}
+                  </p>
+                  <div class="flex gap-2">
                     <Button
-                      type="submit"
                       size="xs"
-                      color="error"
+                      color="secondary"
+                      onClick={() => startEditingEntry(selectedHistoryEntry())}
                     >
-                      Delete
+                      Edit
                     </Button>
-                  </form>
+                    <form
+                      action={deleteConsumptionAction}
+                      method="post"
+                      onSubmit={handleDeleteConsumption}
+                      style="display: inline;"
+                    >
+                      <input
+                        type="hidden"
+                        name="entryId"
+                        value={selectedHistoryEntry()?.id}
+                      />
+                      <Button type="submit" size="xs" color="error">
+                        Delete
+                      </Button>
+                    </form>
+                  </div>
                 </div>
-              </div>
+              </Show>
+
+              <Show when={isEditingEntry()}>
+                <form
+                  action={updateConsumptionAction}
+                  method="post"
+                  onSubmit={handleUpdateConsumption}
+                >
+                  <input
+                    type="hidden"
+                    name="entryId"
+                    value={selectedHistoryEntry()?.id}
+                  />
+                  <Label class="text-xs">Edit Date</Label>
+                  <Input
+                    type="date"
+                    name="consumedAt"
+                    value={editDate()}
+                    onInput={(e) => setEditDate(e.currentTarget.value)}
+                    class="mb-2 text-xs"
+                  />
+
+                  <Label class="text-xs">Edit Quantity</Label>
+                  <Input
+                    type="number"
+                    name="quantity"
+                    min="0.1"
+                    step="0.1"
+                    value={editQuantity()}
+                    onInput={(e) =>
+                      setEditQuantity(parseFloat(e.currentTarget.value) || 1)
+                    }
+                    class="mb-2 text-xs"
+                  />
+
+                  <Label class="text-xs">Edit Notes</Label>
+                  <Textarea
+                    name="notes"
+                    value={editNotes()}
+                    onInput={(e) => setEditNotes(e.currentTarget.value)}
+                    placeholder="Edit notes..."
+                    rows="2"
+                    class="mb-3 text-xs font-mono"
+                  />
+
+                  <div class="flex gap-2">
+                    <Button type="submit" size="xs" color="primary">
+                      Save
+                    </Button>
+                    <Button
+                      type="button"
+                      size="xs"
+                      color="ghost"
+                      onClick={cancelEditingEntry}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </Show>
+            </div>
+          </Show>
+
+          <Show when={updateSuccess()}>
+            <Alert color="success" class="alert-sm mt-2">
+              <span class="text-xs">Updated!</span>
+            </Alert>
+          </Show>
+          <Show when={updateError()}>
+            <Alert color="error" class="alert-sm mt-2">
+              <span class="text-xs">Update Error!</span>
+            </Alert>
+          </Show>
+        </Details>
+
+        {/* Add New Consumption Form */}
+        <form
+          class="mt-4"
+          action={createConsumptionAction}
+          method="post"
+          onSubmit={handleAddConsumption}
+        >
+          <input type="hidden" name="consumptionItemId" value={props.item.id} />
+
+          <Label class="text-xs">Date</Label>
+          <Input
+            type="date"
+            name="consumedAt"
+            value={consumptionDate()}
+            onInput={(e) => setConsumptionDate(e.currentTarget.value)}
+          />
+
+          <Label class="text-xs">Quantity</Label>
+          <Input
+            type="number"
+            name="quantity"
+            min="0.1"
+            step="0.1"
+            value={quantity()}
+            onInput={(e) => setQuantity(parseFloat(e.currentTarget.value) || 1)}
+            placeholder="Quantity consumed"
+          />
+
+          <Label class="text-xs">Notes</Label>
+          <Textarea
+            class="font-mono text-xs"
+            name="notes"
+            value={notes()}
+            onInput={(e) => setNotes(e.currentTarget.value)}
+            placeholder="Add notes about this consumption..."
+            rows="2"
+          />
+
+          <div class="flex items-center gap-2 mt-4">
+            <Button type="submit" size="sm" color="primary">
+              Add Consumption
+            </Button>
+            <Show when={addSuccess()}>
+              <Alert color="success" class="alert-sm">
+                <span class="text-xs">Added!</span>
+              </Alert>
             </Show>
-
-            <Show when={isEditingEntry()}>
-              <form
-                action={updateConsumptionAction}
-                method="post"
-                onSubmit={handleUpdateConsumption}
-              >
-                <input
-                  type="hidden"
-                  name="entryId"
-                  value={selectedHistoryEntry()?.id}
-                />
-                <Label class="text-xs">Edit Date</Label>
-                <Input
-                  type="date"
-                  name="consumedAt"
-                  value={editDate()}
-                  onInput={(e) => setEditDate(e.currentTarget.value)}
-                  class="mb-2 text-xs"
-                />
-
-                <Label class="text-xs">Edit Quantity</Label>
-                <Input
-                  type="number"
-                  name="quantity"
-                  min="0.1"
-                  step="0.1"
-                  value={editQuantity()}
-                  onInput={(e) =>
-                    setEditQuantity(parseFloat(e.currentTarget.value) || 1)
-                  }
-                  class="mb-2 text-xs"
-                />
-
-                <Label class="text-xs">Edit Notes</Label>
-                <Textarea
-                  name="notes"
-                  value={editNotes()}
-                  onInput={(e) => setEditNotes(e.currentTarget.value)}
-                  placeholder="Edit notes..."
-                  rows="2"
-                  class="mb-3 text-xs font-mono"
-                />
-
-                <div class="flex gap-2">
-                  <Button type="submit" size="xs" color="primary">
-                    Save
-                  </Button>
-                  <Button
-                    type="button"
-                    size="xs"
-                    color="ghost"
-                    onClick={cancelEditingEntry}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
+            <Show when={addError()}>
+              <Alert color="error" class="alert-sm">
+                <span class="text-xs">Error!</span>
+              </Alert>
             </Show>
           </div>
-        </Show>
+        </form>
 
-        <Show when={updateSuccess()}>
+        <Show when={deleteSuccess()}>
           <Alert color="success" class="alert-sm mt-2">
-            <span class="text-xs">Updated!</span>
+            <span class="text-xs">Deleted!</span>
           </Alert>
         </Show>
-        <Show when={updateError()}>
+        <Show when={deleteError()}>
           <Alert color="error" class="alert-sm mt-2">
-            <span class="text-xs">Update Error!</span>
+            <span class="text-xs">Delete Error!</span>
           </Alert>
         </Show>
       </Details>
-
-      {/* Add New Consumption Form */}
-      <form
-        class="mt-4"
-        action={createConsumptionAction}
-        method="post"
-        onSubmit={handleAddConsumption}
-      >
-        <input type="hidden" name="consumptionItemId" value={props.item.id} />
-
-        <Label class="text-xs">Date</Label>
-        <Input
-          type="date"
-          name="consumedAt"
-          value={consumptionDate()}
-          onInput={(e) => setConsumptionDate(e.currentTarget.value)}
-        />
-
-        <Label class="text-xs">Quantity</Label>
-        <Input
-          type="number"
-          name="quantity"
-          min="0.1"
-          step="0.1"
-          value={quantity()}
-          onInput={(e) => setQuantity(parseFloat(e.currentTarget.value) || 1)}
-          placeholder="Quantity consumed"
-        />
-
-        <Label class="text-xs">Notes</Label>
-        <Textarea
-          class="font-mono text-xs"
-          name="notes"
-          value={notes()}
-          onInput={(e) => setNotes(e.currentTarget.value)}
-          placeholder="Add notes about this consumption..."
-          rows="2"
-        />
-
-        <div class="flex items-center gap-2 mt-4">
-          <Button type="submit" size="sm" color="primary">
-            Add Consumption
-          </Button>
-          <Show when={addSuccess()}>
-            <Alert color="success" class="alert-sm">
-              <span class="text-xs">Added!</span>
-            </Alert>
-          </Show>
-          <Show when={addError()}>
-            <Alert color="error" class="alert-sm">
-              <span class="text-xs">Error!</span>
-            </Alert>
-          </Show>
-        </div>
-      </form>
-
-      <Show when={deleteSuccess()}>
-        <Alert color="success" class="alert-sm mt-2">
-          <span class="text-xs">Deleted!</span>
-        </Alert>
-      </Show>
-      <Show when={deleteError()}>
-        <Alert color="error" class="alert-sm mt-2">
-          <span class="text-xs">Delete Error!</span>
-        </Alert>
-      </Show>
     </Fieldset>
   );
 };
 
-const Details = (props: { children: JSXElement; title: string }) => (
-  <details class="collapse collapse-arrow bg-base-100 border-base-300 border mb-2">
-    <summary class="collapse-title font-semibold text-sm">
-      {props.title}
-    </summary>
-    <div class="collapse-content text-sm">{props.children}</div>
-  </details>
-);
+const Details = (props: {
+  children: JSXElement;
+  title: JSXElement;
+  open?: Accessor<boolean>;
+  onToggle?: (open: boolean) => void;
+}) => {
+  const safeTitle = children(() => props.title);
+  const safeChildren = children(() => props.children);
+  return (
+    <details
+      class="collapse collapse-arrow bg-base-100 border-base-300 border mb-2"
+      open={props.open?.()}
+      onToggle={(e) => props.onToggle?.(e.currentTarget.open)}
+    >
+      <summary class="collapse-title font-semibold text-sm">
+        {safeTitle()}
+      </summary>
+      <div class="collapse-content">{safeChildren()}</div>
+    </details>
+  );
+};
