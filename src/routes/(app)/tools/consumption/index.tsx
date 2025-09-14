@@ -23,15 +23,15 @@ export default function ConsumptionHub() {
     const date = new Date(nextAllowedAt);
     const now = new Date();
     if (date <= now) return "Available Now";
-    
+
     const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays === 1) return "Tomorrow";
     if (diffDays <= 7) return `${diffDays} days`;
-    
+
     return date.toLocaleDateString("en-AU", {
       timeZone: "Australia/Sydney",
       weekday: "short",
-      month: "short", 
+      month: "short",
       day: "numeric"
     });
   };
@@ -41,20 +41,20 @@ export default function ConsumptionHub() {
       <Hero class="rounded bg-base-200">
         <Hero.Content
           class="text-center"
-          title="Medical Food Consumption Tracker"
-          description="Monitor your dietary restrictions and maintain compliance with doctor's orders."
+          title="Consumption Tracker"
+          description="Monitor your intake and maintain compliance with doctor's orders. We can't have too much fun."
         />
       </Hero>
 
       {/* Quick Stats Overview */}
-      <Suspense fallback={<div class="loading loading-spinner loading-lg mx-auto"></div>}>        
+      <Suspense fallback={<div class="loading loading-spinner loading-lg mx-auto"></div>}>
         <Show when={summary()}>
           {(summaryData) => (
             <Stats class="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Stat>
-                <StatTitle>Foods Tracked</StatTitle>
+                <StatTitle>Items Tracked</StatTitle>
                 <StatValue>{summaryData().total_items}</StatValue>
-                <StatDesc>Medical restrictions</StatDesc>
+                <StatDesc>Tolerance restrictions</StatDesc>
               </Stat>
               <Stat>
                 <StatTitle>Still Restricted</StatTitle>
@@ -78,7 +78,7 @@ export default function ConsumptionHub() {
 
       {/* Current Status Overview */}
       <section>
-        <h2 class="text-2xl font-bold mb-6">Current Food Status</h2>
+        <h2 class="text-2xl font-bold mb-6">Current Item Status</h2>
         <Suspense fallback={<div class="loading loading-spinner loading-md mx-auto"></div>}>
           <Show when={items()}>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -92,9 +92,9 @@ export default function ConsumptionHub() {
                       <div class="flex-1">
                         <h3 class="font-semibold">{item.name}</h3>
                         <p class="text-sm opacity-70">
-                          {item.interval_days >= 30 
+                          {item.interval_days >= 30
                             ? `${Math.floor(item.interval_days / 30)} month interval`
-                            : item.interval_days >= 7 
+                            : item.interval_days >= 7
                               ? `${Math.floor(item.interval_days / 7)} week interval`
                               : `${item.interval_days} day interval`
                           }
@@ -111,7 +111,7 @@ export default function ConsumptionHub() {
                       <div class="flex justify-between">
                         <span>Last consumed:</span>
                         <span>
-                          {item.last_consumed_at 
+                          {item.last_consumed_at
                             ? new Date(item.last_consumed_at).toLocaleDateString("en-AU", {
                                 timeZone: "Australia/Sydney",
                                 day: "numeric",
@@ -148,8 +148,8 @@ export default function ConsumptionHub() {
                 </div>
               </Card.Title>
               <p class="text-sm text-base-content/70 mt-2">
-                Add new consumption entries, edit previous entries, and manage your 
-                food intake history. Track quantities, dates, and notes for each consumption.
+                Add new consumption entries, edit previous entries, and manage your
+                intake history. Track quantities, dates, and notes for each consumption.
               </p>
               <Card.Actions class="mt-4">
                 <A href="/tools/consumption/form" class="w-full">
@@ -169,7 +169,7 @@ export default function ConsumptionHub() {
                 <div>
                   <div>View Analytics</div>
                   <div class="text-sm font-normal text-base-content/60">
-                    Medical compliance reports
+                    Tolerance compliance reports
                   </div>
                 </div>
               </Card.Title>
@@ -193,10 +193,10 @@ export default function ConsumptionHub() {
       {/* Medical Alert */}
       <Alert color="info" class="border border-info/20">
         <div>
-          <h3 class="font-semibold text-info">🩺 Medical Compliance Reminder</h3>
+          <h3 class="font-semibold text-info">🩺 Tolerance Compliance Reminder</h3>
           <p class="text-sm mt-1">
-            This tracker is designed to help you follow your doctor's dietary restrictions. 
-            Always consult with your healthcare provider before making changes to your diet or 
+            This tracker is designed to help you manage intake for your health.
+            Always consult with your healthcare provider before making changes to your diet or
             if you have questions about your restrictions.
           </p>
         </div>
@@ -211,28 +211,28 @@ export default function ConsumptionHub() {
           <div>
             <h4 class="font-medium text-base-content mb-1">Tracking Consumption</h4>
             <p class="text-base-content/70">
-              Log entries as soon as you consume restricted foods. Use the date picker 
+              Log entries as soon as you consume. Use the date picker
               to backdate entries if needed. Add detailed notes for medical reference.
             </p>
           </div>
           <div>
             <h4 class="font-medium text-base-content mb-1">Understanding Status</h4>
             <p class="text-base-content/70">
-              Green status means safe to consume, red means still restricted. 
+              Green status means safe to consume, red means still restricted.
               Export reports as CSV files to share with your healthcare team during appointments.
             </p>
           </div>
           <div>
-            <h4 class="font-medium text-base-content mb-1">Medical Intervals</h4>
+            <h4 class="font-medium text-base-content mb-1">Tolerance Intervals</h4>
             <p class="text-base-content/70">
-              Lemons: 1 month, Meat: 3 months, Candy/Kale/Turmeric: 2 weeks. 
+              Lemons: 1 month, Meat: 3 months, Candy/Kale/Turmeric: 2 weeks.
               These intervals are based on your doctor's specific instructions.
             </p>
           </div>
           <div>
             <h4 class="font-medium text-base-content mb-1">Data Management</h4>
             <p class="text-base-content/70">
-              Use the comprehensive data table to review all entries, filter by food type 
+              Use the comprehensive data table to review all entries, filter by consumed item type
               or date range, and export complete consumption history for medical records.
             </p>
           </div>
