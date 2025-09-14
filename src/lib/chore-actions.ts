@@ -1,6 +1,7 @@
 import { cache, action } from "@solidjs/router";
 import { 
   getChoresWithStatus, 
+  getOverdueChores,
   completeChore as dbCompleteChore, 
   undoLastCompletion as dbUndoLastCompletion, 
   updateChoreDuration as dbUpdateChoreDuration, 
@@ -13,6 +14,12 @@ export const loadChores = cache(async () => {
   await dbSeedChoresIfEmpty();
   return getChoresWithStatus();
 }, "chores");
+
+export const loadOverdueChores = cache(async () => {
+  "use server";
+  await dbSeedChoresIfEmpty();
+  return getOverdueChores();
+}, "overdue-chores");
 
 export const getCompletions = cache(async (choreId: string, limit: number = 10) => {
   "use server";

@@ -9,11 +9,15 @@ import { Select } from "~/solid-daisy-components/components/Select";
 import { Textarea } from "~/solid-daisy-components/components/Textarea";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { type ChoreWithStatus, type ChoreCompletion } from "~/lib/db";
-import { loadChores, completeChoreAction, undoChoreAction, updateDurationAction, getCompletions } from "~/lib/chore-actions";
+import { loadChores, loadOverdueChores, completeChoreAction, undoChoreAction, updateDurationAction, getCompletions } from "~/lib/chore-actions";
 
 export default function Home() {
   const [checked, setChecked] = createSignal(false);
-  const chores = createAsync(() => loadChores());
+  const allChores = createAsync(() => loadChores());
+  const overdueChores = createAsync(() => loadOverdueChores());
+  
+  // Choose which data to display based on toggle
+  const chores = () => checked() ? overdueChores() : allChores();
 
   return (
     <main class="">
@@ -24,10 +28,7 @@ export default function Home() {
           <Show when={chores()} fallback={<div>Loading chores...</div>}>
             <For each={chores() || []}>
               {(chore) => (
-                <ChoreForm 
-                  chore={chore} 
-                  hideCompleted={checked()}
-                />
+                <ChoreForm chore={chore} />
               )}
             </For>
           </Show>
@@ -79,17 +80,11 @@ const TimeStampToDateString = (timestamp: number, includeTime?: boolean) => {
 };
 const ChoreForm = (props: { 
   chore: ChoreWithStatus; 
-  hideCompleted: boolean;
 }) => {
   const [notes, setNotes] = createSignal("");
   const [duration, setDuration] = createSignal(props.chore.duration_hours);
   const completions = createAsync(() => getCompletions(props.chore.id, 5));
   const [selectedCompletion, setSelectedCompletion] = createSignal<ChoreCompletion | undefined>();
-
-  // Hide completed chores if toggle is on
-  if (props.hideCompleted && !props.chore.is_overdue) {
-    return null;
-  }
 
   const statusColor = props.chore.is_overdue ? "border-error" : "border-success";
   const lastCompleted = props.chore.last_completed 

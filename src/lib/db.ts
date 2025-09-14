@@ -108,6 +108,14 @@ export async function getChoresWithStatus(): Promise<ChoreWithStatus[]> {
 }
 
 /**
+ * Get only overdue chores with their completion status
+ */
+export async function getOverdueChores(): Promise<ChoreWithStatus[]> {
+  const allChores = await getChoresWithStatus();
+  return allChores.filter(chore => chore.is_overdue);
+}
+
+/**
  * Update chore duration
  */
 export async function updateChoreDuration(id: string, duration_hours: number): Promise<void> {
