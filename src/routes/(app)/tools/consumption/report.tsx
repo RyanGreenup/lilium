@@ -28,7 +28,7 @@ export default function ConsumptionReport() {
 
   const columns = [
     columnHelper.accessor("food_name", {
-      header: "Food",
+      header: "Consumable",
       size: 120,
       cell: (info) => (
         <div class="flex items-center gap-2">
@@ -70,9 +70,9 @@ export default function ConsumptionReport() {
       size: 130,
       cell: (info) => {
         const days = info.getValue();
-        return days >= 30 
+        return days >= 30
           ? `${Math.floor(days / 30)} month${Math.floor(days / 30) !== 1 ? 's' : ''}`
-          : days >= 7 
+          : days >= 7
             ? `${Math.floor(days / 7)} week${Math.floor(days / 7) !== 1 ? 's' : ''}`
             : `${days} day${days !== 1 ? 's' : ''}`;
       },
@@ -91,7 +91,7 @@ export default function ConsumptionReport() {
             {date.toLocaleDateString("en-AU", {
               timeZone: "Australia/Sydney",
               weekday: "short",
-              month: "short", 
+              month: "short",
               day: "numeric"
             })}
           </span>
@@ -106,7 +106,7 @@ export default function ConsumptionReport() {
         const nextAllowedDate = new Date(info.row.original.next_allowed_at);
         const now = new Date();
         const isRestricted = nextAllowedDate > now;
-        
+
         return (
           <span class={`badge whitespace-nowrap ${
             isRestricted ? 'badge-error' : 'badge-success'
@@ -141,10 +141,10 @@ export default function ConsumptionReport() {
       datasets: [{
         label: 'Days Until Next Allowed',
         data: data.map(item => item.days_until_next),
-        backgroundColor: data.map(item => 
+        backgroundColor: data.map(item =>
           item.is_overdue ? 'rgba(239, 68, 68, 0.8)' : 'rgba(34, 197, 94, 0.8)'
         ),
-        borderColor: data.map(item => 
+        borderColor: data.map(item =>
           item.is_overdue ? 'rgba(239, 68, 68, 1)' : 'rgba(34, 197, 94, 1)'
         ),
         borderWidth: 2
@@ -164,13 +164,13 @@ export default function ConsumptionReport() {
         backgroundColor: [
           'rgba(251, 191, 36, 0.8)', // Lemons - yellow
           'rgba(239, 68, 68, 0.8)',  // Meat - red
-          'rgba(168, 85, 247, 0.8)', // Candy - purple  
+          'rgba(168, 85, 247, 0.8)', // Candy - purple
           'rgba(34, 197, 94, 0.8)',  // Kale - green
           'rgba(249, 115, 22, 0.8)'  // Turmeric - orange
         ],
         borderColor: [
           'rgba(251, 191, 36, 1)',
-          'rgba(239, 68, 68, 1)', 
+          'rgba(239, 68, 68, 1)',
           'rgba(168, 85, 247, 1)',
           'rgba(34, 197, 94, 1)',
           'rgba(249, 115, 22, 1)'
@@ -184,7 +184,7 @@ export default function ConsumptionReport() {
   const statusData = () => {
     const summaryData = summary();
     if (!summaryData) return null;
-    
+
     return {
       labels: ['Available Now', 'Still Restricted'],
       datasets: [{
@@ -209,7 +209,7 @@ export default function ConsumptionReport() {
     return date.toLocaleDateString("en-AU", {
       timeZone: "Australia/Sydney",
       weekday: "short",
-      month: "short", 
+      month: "short",
       day: "numeric"
     });
   };
@@ -225,7 +225,7 @@ export default function ConsumptionReport() {
       <Hero class="inline-block rounded bg-base-200">
         <Hero.Content
           class="text-center"
-          title="Food Consumption Report"
+          title="Consumption Report"
           description="Analytics for your medical dietary restrictions and consumption patterns."
         />
       </Hero>
@@ -236,7 +236,7 @@ export default function ConsumptionReport() {
           {(summaryData) => (
             <Stats class="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Stat>
-                <StatTitle>Total Foods</StatTitle>
+                <StatTitle>Total Consumables</StatTitle>
                 <StatValue>{summaryData().total_items}</StatValue>
                 <StatDesc>Being tracked</StatDesc>
               </Stat>
@@ -265,7 +265,7 @@ export default function ConsumptionReport() {
             <Card.Title>Next Allowed Consumption Timeline</Card.Title>
             <Show when={nextConsumptionData()}>
               {(data) => (
-                <BarChart 
+                <BarChart
                   data={data()}
                   title="Days Until Next Consumption"
                   className="h-64"
@@ -282,7 +282,7 @@ export default function ConsumptionReport() {
               <Card.Title>Consumption Status</Card.Title>
               <Show when={statusData()}>
                 {(data) => (
-                  <DoughnutChart 
+                  <DoughnutChart
                     data={data()}
                     title="Current Status"
                     className="h-64"
@@ -297,7 +297,7 @@ export default function ConsumptionReport() {
               <Card.Title>Monthly Consumption Frequency</Card.Title>
               <Show when={frequencyData()}>
                 {(data) => (
-                  <DoughnutChart 
+                  <DoughnutChart
                     data={data()}
                     title="Times per Month"
                     className="h-64"
@@ -311,12 +311,12 @@ export default function ConsumptionReport() {
         {/* Detailed Analytics Table */}
         <Card>
           <Card.Body>
-            <Card.Title>Detailed Food Analytics</Card.Title>
+            <Card.Title>Detailed Consumption Analytics</Card.Title>
             <div class="overflow-x-auto">
               <Table zebra={true} size="sm">
                 <thead>
                   <tr>
-                    <th>Food</th>
+                    <th>Consumable</th>
                     <th>Next Allowed</th>
                     <th>Restriction Period</th>
                     <th>Total Consumed</th>
@@ -340,9 +340,9 @@ export default function ConsumptionReport() {
                             {formatNextAllowed(item.next_allowed_at)}
                           </td>
                           <td>
-                            {item.interval_days >= 30 
+                            {item.interval_days >= 30
                               ? `${Math.floor(item.interval_days / 30)} month${Math.floor(item.interval_days / 30) !== 1 ? 's' : ''}`
-                              : item.interval_days >= 7 
+                              : item.interval_days >= 7
                                 ? `${Math.floor(item.interval_days / 7)} week${Math.floor(item.interval_days / 7) !== 1 ? 's' : ''}`
                                 : `${item.interval_days} day${item.interval_days !== 1 ? 's' : ''}`
                             }
@@ -354,7 +354,7 @@ export default function ConsumptionReport() {
                             {getFrequencyText(item.consumption_frequency || 0)}
                           </td>
                           <td>
-                            {item.last_consumed_at 
+                            {item.last_consumed_at
                               ? new Date(item.last_consumed_at).toLocaleDateString("en-AU", {
                                   timeZone: "Australia/Sydney",
                                   day: "numeric",
@@ -397,7 +397,7 @@ export default function ConsumptionReport() {
                         </span>
                       </div>
                     </div>
-                    
+
                     <div class="space-y-2 text-sm">
                       <div class="flex justify-between">
                         <span>Next allowed:</span>
@@ -405,22 +405,22 @@ export default function ConsumptionReport() {
                           {formatNextAllowed(item.next_allowed_at)}
                         </strong>
                       </div>
-                      
+
                       <div class="flex justify-between">
                         <span>Interval:</span>
                         <span>{item.interval_days} days</span>
                       </div>
-                      
+
                       <div class="flex justify-between">
                         <span>Total consumed:</span>
                         <span>{item.total_consumptions || 0} times</span>
                       </div>
-                      
+
                       <div class="flex justify-between">
                         <span>Avg quantity:</span>
                         <span>{item.avg_quantity ? Math.round(item.avg_quantity * 10) / 10 : 0}</span>
                       </div>
-                      
+
                       <Show when={item.avg_days_between}>
                         <div class="flex justify-between">
                           <span>Avg days between:</span>
