@@ -1,4 +1,12 @@
-import { Accessor, createSignal, For, JSXElement, Setter, Suspense, Show } from "solid-js";
+import {
+  Accessor,
+  createSignal,
+  For,
+  JSXElement,
+  Setter,
+  Suspense,
+  Show,
+} from "solid-js";
 import { createAsync, RouteDefinition } from "@solidjs/router";
 import { VoidComponent } from "solid-js/types/server/rendering.js";
 import { Alert } from "~/solid-daisy-components/components/Alert";
@@ -10,7 +18,14 @@ import { Select } from "~/solid-daisy-components/components/Select";
 import { Textarea } from "~/solid-daisy-components/components/Textarea";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { type ChoreWithStatus, type ChoreCompletion } from "~/lib/db";
-import { loadChores, loadOverdueChores, completeChoreAction, undoChoreAction, updateDurationAction, getCompletions } from "~/lib/chore-actions";
+import {
+  loadChores,
+  loadOverdueChores,
+  completeChoreAction,
+  undoChoreAction,
+  updateDurationAction,
+  getCompletions,
+} from "~/lib/chore-actions";
 import { getUser } from "~/lib/auth";
 
 export const route = {
@@ -25,19 +40,21 @@ export default function Home() {
   const overdueChores = createAsync(() => loadOverdueChores());
 
   // Choose which data to display based on toggle
-  const chores = () => checked() ? overdueChores() : allChores();
+  const chores = () => (checked() ? overdueChores() : allChores());
 
   return (
     <main class="">
       <HeroComponent />
       <ToggleComponent getChecked={checked} setChecked={setChecked} />
-      <Suspense fallback={<div class="loading loading-spinner loading-lg mx-auto"></div>}>
+      <Suspense
+        fallback={
+          <div class="loading loading-spinner loading-lg mx-auto"></div>
+        }
+      >
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8 auto-rows-max">
           <Show when={chores()} fallback={<div>Loading chores...</div>}>
             <For each={chores() || []}>
-              {(chore) => (
-                <ChoreForm chore={chore} />
-              )}
+              {(chore) => <ChoreForm chore={chore} />}
             </For>
           </Show>
         </div>
@@ -86,14 +103,14 @@ const TimeStampToDateString = (timestamp: number, includeTime?: boolean) => {
   }
   return date.toDateString();
 };
-const ChoreForm = (props: {
-  chore: ChoreWithStatus;
-}) => {
+const ChoreForm = (props: { chore: ChoreWithStatus }) => {
   const [notes, setNotes] = createSignal("");
   const [duration, setDuration] = createSignal(props.chore.duration_hours);
   const completions = createAsync(() => getCompletions(props.chore.id, 5));
-  const [selectedCompletion, setSelectedCompletion] = createSignal<ChoreCompletion | undefined>();
-  
+  const [selectedCompletion, setSelectedCompletion] = createSignal<
+    ChoreCompletion | undefined
+  >();
+
   // Form feedback signals
   const [durationSuccess, setDurationSuccess] = createSignal(false);
   const [durationError, setDurationError] = createSignal(false);
@@ -107,7 +124,7 @@ const ChoreForm = (props: {
     event.preventDefault();
     const form = event.target as HTMLFormElement;
     const formData = new FormData(form);
-    
+
     try {
       await fetch(form.action, { method: "POST", body: formData });
       setDurationSuccess(true);
@@ -122,7 +139,7 @@ const ChoreForm = (props: {
     event.preventDefault();
     const form = event.target as HTMLFormElement;
     const formData = new FormData(form);
-    
+
     try {
       await fetch(form.action, { method: "POST", body: formData });
       setCompleteSuccess(true);
@@ -138,7 +155,7 @@ const ChoreForm = (props: {
     event.preventDefault();
     const form = event.target as HTMLFormElement;
     const formData = new FormData(form);
-    
+
     try {
       await fetch(form.action, { method: "POST", body: formData });
       setUndoSuccess(true);
@@ -149,16 +166,21 @@ const ChoreForm = (props: {
     }
   };
 
-  const statusColor = props.chore.is_overdue ? "border-error" : "border-success";
+  const statusColor = props.chore.is_overdue
+    ? "border-error"
+    : "border-success";
   const lastCompleted = props.chore.last_completed
-    ? TimeStampToDateString(new Date(props.chore.last_completed).getTime() / 1000, true)
+    ? TimeStampToDateString(
+        new Date(props.chore.last_completed).getTime() / 1000,
+        true,
+      )
     : "Never";
 
   // Animation classes based on form states
   const formAnimationClasses = () => {
     const hasSuccess = durationSuccess() || completeSuccess() || undoSuccess();
     const hasError = durationError() || completeError() || undoError();
-    
+
     if (hasSuccess) {
       return "transition-all duration-500 ease-out scale-105 rotate-1 shadow-lg ring-2 ring-success/50";
     } else if (hasError) {
@@ -169,26 +191,36 @@ const ChoreForm = (props: {
   };
 
   return (
-    <Fieldset class={`w-xs bg-base-200 border ${statusColor} p-4 rounded-box ${formAnimationClasses()}`}>
+    <Fieldset
+      class={`w-xs bg-base-200 border ${statusColor} p-4 rounded-box ${formAnimationClasses()}`}
+    >
       <Fieldset.Legend>{props.chore.name}</Fieldset.Legend>
 
       <p class="label">
         Previous: {lastCompleted}
-        {props.chore.is_overdue && <span class="text-error ml-2">(Overdue)</span>}
+        {props.chore.is_overdue && (
+          <span class="text-error ml-2">(Overdue)</span>
+        )}
       </p>
 
       <Details title="Details">
         <Label>Previous Completions</Label>
-        <Select onChange={(e) => {
-          const completionId = e.currentTarget.value;
-          const completion = completions()?.find(c => c.id === completionId);
-          setSelectedCompletion(completion);
-        }}>
+        <Select
+          onChange={(e) => {
+            const completionId = e.currentTarget.value;
+            const completion = completions()?.find(
+              (c) => c.id === completionId,
+            );
+            setSelectedCompletion(completion);
+          }}
+        >
           <option value="">Select completion...</option>
           <For each={completions() || []}>
             {(completion) => (
               <option value={completion.id}>
-                {TimeStampToDateString(new Date(completion.completed_at).getTime() / 1000)}
+                {TimeStampToDateString(
+                  new Date(completion.completed_at).getTime() / 1000,
+                )}
               </option>
             )}
           </For>
@@ -198,40 +230,45 @@ const ChoreForm = (props: {
         <div class="bg-base-100 border border-base-300 p-3 rounded-box max-h-[6.25rem] overflow-auto mb-4">
           {selectedCompletion()?.notes || "No notes"}
         </div>
+
+        <form
+          action={updateDurationAction}
+          method="post"
+          onSubmit={handleDurationSubmit}
+        >
+          <input type="hidden" name="choreId" value={props.chore.id} />
+          <Label>Duration Interval (H)</Label>
+          <Input
+            type="number"
+            name="durationHours"
+            value={duration()}
+            onInput={(e) => setDuration(parseInt(e.currentTarget.value) || 24)}
+            placeholder="Duration Between Completion"
+          />
+          <div class="flex items-center gap-2 mt-2">
+            <Button type="submit" size="sm" color="secondary">
+              Update Duration
+            </Button>
+            <Show when={durationSuccess()}>
+              <Alert color="success" class="alert-sm">
+                <span class="text-xs">Updated!</span>
+              </Alert>
+            </Show>
+            <Show when={durationError()}>
+              <Alert color="error" class="alert-sm">
+                <span class="text-xs">Error!</span>
+              </Alert>
+            </Show>
+          </div>
+        </form>
       </Details>
 
-      <form action={updateDurationAction} method="post" onSubmit={handleDurationSubmit}>
-        <input type="hidden" name="choreId" value={props.chore.id} />
-        <Label>Duration Interval (H)</Label>
-        <Input
-          type="number"
-          name="durationHours"
-          value={duration()}
-          onInput={(e) => setDuration(parseInt(e.currentTarget.value) || 24)}
-          placeholder="Duration Between Completion"
-        />
-        <div class="flex items-center gap-2 mt-2">
-          <Button
-            type="submit"
-            size="sm"
-            color="secondary"
-          >
-            Update Duration
-          </Button>
-          <Show when={durationSuccess()}>
-            <Alert color="success" class="alert-sm">
-              <span class="text-xs">Updated!</span>
-            </Alert>
-          </Show>
-          <Show when={durationError()}>
-            <Alert color="error" class="alert-sm">
-              <span class="text-xs">Error!</span>
-            </Alert>
-          </Show>
-        </div>
-      </form>
-
-      <form action={completeChoreAction} method="post" class="mt-4" onSubmit={handleCompleteSubmit}>
+      <form
+        action={completeChoreAction}
+        method="post"
+        class="mt-4"
+        onSubmit={handleCompleteSubmit}
+      >
         <input type="hidden" name="choreId" value={props.chore.id} />
         <Label>Notes</Label>
         <Textarea
@@ -242,11 +279,7 @@ const ChoreForm = (props: {
           placeholder="Add notes for this completion..."
         />
         <div class="flex items-center gap-2 mt-4">
-          <Button
-            type="submit"
-            size="sm"
-            color="primary"
-          >
+          <Button type="submit" size="sm" color="primary">
             Mark Completed
           </Button>
           <Show when={completeSuccess()}>
@@ -262,7 +295,12 @@ const ChoreForm = (props: {
         </div>
       </form>
 
-      <form action={undoChoreAction} method="post" class="mt-2" onSubmit={handleUndoSubmit}>
+      <form
+        action={undoChoreAction}
+        method="post"
+        class="mt-2"
+        onSubmit={handleUndoSubmit}
+      >
         <input type="hidden" name="choreId" value={props.chore.id} />
         <div class="flex items-center gap-2">
           <Button
@@ -295,4 +333,3 @@ const Details = (props: { children: JSXElement; title: string }) => (
     <div class="collapse-content text-sm">{props.children}</div>
   </details>
 );
-
