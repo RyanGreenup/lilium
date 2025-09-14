@@ -235,3 +235,132 @@ export async function seedChoresIfEmpty(): Promise<void> {
     }
   }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Report Analytics ////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+export interface ChoreStats {
+  name: string;
+  total_completions: number;
+  days_since_last_completion: number;
+  average_days_between: number;
+  is_overdue: boolean;
+  completion_rate: number; // percentage based on expected frequency
+}
+
+export interface CompletionTrend {
+  date: string;
+  completions: number;
+}
+
+/**
+ * Get comprehensive statistics for all chores
+ */
+export async function getChoreStatistics(): Promise<ChoreStats[]> {
+  const stmt = db.prepare(`
+    SELECT 
+      c.name,
+      c.duration_hours,
+      c.id,
+      COUNT(cc.id) as total_completions,
+      MAX(cc.completed_at) as last_completed,
+      MIN(cc.completed_at) as first_completed
+    FROM chores c
+    LEFT JOIN chore_completions cc ON c.id = cc.chore_id
+    GROUP BY c.id, c.name, c.duration_hours
+    ORDER BY c.name
+  `);
+
+  const results = stmt.all() as Array<{
+    name: string;
+    duration_hours: number;
+    id: string;
+    total_completions: number;
+    last_completed?: string;
+    first_completed?: string;
+  }>;
+
+  return results.map(row => {
+    const now = Date.now();
+    const lastCompleted = row.last_completed ? new Date(row.last_completed).getTime() : null;
+    const firstCompleted = row.first_completed ? new Date(row.first_completed).getTime() : null;
+    
+    const days_since_last = lastCompleted 
+      ? Math.floor((now - lastCompleted) / (1000 * 60 * 60 * 24))
+      : 999;
+    
+    const total_days = firstCompleted && lastCompleted && row.total_completions > 1
+      ? Math.floor((lastCompleted - firstCompleted) / (1000 * 60 * 60 * 24))
+      : 0;
+    
+    const average_days_between = total_days > 0 && row.total_completions > 1
+      ? total_days / (row.total_completions - 1)
+      : row.duration_hours / 24;
+
+    const expected_frequency_days = row.duration_hours / 24;
+    const completion_rate = average_days_between > 0 
+      ? Math.min(100, (expected_frequency_days / average_days_between) * 100)
+      : 0;
+
+    return {
+      name: row.name,
+      total_completions: row.total_completions,
+      days_since_last_completion: days_since_last,
+      average_days_between: Math.round(average_days_between * 10) / 10,
+      is_overdue: isChoreOverdue(row.last_completed, row.duration_hours),
+      completion_rate: Math.round(completion_rate)
+    };
+  });
+}
+
+/**
+ * Get completion trends over the last 30 days
+ */
+export async function getCompletionTrends(): Promise<CompletionTrend[]> {
+  const stmt = db.prepare(`
+    SELECT 
+      DATE(completed_at) as date,
+      COUNT(*) as completions
+    FROM chore_completions 
+    WHERE completed_at >= datetime('now', '-30 days')
+    GROUP BY DATE(completed_at)
+    ORDER BY date
+  `);
+
+  return stmt.all() as CompletionTrend[];
+}
+
+/**
+ * Get summary statistics
+ */
+export async function getSummaryStats() {
+  const totalChoresStmt = db.prepare("SELECT COUNT(*) as count FROM chores");
+  const overdueStmt = db.prepare(`
+    SELECT COUNT(*) as count FROM (
+      SELECT c.*, cc.completed_at as last_completed
+      FROM chores c
+      LEFT JOIN chore_completions cc ON c.id = cc.chore_id
+      LEFT JOIN chore_completions cc2 ON c.id = cc2.chore_id AND cc.completed_at < cc2.completed_at
+      WHERE cc2.id IS NULL
+    ) WHERE last_completed IS NULL OR 
+    (julianday('now') - julianday(last_completed)) * 24 > duration_hours
+  `);
+  
+  const completionsThisWeekStmt = db.prepare(`
+    SELECT COUNT(*) as count 
+    FROM chore_completions 
+    WHERE completed_at >= datetime('now', '-7 days')
+  `);
+
+  const total = totalChoresStmt.get() as { count: number };
+  const overdue = overdueStmt.get() as { count: number };
+  const thisWeek = completionsThisWeekStmt.get() as { count: number };
+
+  return {
+    total_chores: total.count,
+    overdue_chores: overdue.count,
+    completions_this_week: thisWeek.count,
+    on_time_chores: total.count - overdue.count
+  };
+}

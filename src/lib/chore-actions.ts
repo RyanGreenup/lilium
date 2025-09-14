@@ -6,7 +6,10 @@ import {
   undoLastCompletion as dbUndoLastCompletion, 
   updateChoreDuration as dbUpdateChoreDuration, 
   getChoreCompletions as dbGetChoreCompletions,
-  seedChoresIfEmpty as dbSeedChoresIfEmpty
+  seedChoresIfEmpty as dbSeedChoresIfEmpty,
+  getChoreStatistics,
+  getCompletionTrends,
+  getSummaryStats
 } from "./db";
 
 export const loadChores = cache(async () => {
@@ -48,3 +51,22 @@ export const updateDurationAction = action(async (formData: FormData) => {
   const result = await dbUpdateChoreDuration(choreId, durationHours);
   return result;
 });
+
+////////////////////////////////////////////////////////////////////////////////
+// Report Cache Functions //////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+export const loadChoreStatistics = cache(async () => {
+  "use server";
+  return getChoreStatistics();
+}, "chore-statistics");
+
+export const loadCompletionTrends = cache(async () => {
+  "use server";
+  return getCompletionTrends();
+}, "completion-trends");
+
+export const loadSummaryStats = cache(async () => {
+  "use server";
+  return getSummaryStats();
+}, "summary-stats");
