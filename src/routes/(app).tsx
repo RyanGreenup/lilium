@@ -67,12 +67,12 @@ const SidebarItems: VoidComponent = () => (
           {
             name: "Chores",
             icon: <BrushCleaning class="w-4 h-4" />,
-            link: "tools/chores/form",
+            link: "tools/chores/",
           },
           {
             name: "Consumption",
             icon: <Candy class="w-4 h-4" />,
-            link: "tools/consumption/report",
+            link: "tools/consumption/",
           },
         ]}
       >
