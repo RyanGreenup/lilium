@@ -58,11 +58,7 @@ export interface ChoreWithStatus extends Chore {
   last_completion_notes?: string;
 }
 
-const user = await requireUser();
-// Only allow logged in user to fetch data
-if (!user.id) {
-  throw redirect("/login");
-}
+// User authentication is now handled within each function
 
 ////////////////////////////////////////////////////////////////////////////////
 // Chore Management ////////////////////////////////////////////////////////////
@@ -75,6 +71,10 @@ export async function createChore(
   name: string,
   duration_hours: number = 24,
 ): Promise<Chore> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
   const id = randomBytes(16).toString("hex");
   const stmt = db.prepare(
     "INSERT INTO chores (id, name, duration_hours) VALUES (?, ?, ?)",
@@ -98,6 +98,10 @@ export async function getChoreById(id: string): Promise<Chore> {
  * Get all chores with their completion status
  */
 export async function getChoresWithStatus(): Promise<ChoreWithStatus[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
   const stmt = db.prepare(`
     SELECT
       c.*,
@@ -220,6 +224,10 @@ function isChoreOverdue(
  * Seed database with sample chores if empty
  */
 export async function seedChoresIfEmpty(): Promise<void> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
   const stmt = db.prepare("SELECT COUNT(*) as count FROM chores");
   const result = stmt.get() as { count: number };
 

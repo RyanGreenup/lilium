@@ -94,11 +94,7 @@ export interface ConsumptionValidation {
   next_allowed_date?: string;
 }
 
-const user = await requireUser();
-// Only allow logged in user to fetch data
-if (!user.id) {
-  throw redirect("/login");
-}
+// User authentication is now handled within each function
 
 ////////////////////////////////////////////////////////////////////////////////
 // Consumption Items Management ////////////////////////////////////////////////
@@ -108,6 +104,10 @@ if (!user.id) {
  * Get all consumption items with their status
  */
 export async function getConsumptionItemsWithStatus(): Promise<ConsumptionItemWithStatus[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
   const stmt = db.prepare(`
     SELECT 
       ci.id,
@@ -150,6 +150,10 @@ export async function getConsumptionItemsWithStatus(): Promise<ConsumptionItemWi
  * Get only overdue consumption items
  */
 export async function getOverdueConsumptionItems(): Promise<ConsumptionItemWithStatus[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
   const allItems = await getConsumptionItemsWithStatus();
   return allItems.filter((item) => item.is_overdue);
 }
@@ -181,6 +185,10 @@ export async function createConsumptionEntry(
   quantity: number,
   notes?: string,
 ): Promise<ConsumptionEntry> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
   const id = randomBytes(16).toString("hex");
   const stmt = db.prepare(
     "INSERT INTO consumption_entries (id, consumption_item_id, consumed_at, quantity, notes) VALUES (?, ?, ?, ?, ?)",
@@ -355,6 +363,10 @@ function isConsumptionOverdue(
  * Seed database with medical dietary restriction items if empty
  */
 export async function seedConsumptionItemsIfEmpty(): Promise<void> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
   const stmt = db.prepare("SELECT COUNT(*) as count FROM consumption_items");
   const result = stmt.get() as { count: number };
 
