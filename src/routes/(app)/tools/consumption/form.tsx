@@ -40,10 +40,19 @@ export const route = {
 
 export default function ConsumptionTracker() {
   const [showOnlyOverdue, setShowOnlyOverdue] = createSignal(false);
+  
+  // Global refresh trigger for all consumption data
+  const [globalRefreshTrigger, setGlobalRefreshTrigger] = createSignal(0);
 
-  // Load real data from database
-  const allConsumptions = createAsync(() => loadConsumptionItems());
-  const overdueConsumptions = createAsync(() => loadOverdueConsumptionItems());
+  // Load real data from database with refresh capability
+  const allConsumptions = createAsync(() => {
+    globalRefreshTrigger(); // Subscribe to global refresh
+    return loadConsumptionItems();
+  });
+  const overdueConsumptions = createAsync(() => {
+    globalRefreshTrigger(); // Subscribe to global refresh  
+    return loadOverdueConsumptionItems();
+  });
 
   // Choose which data to display based on toggle
   const consumptions = () =>
@@ -68,7 +77,7 @@ export default function ConsumptionTracker() {
               fallback={<div>Loading consumption items...</div>}
             >
               <For each={consumptions() || []}>
-                {(item) => <ConsumptionForm item={item} />}
+                {(item) => <ConsumptionForm item={item} onDataChange={() => setGlobalRefreshTrigger(prev => prev + 1)} />}
               </For>
             </Show>
           </div>
@@ -145,7 +154,10 @@ const TimeStampToDateString = (
   });
 };
 
-const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
+const ConsumptionForm = (props: { 
+  item: ConsumptionItemWithStatus;
+  onDataChange?: () => void;
+}) => {
   const [notes, setNotes] = createSignal("");
   const [quantity, setQuantity] = createSignal(1);
   // Initialize with today's date
@@ -195,6 +207,9 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
       // Refresh history data
       setRefreshTrigger(prev => prev + 1);
       
+      // Refresh main consumption data
+      props.onDataChange?.();
+      
       setTimeout(() => setAddSuccess(false), 3000);
     } catch (error) {
       setAddError(true);
@@ -214,6 +229,9 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
       
       // Refresh history data
       setRefreshTrigger(prev => prev + 1);
+      
+      // Refresh main consumption data
+      props.onDataChange?.();
       
       setTimeout(() => setUpdateSuccess(false), 3000);
     } catch (error) {
@@ -250,6 +268,9 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
       
       // Force refresh the history data by updating the trigger
       setRefreshTrigger(prev => prev + 1);
+      
+      // Refresh main consumption data
+      props.onDataChange?.();
       
       setTimeout(() => setDeleteSuccess(false), 3000);
     } catch (error) {
