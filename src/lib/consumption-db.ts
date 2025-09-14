@@ -219,6 +219,10 @@ export async function updateConsumptionEntry(
  * Delete consumption entry
  */
 export async function deleteConsumptionEntry(id: string): Promise<void> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
   const stmt = db.prepare("DELETE FROM consumption_entries WHERE id = ?");
   const result = stmt.run(id);
   if (result.changes === 0) throw new Error("Consumption entry not found");

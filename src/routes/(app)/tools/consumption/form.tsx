@@ -1,14 +1,28 @@
+import { createAsync, RouteDefinition } from "@solidjs/router";
 import {
   Accessor,
   createSignal,
   For,
   JSXElement,
   Setter,
-  Suspense,
   Show,
+  Suspense,
 } from "solid-js";
-import { createAsync, RouteDefinition } from "@solidjs/router";
 import { VoidComponent } from "solid-js/types/server/rendering.js";
+import { FirstLetterAvatar } from "~/components/FirstLetterAvatar";
+import { getUser } from "~/lib/auth";
+import {
+  createConsumptionAction,
+  deleteConsumptionAction,
+  getConsumptionHistory,
+  loadConsumptionItems,
+  loadOverdueConsumptionItems,
+  updateConsumptionAction,
+} from "~/lib/consumption-actions";
+import {
+  type ConsumptionEntry,
+  type ConsumptionItemWithStatus,
+} from "~/lib/consumption-db";
 import { Alert } from "~/solid-daisy-components/components/Alert";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { Fieldset, Label } from "~/solid-daisy-components/components/Fieldset";
@@ -17,20 +31,6 @@ import { Input } from "~/solid-daisy-components/components/Input";
 import { Select } from "~/solid-daisy-components/components/Select";
 import { Textarea } from "~/solid-daisy-components/components/Textarea";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
-import {
-  type ConsumptionItemWithStatus,
-  type ConsumptionEntry,
-} from "~/lib/consumption-db";
-import {
-  loadConsumptionItems,
-  loadOverdueConsumptionItems,
-  createConsumptionAction,
-  updateConsumptionAction,
-  deleteConsumptionAction,
-  getConsumptionHistory,
-} from "~/lib/consumption-actions";
-import { getUser } from "~/lib/auth";
-import { FirstLetterAvatar } from "~/components/FirstLetterAvatar";
 
 export const route = {
   preload() {
@@ -61,15 +61,17 @@ export default function ConsumptionTracker() {
           <div class="loading loading-spinner loading-lg mx-auto"></div>
         }
       >
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8 auto-rows-max">
-          <Show
-            when={consumptions()}
-            fallback={<div>Loading consumption items...</div>}
-          >
-            <For each={consumptions() || []}>
-              {(item) => <ConsumptionForm item={item} />}
-            </For>
-          </Show>
+        <div class="flex justify-center">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8 auto-rows-max">
+            <Show
+              when={consumptions()}
+              fallback={<div>Loading consumption items...</div>}
+            >
+              <For each={consumptions() || []}>
+                {(item) => <ConsumptionForm item={item} />}
+              </For>
+            </Show>
+          </div>
         </div>
       </Suspense>
     </main>
@@ -154,8 +156,12 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
   };
   const [consumptionDate, setConsumptionDate] = createSignal(getToday());
 
-  // Load consumption history
-  const history = createAsync(() => getConsumptionHistory(props.item.id, 10));
+  // Load consumption history with refresh capability
+  const [refreshTrigger, setRefreshTrigger] = createSignal(0);
+  const history = createAsync(() => {
+    refreshTrigger(); // Subscribe to refresh trigger
+    return getConsumptionHistory(props.item.id, 10);
+  });
 
   const [selectedHistoryEntry, setSelectedHistoryEntry] = createSignal<
     ConsumptionEntry | undefined
@@ -185,6 +191,10 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
       setNotes("");
       setQuantity(1);
       setConsumptionDate(getToday());
+      
+      // Refresh history data
+      setRefreshTrigger(prev => prev + 1);
+      
       setTimeout(() => setAddSuccess(false), 3000);
     } catch (error) {
       setAddError(true);
@@ -201,6 +211,10 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
       await fetch(form.action, { method: "POST", body: formData });
       setUpdateSuccess(true);
       setIsEditingEntry(false);
+      
+      // Refresh history data
+      setRefreshTrigger(prev => prev + 1);
+      
       setTimeout(() => setUpdateSuccess(false), 3000);
     } catch (error) {
       setUpdateError(true);
@@ -224,14 +238,22 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
     setEditNotes("");
   };
 
-  const handleDeleteConsumption = async (entryId: string) => {
+  const handleDeleteConsumption = async (event: Event) => {
+    event.preventDefault();
+    const form = event.target as HTMLFormElement;
+    const formData = new FormData(form);
+
     try {
-      const formData = new FormData();
-      formData.append("entryId", entryId);
-      await deleteConsumptionAction(formData);
+      await fetch(form.action, { method: "POST", body: formData });
       setDeleteSuccess(true);
+      setSelectedHistoryEntry(undefined); // Clear selection after delete
+      
+      // Force refresh the history data by updating the trigger
+      setRefreshTrigger(prev => prev + 1);
+      
       setTimeout(() => setDeleteSuccess(false), 3000);
     } catch (error) {
+      console.error("Delete error:", error);
       setDeleteError(true);
       setTimeout(() => setDeleteError(false), 3000);
     }
@@ -326,15 +348,25 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
                   >
                     Edit
                   </Button>
-                  <Button
-                    size="xs"
-                    color="error"
-                    onClick={() =>
-                      handleDeleteConsumption(selectedHistoryEntry()?.id)
-                    }
+                  <form
+                    action={deleteConsumptionAction}
+                    method="post"
+                    onSubmit={handleDeleteConsumption}
+                    style="display: inline;"
                   >
-                    Delete
-                  </Button>
+                    <input
+                      type="hidden"
+                      name="entryId"
+                      value={selectedHistoryEntry()?.id}
+                    />
+                    <Button
+                      type="submit"
+                      size="xs"
+                      color="error"
+                    >
+                      Delete
+                    </Button>
+                  </form>
                 </div>
               </div>
             </Show>
