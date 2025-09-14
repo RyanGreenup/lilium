@@ -1,16 +1,20 @@
 import { createAsync, RouteDefinition } from "@solidjs/router";
+import { createColumnHelper } from "@tanstack/solid-table";
 import { For, Show, Suspense } from "solid-js";
+import { FirstLetterAvatar } from "~/components/FirstLetterAvatar";
 import { getUser } from "~/lib/auth";
+import {
+  loadAllConsumptionEntries,
+  loadConsumptionAnalytics,
+  loadConsumptionSummary,
+} from "~/lib/consumption-actions";
+import { Card } from "~/solid-daisy-components/components/Card";
+import { VirtualizedDataTable } from "~/solid-daisy-components/components/Datatables/VirtualizedDataTable";
 import { Hero } from "~/solid-daisy-components/components/Hero";
 import { Table } from "~/solid-daisy-components/components/Table";
-import { Card } from "~/solid-daisy-components/components/Card";
-import { Stats, Stat, StatTitle, StatValue, StatDesc } from "~/solid-daisy-components/components/Stat";
-import { DoughnutChart } from "~/solid-daisy-components/components/viz/chart_js/DoughnutChart";
 import { BarChart } from "~/solid-daisy-components/components/viz/chart_js/BarChart";
-import { VirtualizedDataTable } from "~/solid-daisy-components/components/Datatables/VirtualizedDataTable";
-import { loadConsumptionAnalytics, loadConsumptionSummary, loadAllConsumptionEntries } from "~/lib/consumption-actions";
-import { FirstLetterAvatar } from "~/components/FirstLetterAvatar";
-import { createColumnHelper } from "@tanstack/solid-table";
+import { DoughnutChart } from "~/solid-daisy-components/components/viz/chart_js/DoughnutChart";
+import { SummaryStatsCard } from ".";
 
 export const route = {
   preload() {
@@ -47,7 +51,7 @@ export default function ConsumptionReport() {
           weekday: "short",
           day: "2-digit",
           month: "short",
-          year: "numeric"
+          year: "numeric",
         });
       },
     }),
@@ -71,10 +75,10 @@ export default function ConsumptionReport() {
       cell: (info) => {
         const days = info.getValue();
         return days >= 30
-          ? `${Math.floor(days / 30)} month${Math.floor(days / 30) !== 1 ? 's' : ''}`
+          ? `${Math.floor(days / 30)} month${Math.floor(days / 30) !== 1 ? "s" : ""}`
           : days >= 7
-            ? `${Math.floor(days / 7)} week${Math.floor(days / 7) !== 1 ? 's' : ''}`
-            : `${days} day${days !== 1 ? 's' : ''}`;
+            ? `${Math.floor(days / 7)} week${Math.floor(days / 7) !== 1 ? "s" : ""}`
+            : `${days} day${days !== 1 ? "s" : ""}`;
       },
     }),
     columnHelper.accessor("next_allowed_at", {
@@ -92,7 +96,7 @@ export default function ConsumptionReport() {
               timeZone: "Australia/Sydney",
               weekday: "short",
               month: "short",
-              day: "numeric"
+              day: "numeric",
             })}
           </span>
         );
@@ -108,10 +112,12 @@ export default function ConsumptionReport() {
         const isRestricted = nextAllowedDate > now;
 
         return (
-          <span class={`badge whitespace-nowrap ${
-            isRestricted ? 'badge-error' : 'badge-success'
-          }`}>
-            {isRestricted ? 'Restricted' : 'Available'}
+          <span
+            class={`badge whitespace-nowrap ${
+              isRestricted ? "badge-error" : "badge-success"
+            }`}
+          >
+            {isRestricted ? "Restricted" : "Available"}
           </span>
         );
       },
@@ -125,7 +131,7 @@ export default function ConsumptionReport() {
           timeZone: "Australia/Sydney",
           day: "2-digit",
           month: "short",
-          year: "numeric"
+          year: "numeric",
         });
       },
     }),
@@ -137,18 +143,22 @@ export default function ConsumptionReport() {
     if (!data) return null;
 
     return {
-      labels: data.map(item => item.name),
-      datasets: [{
-        label: 'Days Until Next Allowed',
-        data: data.map(item => item.days_until_next),
-        backgroundColor: data.map(item =>
-          item.is_overdue ? 'rgba(239, 68, 68, 0.8)' : 'rgba(34, 197, 94, 0.8)'
-        ),
-        borderColor: data.map(item =>
-          item.is_overdue ? 'rgba(239, 68, 68, 1)' : 'rgba(34, 197, 94, 1)'
-        ),
-        borderWidth: 2
-      }]
+      labels: data.map((item) => item.name),
+      datasets: [
+        {
+          label: "Days Until Next Allowed",
+          data: data.map((item) => item.days_until_next),
+          backgroundColor: data.map((item) =>
+            item.is_overdue
+              ? "rgba(239, 68, 68, 0.8)"
+              : "rgba(34, 197, 94, 0.8)",
+          ),
+          borderColor: data.map((item) =>
+            item.is_overdue ? "rgba(239, 68, 68, 1)" : "rgba(34, 197, 94, 1)",
+          ),
+          borderWidth: 2,
+        },
+      ],
     };
   };
 
@@ -158,25 +168,27 @@ export default function ConsumptionReport() {
     if (!data) return null;
 
     return {
-      labels: data.map(item => item.name),
-      datasets: [{
-        data: data.map(item => item.consumption_frequency || 0),
-        backgroundColor: [
-          'rgba(251, 191, 36, 0.8)', // Lemons - yellow
-          'rgba(239, 68, 68, 0.8)',  // Meat - red
-          'rgba(168, 85, 247, 0.8)', // Candy - purple
-          'rgba(34, 197, 94, 0.8)',  // Kale - green
-          'rgba(249, 115, 22, 0.8)'  // Turmeric - orange
-        ],
-        borderColor: [
-          'rgba(251, 191, 36, 1)',
-          'rgba(239, 68, 68, 1)',
-          'rgba(168, 85, 247, 1)',
-          'rgba(34, 197, 94, 1)',
-          'rgba(249, 115, 22, 1)'
-        ],
-        borderWidth: 2
-      }]
+      labels: data.map((item) => item.name),
+      datasets: [
+        {
+          data: data.map((item) => item.consumption_frequency || 0),
+          backgroundColor: [
+            "rgba(251, 191, 36, 0.8)", // Lemons - yellow
+            "rgba(239, 68, 68, 0.8)", // Meat - red
+            "rgba(168, 85, 247, 0.8)", // Candy - purple
+            "rgba(34, 197, 94, 0.8)", // Kale - green
+            "rgba(249, 115, 22, 0.8)", // Turmeric - orange
+          ],
+          borderColor: [
+            "rgba(251, 191, 36, 1)",
+            "rgba(239, 68, 68, 1)",
+            "rgba(168, 85, 247, 1)",
+            "rgba(34, 197, 94, 1)",
+            "rgba(249, 115, 22, 1)",
+          ],
+          borderWidth: 2,
+        },
+      ],
     };
   };
 
@@ -186,19 +198,18 @@ export default function ConsumptionReport() {
     if (!summaryData) return null;
 
     return {
-      labels: ['Available Now', 'Still Restricted'],
-      datasets: [{
-        data: [summaryData.on_time_items, summaryData.overdue_items],
-        backgroundColor: [
-          'rgba(34, 197, 94, 0.8)', // green
-          'rgba(239, 68, 68, 0.8)'   // red
-        ],
-        borderColor: [
-          'rgba(34, 197, 94, 1)',
-          'rgba(239, 68, 68, 1)'
-        ],
-        borderWidth: 2
-      }]
+      labels: ["Available Now", "Still Restricted"],
+      datasets: [
+        {
+          data: [summaryData.on_time_items, summaryData.overdue_items],
+          backgroundColor: [
+            "rgba(34, 197, 94, 0.8)", // green
+            "rgba(239, 68, 68, 0.8)", // red
+          ],
+          borderColor: ["rgba(34, 197, 94, 1)", "rgba(239, 68, 68, 1)"],
+          borderWidth: 2,
+        },
+      ],
     };
   };
 
@@ -210,7 +221,7 @@ export default function ConsumptionReport() {
       timeZone: "Australia/Sydney",
       weekday: "short",
       month: "short",
-      day: "numeric"
+      day: "numeric",
     });
   };
 
@@ -230,33 +241,14 @@ export default function ConsumptionReport() {
         />
       </Hero>
 
-      <Suspense fallback={<div class="loading loading-spinner loading-lg mx-auto"></div>}>
+      <Suspense
+        fallback={
+          <div class="loading loading-spinner loading-lg mx-auto"></div>
+        }
+      >
         {/* Summary Statistics */}
         <Show when={summary()}>
-          {(summaryData) => (
-            <Stats class="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Stat>
-                <StatTitle>Total Consumables</StatTitle>
-                <StatValue>{summaryData().total_items}</StatValue>
-                <StatDesc>Being tracked</StatDesc>
-              </Stat>
-              <Stat>
-                <StatTitle>Still Restricted</StatTitle>
-                <StatValue class="text-error">{summaryData().overdue_items}</StatValue>
-                <StatDesc>Cannot consume yet</StatDesc>
-              </Stat>
-              <Stat>
-                <StatTitle>Available Now</StatTitle>
-                <StatValue class="text-success">{summaryData().on_time_items}</StatValue>
-                <StatDesc>Safe to consume</StatDesc>
-              </Stat>
-              <Stat>
-                <StatTitle>This Week</StatTitle>
-                <StatValue>{summaryData().consumptions_this_week}</StatValue>
-                <StatDesc>Consumptions</StatDesc>
-              </Stat>
-            </Stats>
-          )}
+          {(summaryData) => <SummaryStatsCard summaryData={summaryData} />}
         </Show>
 
         {/* Next Consumption Timeline */}
@@ -329,46 +321,61 @@ export default function ConsumptionReport() {
                   <Show when={analytics()}>
                     <For each={analytics()}>
                       {(item) => (
-                        <tr class={item.is_overdue ? "bg-error/10" : "bg-success/5"}>
+                        <tr
+                          class={
+                            item.is_overdue ? "bg-error/10" : "bg-success/5"
+                          }
+                        >
                           <td>
                             <div class="flex items-center gap-2">
-                              <FirstLetterAvatar name={item.name} showIcon={true} />
+                              <FirstLetterAvatar
+                                name={item.name}
+                                showIcon={true}
+                              />
                               <span class="font-medium">{item.name}</span>
                             </div>
                           </td>
-                          <td class={item.is_overdue ? "text-error font-semibold" : "text-success"}>
+                          <td
+                            class={
+                              item.is_overdue
+                                ? "text-error font-semibold"
+                                : "text-success"
+                            }
+                          >
                             {formatNextAllowed(item.next_allowed_at)}
                           </td>
                           <td>
                             {item.interval_days >= 30
-                              ? `${Math.floor(item.interval_days / 30)} month${Math.floor(item.interval_days / 30) !== 1 ? 's' : ''}`
+                              ? `${Math.floor(item.interval_days / 30)} month${Math.floor(item.interval_days / 30) !== 1 ? "s" : ""}`
                               : item.interval_days >= 7
-                                ? `${Math.floor(item.interval_days / 7)} week${Math.floor(item.interval_days / 7) !== 1 ? 's' : ''}`
-                                : `${item.interval_days} day${item.interval_days !== 1 ? 's' : ''}`
-                            }
+                                ? `${Math.floor(item.interval_days / 7)} week${Math.floor(item.interval_days / 7) !== 1 ? "s" : ""}`
+                                : `${item.interval_days} day${item.interval_days !== 1 ? "s" : ""}`}
                           </td>
-                          <td>
-                            {item.total_consumptions || 0} times
-                          </td>
+                          <td>{item.total_consumptions || 0} times</td>
                           <td>
                             {getFrequencyText(item.consumption_frequency || 0)}
                           </td>
                           <td>
                             {item.last_consumed_at
-                              ? new Date(item.last_consumed_at).toLocaleDateString("en-AU", {
+                              ? new Date(
+                                  item.last_consumed_at,
+                                ).toLocaleDateString("en-AU", {
                                   timeZone: "Australia/Sydney",
                                   day: "numeric",
                                   month: "short",
-                                  year: "numeric"
+                                  year: "numeric",
                                 })
-                              : "Never"
-                            }
+                              : "Never"}
                           </td>
                           <td>
-                            <span class={`badge whitespace-nowrap ${
-                              item.is_overdue ? 'badge-error' : 'badge-success'
-                            }`}>
-                              {item.is_overdue ? 'Restricted' : 'Available'}
+                            <span
+                              class={`badge whitespace-nowrap ${
+                                item.is_overdue
+                                  ? "badge-error"
+                                  : "badge-success"
+                              }`}
+                            >
+                              {item.is_overdue ? "Restricted" : "Available"}
                             </span>
                           </td>
                         </tr>
@@ -392,8 +399,10 @@ export default function ConsumptionReport() {
                       <FirstLetterAvatar name={item.name} showIcon={true} />
                       <div>
                         <Card.Title class="text-lg">{item.name}</Card.Title>
-                        <span class={`badge ${item.is_overdue ? 'badge-error' : 'badge-success'}`}>
-                          {item.is_overdue ? 'Restricted' : 'Available'}
+                        <span
+                          class={`badge ${item.is_overdue ? "badge-error" : "badge-success"}`}
+                        >
+                          {item.is_overdue ? "Restricted" : "Available"}
                         </span>
                       </div>
                     </div>
@@ -401,7 +410,11 @@ export default function ConsumptionReport() {
                     <div class="space-y-2 text-sm">
                       <div class="flex justify-between">
                         <span>Next allowed:</span>
-                        <strong class={item.is_overdue ? "text-error" : "text-success"}>
+                        <strong
+                          class={
+                            item.is_overdue ? "text-error" : "text-success"
+                          }
+                        >
                           {formatNextAllowed(item.next_allowed_at)}
                         </strong>
                       </div>
@@ -418,7 +431,11 @@ export default function ConsumptionReport() {
 
                       <div class="flex justify-between">
                         <span>Avg quantity:</span>
-                        <span>{item.avg_quantity ? Math.round(item.avg_quantity * 10) / 10 : 0}</span>
+                        <span>
+                          {item.avg_quantity
+                            ? Math.round(item.avg_quantity * 10) / 10
+                            : 0}
+                        </span>
                       </div>
 
                       <Show when={item.avg_days_between}>
@@ -440,7 +457,8 @@ export default function ConsumptionReport() {
           <Card.Body>
             <Card.Title>All Consumption Data</Card.Title>
             <p class="text-sm opacity-70 mb-4">
-              Complete record of all consumption entries with filtering, sorting, and export capabilities.
+              Complete record of all consumption entries with filtering,
+              sorting, and export capabilities.
             </p>
             <Show when={allEntries()}>
               <VirtualizedDataTable
