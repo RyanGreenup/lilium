@@ -36,8 +36,19 @@ export const route = {
 
 export default function Home() {
   const [checked, setChecked] = createSignal(false);
-  const allChores = createAsync(() => loadChores());
-  const overdueChores = createAsync(() => loadOverdueChores());
+  
+  // Global refresh trigger for all chore data
+  const [globalRefreshTrigger, setGlobalRefreshTrigger] = createSignal(0);
+
+  // Load real data from database with refresh capability
+  const allChores = createAsync(() => {
+    globalRefreshTrigger(); // Subscribe to global refresh
+    return loadChores();
+  });
+  const overdueChores = createAsync(() => {
+    globalRefreshTrigger(); // Subscribe to global refresh  
+    return loadOverdueChores();
+  });
 
   // Choose which data to display based on toggle
   const chores = () => (checked() ? overdueChores() : allChores());
@@ -55,7 +66,7 @@ export default function Home() {
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8 auto-rows-max">
             <Show when={chores()} fallback={<div>Loading chores...</div>}>
               <For each={chores() || []}>
-                {(chore) => <ChoreForm chore={chore} />}
+                {(chore) => <ChoreForm chore={chore} onDataChange={() => setGlobalRefreshTrigger(prev => prev + 1)} />}
               </For>
             </Show>
           </div>
@@ -123,10 +134,19 @@ const renderMarkdown = async (markdownContent: string): Promise<string> => {
     return markdownContent; // Fallback to plain text
   }
 };
-const ChoreForm = (props: { chore: ChoreWithStatus }) => {
+const ChoreForm = (props: { 
+  chore: ChoreWithStatus;
+  onDataChange?: () => void;
+}) => {
   const [notes, setNotes] = createSignal("");
   const [duration, setDuration] = createSignal(props.chore.duration_hours);
-  const completions = createAsync(() => getCompletions(props.chore.id, 5));
+  
+  // Add refresh capability for completions data
+  const [refreshTrigger, setRefreshTrigger] = createSignal(0);
+  const completions = createAsync(() => {
+    refreshTrigger(); // Subscribe to refresh trigger
+    return getCompletions(props.chore.id, 5);
+  });
   const [selectedCompletion, setSelectedCompletion] = createSignal<
     ChoreCompletion | undefined
   >();
@@ -155,6 +175,13 @@ const ChoreForm = (props: { chore: ChoreWithStatus }) => {
     try {
       await fetch(form.action, { method: "POST", body: formData });
       setDurationSuccess(true);
+      
+      // Update the local duration state
+      setDuration(parseInt(formData.get("durationHours") as string) || 24);
+      
+      // Refresh main chore data (duration change affects overdue status)
+      props.onDataChange?.();
+      
       setTimeout(() => setDurationSuccess(false), 3000);
     } catch (error) {
       setDurationError(true);
@@ -171,6 +198,13 @@ const ChoreForm = (props: { chore: ChoreWithStatus }) => {
       await fetch(form.action, { method: "POST", body: formData });
       setCompleteSuccess(true);
       setNotes("");
+      
+      // Refresh completions data
+      setRefreshTrigger(prev => prev + 1);
+      
+      // Refresh main chore data (completion changes overdue status)
+      props.onDataChange?.();
+      
       setTimeout(() => setCompleteSuccess(false), 3000);
     } catch (error) {
       setCompleteError(true);
@@ -186,6 +220,13 @@ const ChoreForm = (props: { chore: ChoreWithStatus }) => {
     try {
       await fetch(form.action, { method: "POST", body: formData });
       setUndoSuccess(true);
+      
+      // Refresh completions data
+      setRefreshTrigger(prev => prev + 1);
+      
+      // Refresh main chore data (undo changes overdue status)
+      props.onDataChange?.();
+      
       setTimeout(() => setUndoSuccess(false), 3000);
     } catch (error) {
       setUndoError(true);
