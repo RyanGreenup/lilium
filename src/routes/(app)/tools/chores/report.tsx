@@ -185,9 +185,9 @@ export default function ChoreReport() {
                             </div>
                           </td>
                           <td>
-                            <div class={`badge ${stat.is_overdue ? 'badge-error' : 'badge-success'}`}>
+                            <span class={`badge whitespace-nowrap ${stat.is_overdue ? 'badge-error' : 'badge-success'}`}>
                               {stat.is_overdue ? 'Overdue' : 'On Time'}
-                            </div>
+                            </span>
                           </td>
                         </tr>
                       )}
