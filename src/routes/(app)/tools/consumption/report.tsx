@@ -101,13 +101,20 @@ export default function ConsumptionReport() {
     columnHelper.accessor("is_currently_overdue", {
       header: "Status",
       size: 100,
-      cell: (info) => (
-        <span class={`badge whitespace-nowrap ${
-          info.getValue() ? 'badge-error' : 'badge-success'
-        }`}>
-          {info.getValue() ? 'Restricted' : 'Available'}
-        </span>
-      ),
+      cell: (info) => {
+        // Use consistent logic with "Next Allowed" column
+        const nextAllowedDate = new Date(info.row.original.next_allowed_at);
+        const now = new Date();
+        const isRestricted = nextAllowedDate > now;
+        
+        return (
+          <span class={`badge whitespace-nowrap ${
+            isRestricted ? 'badge-error' : 'badge-success'
+          }`}>
+            {isRestricted ? 'Restricted' : 'Available'}
+          </span>
+        );
+      },
     }),
     columnHelper.accessor("created_at", {
       header: "Entry Created",
