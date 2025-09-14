@@ -1,0 +1,3 @@
+[submodule "src/solid-daisy-components"]
+	path = src/solid-daisy-components
+	url = https://github.com/RyanGreenup/solid-daisy-components

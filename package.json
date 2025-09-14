@@ -1,14 +1,19 @@
 {
-  "name": "example-with-tailwindcss",
+  "name": "rsChronicles",
   "type": "module",
   "scripts": {
     "dev": "vinxi dev",
     "build": "vinxi build",
     "start": "vinxi start"
   },
+  "workspace": [
+    "./src/solid-daisy-components/"
+  ],
   "dependencies": {
     "@solidjs/router": "^0.15.0",
     "@solidjs/start": "^1.1.0",
+    "@tailwindcss/typography": "^0.5.16",
+    "daisyui": "^5.1.10",
     "solid-js": "^1.9.5",
     "vinxi": "^0.5.7"
   },
