@@ -103,7 +103,7 @@ const AccountActionSelector = () => {
         <Label>Login</Label>
         <Radio name="loginType" value="login" checked={true} />
         <Label>Register</Label>
-        <Radio name="loginType" value="register" checked={true} />
+        <Radio name="loginType" value="register" checked={false} />
       </Fieldset>
     </div>
   );
