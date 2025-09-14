@@ -71,8 +71,8 @@ const HeroComponent: VoidComponent = () => (
   <Hero class="inline-block rounded bg-base-200">
     <Hero.Content
       class="text-center"
-      title="Food Consumption Tracker"
-      description="Track your medical dietary restrictions with specified intervals between consumptions."
+      title="Consumption Tracker"
+      description="Track your intake with specified intervals between consumptions."
     ></Hero.Content>
   </Hero>
 );
@@ -251,7 +251,9 @@ const ConsumptionForm = (props: { item: ConsumptionItemWithStatus }) => {
     >
       <Fieldset.Legend>
         <div class="flex items-center gap-2">
-          <FirstLetterAvatar name={props.item.name} />
+          <FirstLetterAvatar name={props.item.name} showIcon={true} />
+          {/*Leave this, I like it without*/}
+          {/*<span>{props.item.name}</span>*/}
         </div>
       </Fieldset.Legend>
 
