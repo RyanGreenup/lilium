@@ -7,8 +7,10 @@ import { Card } from "~/solid-daisy-components/components/Card";
 import { Stats, Stat, StatTitle, StatValue, StatDesc } from "~/solid-daisy-components/components/Stat";
 import { DoughnutChart } from "~/solid-daisy-components/components/viz/chart_js/DoughnutChart";
 import { BarChart } from "~/solid-daisy-components/components/viz/chart_js/BarChart";
-import { loadConsumptionAnalytics, loadConsumptionSummary } from "~/lib/consumption-actions";
+import { VirtualizedDataTable } from "~/solid-daisy-components/components/Datatables/VirtualizedDataTable";
+import { loadConsumptionAnalytics, loadConsumptionSummary, loadAllConsumptionEntries } from "~/lib/consumption-actions";
 import { FirstLetterAvatar } from "~/components/FirstLetterAvatar";
+import { createColumnHelper } from "@tanstack/solid-table";
 
 export const route = {
   preload() {
@@ -19,6 +21,108 @@ export const route = {
 export default function ConsumptionReport() {
   const analytics = createAsync(() => loadConsumptionAnalytics());
   const summary = createAsync(() => loadConsumptionSummary());
+  const allEntries = createAsync(() => loadAllConsumptionEntries());
+
+  // Column helper for the data table
+  const columnHelper = createColumnHelper<any>();
+
+  const columns = [
+    columnHelper.accessor("food_name", {
+      header: "Food",
+      size: 120,
+      cell: (info) => (
+        <div class="flex items-center gap-2">
+          <FirstLetterAvatar name={info.getValue()} showIcon={true} />
+          <span class="font-medium">{info.getValue()}</span>
+        </div>
+      ),
+    }),
+    columnHelper.accessor("consumed_at", {
+      header: "Consumed Date",
+      size: 140,
+      cell: (info) => {
+        const date = new Date(info.getValue());
+        return date.toLocaleDateString("en-AU", {
+          timeZone: "Australia/Sydney",
+          weekday: "short",
+          day: "2-digit",
+          month: "short",
+          year: "numeric"
+        });
+      },
+    }),
+    columnHelper.accessor("quantity", {
+      header: "Quantity",
+      size: 80,
+      cell: (info) => Math.round(info.getValue() * 10) / 10,
+    }),
+    columnHelper.accessor("notes", {
+      header: "Notes",
+      size: 200,
+      cell: (info) => (
+        <div class="max-w-xs truncate" title={info.getValue() || ""}>
+          {info.getValue() || "—"}
+        </div>
+      ),
+    }),
+    columnHelper.accessor("interval_days", {
+      header: "Restriction Period",
+      size: 130,
+      cell: (info) => {
+        const days = info.getValue();
+        return days >= 30 
+          ? `${Math.floor(days / 30)} month${Math.floor(days / 30) !== 1 ? 's' : ''}`
+          : days >= 7 
+            ? `${Math.floor(days / 7)} week${Math.floor(days / 7) !== 1 ? 's' : ''}`
+            : `${days} day${days !== 1 ? 's' : ''}`;
+      },
+    }),
+    columnHelper.accessor("next_allowed_at", {
+      header: "Next Allowed",
+      size: 130,
+      cell: (info) => {
+        const date = new Date(info.getValue());
+        const now = new Date();
+        if (date <= now) {
+          return <span class="text-success font-semibold">Available Now</span>;
+        }
+        return (
+          <span class="text-error">
+            {date.toLocaleDateString("en-AU", {
+              timeZone: "Australia/Sydney",
+              weekday: "short",
+              month: "short", 
+              day: "numeric"
+            })}
+          </span>
+        );
+      },
+    }),
+    columnHelper.accessor("is_currently_overdue", {
+      header: "Status",
+      size: 100,
+      cell: (info) => (
+        <span class={`badge whitespace-nowrap ${
+          info.getValue() ? 'badge-error' : 'badge-success'
+        }`}>
+          {info.getValue() ? 'Restricted' : 'Available'}
+        </span>
+      ),
+    }),
+    columnHelper.accessor("created_at", {
+      header: "Entry Created",
+      size: 140,
+      cell: (info) => {
+        const date = new Date(info.getValue());
+        return date.toLocaleDateString("en-AU", {
+          timeZone: "Australia/Sydney",
+          day: "2-digit",
+          month: "short",
+          year: "numeric"
+        });
+      },
+    }),
+  ];
 
   // Next consumption timeline data for bar chart
   const nextConsumptionData = () => {
@@ -323,6 +427,33 @@ export default function ConsumptionReport() {
             </For>
           </div>
         </Show>
+
+        {/* Comprehensive Data Review Table */}
+        <Card>
+          <Card.Body>
+            <Card.Title>All Consumption Data</Card.Title>
+            <p class="text-sm opacity-70 mb-4">
+              Complete record of all consumption entries with filtering, sorting, and export capabilities.
+            </p>
+            <Show when={allEntries()}>
+              <VirtualizedDataTable
+                data={allEntries() || []}
+                columns={columns}
+                enableGlobalFilter={true}
+                enableColumnFilters={true}
+                enableSorting={true}
+                enableDownload={true}
+                downloadFilename="consumption-data.csv"
+                searchPlaceholder="Search all consumption data..."
+                height="500px"
+                striped={true}
+                darkHeader={true}
+                estimateSize={() => 52}
+                overscan={10}
+              />
+            </Show>
+          </Card.Body>
+        </Card>
       </Suspense>
     </main>
   );

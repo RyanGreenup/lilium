@@ -157,3 +157,27 @@ export const loadConsumptionSummary = cache(async () => {
     consumptions_this_week: consumptionsThisWeek,
   };
 }, "consumption-summary");
+
+export const loadAllConsumptionEntries = cache(async () => {
+  "use server";
+  const items = await getConsumptionItemsWithStatus();
+  
+  const allEntries = [];
+  for (const item of items) {
+    const entries = await dbGetConsumptionHistory(item.id, 1000); // Get all entries
+    for (const entry of entries) {
+      allEntries.push({
+        ...entry,
+        food_name: item.name,
+        interval_days: item.interval_days,
+        is_currently_overdue: item.is_overdue,
+        next_allowed_at: item.next_allowed_at,
+      });
+    }
+  }
+  
+  // Sort by consumed_at descending (most recent first)
+  allEntries.sort((a, b) => new Date(b.consumed_at).getTime() - new Date(a.consumed_at).getTime());
+  
+  return allEntries;
+}, "all-consumption-entries");
