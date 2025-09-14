@@ -1,3 +1,11 @@
+import { getUser } from "~/lib/auth";
+
+export const route = {
+  preload() {
+    getUser();
+  },
+} satisfies RouteDefinition;
+
 export default function Home() {
   return (
     <main class="   max-w-260">

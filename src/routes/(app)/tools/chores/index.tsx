@@ -1,5 +1,5 @@
 import { Accessor, createSignal, For, JSXElement, Setter, Suspense, Show } from "solid-js";
-import { createAsync } from "@solidjs/router";
+import { createAsync, RouteDefinition } from "@solidjs/router";
 import { VoidComponent } from "solid-js/types/server/rendering.js";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { Fieldset, Label } from "~/solid-daisy-components/components/Fieldset";
@@ -10,12 +10,19 @@ import { Textarea } from "~/solid-daisy-components/components/Textarea";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { type ChoreWithStatus, type ChoreCompletion } from "~/lib/db";
 import { loadChores, loadOverdueChores, completeChoreAction, undoChoreAction, updateDurationAction, getCompletions } from "~/lib/chore-actions";
+import { getUser } from "~/lib/auth";
+
+export const route = {
+  preload() {
+    getUser();
+  },
+} satisfies RouteDefinition;
 
 export default function Home() {
   const [checked, setChecked] = createSignal(false);
   const allChores = createAsync(() => loadChores());
   const overdueChores = createAsync(() => loadOverdueChores());
-  
+
   // Choose which data to display based on toggle
   const chores = () => checked() ? overdueChores() : allChores();
 
@@ -78,8 +85,8 @@ const TimeStampToDateString = (timestamp: number, includeTime?: boolean) => {
   }
   return date.toDateString();
 };
-const ChoreForm = (props: { 
-  chore: ChoreWithStatus; 
+const ChoreForm = (props: {
+  chore: ChoreWithStatus;
 }) => {
   const [notes, setNotes] = createSignal("");
   const [duration, setDuration] = createSignal(props.chore.duration_hours);
@@ -87,7 +94,7 @@ const ChoreForm = (props: {
   const [selectedCompletion, setSelectedCompletion] = createSignal<ChoreCompletion | undefined>();
 
   const statusColor = props.chore.is_overdue ? "border-error" : "border-success";
-  const lastCompleted = props.chore.last_completed 
+  const lastCompleted = props.chore.last_completed
     ? TimeStampToDateString(new Date(props.chore.last_completed).getTime() / 1000, true)
     : "Never";
 
@@ -126,16 +133,16 @@ const ChoreForm = (props: {
       <form action={updateDurationAction} method="post">
         <input type="hidden" name="choreId" value={props.chore.id} />
         <Label>Duration Interval (H)</Label>
-        <Input 
-          type="number" 
+        <Input
+          type="number"
           name="durationHours"
-          value={duration()} 
+          value={duration()}
           onInput={(e) => setDuration(parseInt(e.currentTarget.value) || 24)}
-          placeholder="Duration Between Completion" 
+          placeholder="Duration Between Completion"
         />
-        <Button 
-          type="submit" 
-          size="sm" 
+        <Button
+          type="submit"
+          size="sm"
           color="secondary"
           class="mt-2"
         >
@@ -146,17 +153,17 @@ const ChoreForm = (props: {
       <form action={completeChoreAction} method="post" class="mt-4">
         <input type="hidden" name="choreId" value={props.chore.id} />
         <Label>Notes</Label>
-        <Textarea 
-          class="font-mono" 
+        <Textarea
+          class="font-mono"
           name="notes"
           value={notes()}
           onInput={(e) => setNotes(e.currentTarget.value)}
           placeholder="Add notes for this completion..."
         />
         <div class="flex gap-2 mt-4">
-          <Button 
-            type="submit" 
-            size="sm" 
+          <Button
+            type="submit"
+            size="sm"
             color="primary"
           >
             Mark Completed
@@ -166,9 +173,9 @@ const ChoreForm = (props: {
 
       <form action={undoChoreAction} method="post" class="mt-2">
         <input type="hidden" name="choreId" value={props.chore.id} />
-        <Button 
-          type="submit" 
-          size="sm" 
+        <Button
+          type="submit"
+          size="sm"
           color="error"
           disabled={!props.chore.last_completed}
         >

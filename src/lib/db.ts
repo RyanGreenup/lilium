@@ -1,6 +1,6 @@
 /**
  * General application database module using SQLite
- * 
+ *
  * This module provides non-security related data storage functions.
  * Uses random IDs for security and follows best practices.
  */
@@ -9,6 +9,8 @@
 
 import Database from "better-sqlite3";
 import { randomBytes } from "crypto";
+import { requireUser } from "./auth";
+import { redirect } from "@solidjs/router";
 
 // Initialize SQLite database for general app data
 const db = new Database("./.data/app.sqlite");
@@ -56,6 +58,12 @@ export interface ChoreWithStatus extends Chore {
   last_completion_notes?: string;
 }
 
+const user = await requireUser();
+// Only allow logged in user to fetch data
+if (!user.id) {
+  throw redirect("/login");
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Chore Management ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -63,13 +71,16 @@ export interface ChoreWithStatus extends Chore {
 /**
  * Create a new chore
  */
-export async function createChore(name: string, duration_hours: number = 24): Promise<Chore> {
+export async function createChore(
+  name: string,
+  duration_hours: number = 24,
+): Promise<Chore> {
   const id = randomBytes(16).toString("hex");
   const stmt = db.prepare(
-    "INSERT INTO chores (id, name, duration_hours) VALUES (?, ?, ?)"
+    "INSERT INTO chores (id, name, duration_hours) VALUES (?, ?, ?)",
   );
   stmt.run(id, name, duration_hours);
-  
+
   return getChoreById(id);
 }
 
@@ -88,7 +99,7 @@ export async function getChoreById(id: string): Promise<Chore> {
  */
 export async function getChoresWithStatus(): Promise<ChoreWithStatus[]> {
   const stmt = db.prepare(`
-    SELECT 
+    SELECT
       c.*,
       cc.completed_at as last_completed,
       cc.notes as last_completion_notes
@@ -98,12 +109,15 @@ export async function getChoresWithStatus(): Promise<ChoreWithStatus[]> {
     WHERE cc2.id IS NULL
     ORDER BY c.name
   `);
-  
-  const chores = stmt.all() as (Chore & { last_completed?: string; last_completion_notes?: string })[];
-  
-  return chores.map(chore => ({
+
+  const chores = stmt.all() as (Chore & {
+    last_completed?: string;
+    last_completion_notes?: string;
+  })[];
+
+  return chores.map((chore) => ({
     ...chore,
-    is_overdue: isChoreOverdue(chore.last_completed, chore.duration_hours)
+    is_overdue: isChoreOverdue(chore.last_completed, chore.duration_hours),
   }));
 }
 
@@ -112,15 +126,18 @@ export async function getChoresWithStatus(): Promise<ChoreWithStatus[]> {
  */
 export async function getOverdueChores(): Promise<ChoreWithStatus[]> {
   const allChores = await getChoresWithStatus();
-  return allChores.filter(chore => chore.is_overdue);
+  return allChores.filter((chore) => chore.is_overdue);
 }
 
 /**
  * Update chore duration
  */
-export async function updateChoreDuration(id: string, duration_hours: number): Promise<void> {
+export async function updateChoreDuration(
+  id: string,
+  duration_hours: number,
+): Promise<void> {
   const stmt = db.prepare(
-    "UPDATE chores SET duration_hours = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+    "UPDATE chores SET duration_hours = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
   );
   const result = stmt.run(duration_hours, id);
   if (result.changes === 0) throw new Error("Chore not found");
@@ -133,13 +150,16 @@ export async function updateChoreDuration(id: string, duration_hours: number): P
 /**
  * Mark chore as completed
  */
-export async function completeChore(chore_id: string, notes?: string): Promise<ChoreCompletion> {
+export async function completeChore(
+  chore_id: string,
+  notes?: string,
+): Promise<ChoreCompletion> {
   const id = randomBytes(16).toString("hex");
   const stmt = db.prepare(
-    "INSERT INTO chore_completions (id, chore_id, notes) VALUES (?, ?, ?)"
+    "INSERT INTO chore_completions (id, chore_id, notes) VALUES (?, ?, ?)",
   );
   stmt.run(id, chore_id, notes);
-  
+
   const getStmt = db.prepare("SELECT * FROM chore_completions WHERE id = ?");
   return getStmt.get(id) as ChoreCompletion;
 }
@@ -149,11 +169,11 @@ export async function completeChore(chore_id: string, notes?: string): Promise<C
  */
 export async function undoLastCompletion(chore_id: string): Promise<void> {
   const stmt = db.prepare(`
-    DELETE FROM chore_completions 
+    DELETE FROM chore_completions
     WHERE id = (
-      SELECT id FROM chore_completions 
-      WHERE chore_id = ? 
-      ORDER BY completed_at DESC 
+      SELECT id FROM chore_completions
+      WHERE chore_id = ?
+      ORDER BY completed_at DESC
       LIMIT 1
     )
   `);
@@ -164,9 +184,12 @@ export async function undoLastCompletion(chore_id: string): Promise<void> {
 /**
  * Get completion history for a chore
  */
-export async function getChoreCompletions(chore_id: string, limit: number = 10): Promise<ChoreCompletion[]> {
+export async function getChoreCompletions(
+  chore_id: string,
+  limit: number = 10,
+): Promise<ChoreCompletion[]> {
   const stmt = db.prepare(
-    "SELECT * FROM chore_completions WHERE chore_id = ? ORDER BY completed_at DESC LIMIT ?"
+    "SELECT * FROM chore_completions WHERE chore_id = ? ORDER BY completed_at DESC LIMIT ?",
   );
   return stmt.all(chore_id, limit) as ChoreCompletion[];
 }
@@ -178,14 +201,17 @@ export async function getChoreCompletions(chore_id: string, limit: number = 10):
 /**
  * Check if chore is overdue based on last completion and duration
  */
-function isChoreOverdue(last_completed?: string, duration_hours: number = 24): boolean {
+function isChoreOverdue(
+  last_completed?: string,
+  duration_hours: number = 24,
+): boolean {
   if (!last_completed) return true;
-  
+
   const lastCompletedTime = new Date(last_completed).getTime();
   const durationMs = duration_hours * 60 * 60 * 1000;
   const now = Date.now();
-  
-  return (now - lastCompletedTime) > durationMs;
+
+  return now - lastCompletedTime > durationMs;
 }
 
 /**
@@ -194,16 +220,16 @@ function isChoreOverdue(last_completed?: string, duration_hours: number = 24): b
 export async function seedChoresIfEmpty(): Promise<void> {
   const stmt = db.prepare("SELECT COUNT(*) as count FROM chores");
   const result = stmt.get() as { count: number };
-  
+
   if (result.count === 0) {
     const sampleChores = [
       { name: "Vacuum Living Room", duration_hours: 168 }, // Weekly
-      { name: "Take Out Trash", duration_hours: 72 },     // 3 days
-      { name: "Do Laundry", duration_hours: 48 },         // 2 days
-      { name: "Clean Kitchen", duration_hours: 24 },      // Daily
-      { name: "Water Plants", duration_hours: 48 },       // 2 days
+      { name: "Take Out Trash", duration_hours: 72 }, // 3 days
+      { name: "Do Laundry", duration_hours: 48 }, // 2 days
+      { name: "Clean Kitchen", duration_hours: 24 }, // Daily
+      { name: "Water Plants", duration_hours: 48 }, // 2 days
     ];
-    
+
     for (const chore of sampleChores) {
       await createChore(chore.name, chore.duration_hours);
     }
