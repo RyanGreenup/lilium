@@ -36,6 +36,7 @@ export const route = {
 
 export default function Home() {
   const [checked, setChecked] = createSignal(false);
+  const [searchTerm, setSearchTerm] = createSignal("");
   
   // Global refresh trigger for all chore data
   const [globalRefreshTrigger, setGlobalRefreshTrigger] = createSignal(0);
@@ -50,13 +51,25 @@ export default function Home() {
     return loadOverdueChores();
   });
 
-  // Choose which data to display based on toggle
-  const chores = () => (checked() ? overdueChores() : allChores());
+  // Choose which data to display based on toggle, then filter by search
+  const chores = () => {
+    const baseChores = checked() ? overdueChores() : allChores();
+    const search = searchTerm().toLowerCase().trim();
+    
+    if (!search || !baseChores) return baseChores;
+    
+    return baseChores.filter(chore => 
+      chore.name.toLowerCase().includes(search)
+    );
+  };
 
   return (
     <main class="">
       <HeroComponent />
-      <ToggleComponent getChecked={checked} setChecked={setChecked} />
+      <div class="flex gap-4 mb-4 flex-wrap">
+        <SearchComponent searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        <ToggleComponent getChecked={checked} setChecked={setChecked} />
+      </div>
       <Suspense
         fallback={
           <div class="loading loading-spinner loading-lg mx-auto"></div>
@@ -100,6 +113,23 @@ const ToggleComponent = (props: {
         props.setChecked(e.currentTarget.checked);
         props.onChange?.();
       }}
+    />
+  </Fieldset>
+);
+
+const SearchComponent = (props: {
+  searchTerm: Accessor<string>;
+  setSearchTerm: Setter<string>;
+}) => (
+  <Fieldset class="flex-1 max-w-md bg-base-100 border border-base-300 p-4 rounded-box">
+    <Fieldset.Legend>Search</Fieldset.Legend>
+    <Label>Filter Chores</Label>
+    <Input
+      type="text"
+      placeholder="Search chore names..."
+      value={props.searchTerm()}
+      onInput={(e) => props.setSearchTerm(e.currentTarget.value)}
+      class="w-full"
     />
   </Fieldset>
 );
