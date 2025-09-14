@@ -1,8 +1,13 @@
 import { A, RouteDefinition } from "@solidjs/router";
-import { Camera, MessageCircleIcon, NotebookPen } from "lucide-solid";
 import BrushCleaning from "lucide-solid/icons/brush-cleaning";
+
+import Camera from "lucide-solid/icons/camera";
+import Cigarette from "lucide-solid/icons/cigarette";
 import Menu from "lucide-solid/icons/menu";
+import MessageCircleIcon from "lucide-solid/icons/message-circle";
+import NotebookPen from "lucide-solid/icons/notebook-pen";
 import Settings from "lucide-solid/icons/settings";
+
 import ToggleLeft from "lucide-solid/icons/toggle-left";
 import { For, JSXElement, VoidComponent } from "solid-js";
 import { UserDropdown } from "~/components/UserDrowDown";
@@ -39,7 +44,7 @@ export default function MainLayout(props: { children: JSXElement }) {
             <SidebarItems />
           </SidebarContent>
         </Sidebar>
-        <MainContent class="bg-base-100">{props.children}</MainContent>
+        <MainContent class="bg-base-100 p-4">{props.children}</MainContent>
         <RightDrawer class="bg-base-200">
           <div class="flex mt-12 justify-center">TODO</div>
         </RightDrawer>
@@ -62,6 +67,11 @@ const SidebarItems: VoidComponent = () => (
             name: "Chores",
             icon: <BrushCleaning class="w-4 h-4" />,
             link: "tools/chores",
+          },
+          {
+            name: "Consumption",
+            icon: <Cigarette class="w-4 h-4" />,
+            link: "tools/consumption",
           },
         ]}
       >

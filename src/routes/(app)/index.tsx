@@ -13,7 +13,7 @@ export const route = {
 
 export default function Home() {
   return (
-    <main class="  p-4 max-w-260">
+    <main class="  max-w-260">
       <div class="prose dark:prose-invert">
         <h1> Welcome the Chronicles</h1>
       </div>
