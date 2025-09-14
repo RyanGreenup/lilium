@@ -207,7 +207,9 @@ function isChoreOverdue(
 ): boolean {
   if (!last_completed) return true;
 
-  const lastCompletedTime = new Date(last_completed).getTime();
+  // SQLite CURRENT_TIMESTAMP stores UTC time as 'YYYY-MM-DD HH:MM:SS'
+  // We need to explicitly treat it as UTC to avoid timezone issues
+  const lastCompletedTime = new Date(last_completed + 'Z').getTime();
   const durationMs = duration_hours * 60 * 60 * 1000;
   const now = Date.now();
 
@@ -296,10 +298,10 @@ export async function getChoreStatistics(): Promise<ChoreStats[]> {
   return results.map((row) => {
     const now = Date.now();
     const lastCompleted = row.last_completed
-      ? new Date(row.last_completed).getTime()
+      ? new Date(row.last_completed + 'Z').getTime()
       : null;
     const firstCompleted = row.first_completed
-      ? new Date(row.first_completed).getTime()
+      ? new Date(row.first_completed + 'Z').getTime()
       : null;
 
     const days_since_last = lastCompleted

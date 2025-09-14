@@ -94,20 +94,23 @@ const ToggleComponent = (props: {
 const TimeStampToDateString = (timestamp: number, includeTime?: boolean) => {
   const date = new Date(timestamp * 1000);
   if (includeTime) {
-    return date.toLocaleString("en-GB", {
+    return date.toLocaleString("en-AU", {
+      timeZone: "Australia/Sydney",
       weekday: "short",
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
     });
   }
-  return date.toDateString();
+  return date.toLocaleDateString("en-AU", {
+    timeZone: "Australia/Sydney",
+  });
 };
 
 // Markdown rendering function
 const renderMarkdown = async (markdownContent: string): Promise<string> => {
   if (!markdownContent.trim()) return "No notes";
-  
+
   try {
     // Dynamically import the marked library to parse markdown to HTML
     const { marked } = await import("marked");
@@ -193,7 +196,7 @@ const ChoreForm = (props: { chore: ChoreWithStatus }) => {
     : "border-success";
   const lastCompleted = props.chore.last_completed
     ? TimeStampToDateString(
-        new Date(props.chore.last_completed).getTime() / 1000,
+        new Date(props.chore.last_completed + "Z").getTime() / 1000,
         true,
       )
     : "Never";
@@ -241,7 +244,7 @@ const ChoreForm = (props: { chore: ChoreWithStatus }) => {
             {(completion) => (
               <option value={completion.id}>
                 {TimeStampToDateString(
-                  new Date(completion.completed_at).getTime() / 1000,
+                  new Date(completion.completed_at + "Z").getTime() / 1000,
                 )}
               </option>
             )}
@@ -332,14 +335,19 @@ const ChoreForm = (props: { chore: ChoreWithStatus }) => {
       >
         <input type="hidden" name="choreId" value={props.chore.id} />
         <div class="flex items-center gap-2">
-          <Button
-            type="submit"
-            size="sm"
-            color="error"
-            disabled={!props.chore.last_completed}
+          <div
+            class="tooltip"
+            data-tip="The comment will be lost! (DELETE FROM chore_completsions where ..."
           >
-            Mark Not Completed
-          </Button>
+            <Button
+              type="submit"
+              size="sm"
+              color="error"
+              disabled={!props.chore.last_completed}
+            >
+              Mark Not Completed
+            </Button>
+          </div>
           <Show when={undoSuccess()}>
             <Alert color="success" class="alert-sm">
               <span class="text-xs">Undone!</span>
