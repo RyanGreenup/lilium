@@ -154,8 +154,22 @@ const ChoreForm = (props: {
     ? TimeStampToDateString(new Date(props.chore.last_completed).getTime() / 1000, true)
     : "Never";
 
+  // Animation classes based on form states
+  const formAnimationClasses = () => {
+    const hasSuccess = durationSuccess() || completeSuccess() || undoSuccess();
+    const hasError = durationError() || completeError() || undoError();
+    
+    if (hasSuccess) {
+      return "transition-all duration-500 ease-out scale-105 rotate-1 shadow-lg ring-2 ring-success/50";
+    } else if (hasError) {
+      return "transition-all duration-300 ease-out animate-pulse ring-2 ring-error/50 rotate-0 scale-[1.02]";
+    } else {
+      return "transition-all duration-300 ease-in-out hover:scale-[1.01] rotate-0 scale-100";
+    }
+  };
+
   return (
-    <Fieldset class={`w-xs bg-base-200 border ${statusColor} p-4 rounded-box`}>
+    <Fieldset class={`w-xs bg-base-200 border ${statusColor} p-4 rounded-box ${formAnimationClasses()}`}>
       <Fieldset.Legend>{props.chore.name}</Fieldset.Legend>
 
       <p class="label">
