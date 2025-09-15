@@ -1,6 +1,6 @@
 import { createAsync, RouteDefinition } from "@solidjs/router";
 import { createColumnHelper } from "@tanstack/solid-table";
-import { For, Show, Suspense } from "solid-js";
+import { For, Show, Suspense, createMemo } from "solid-js";
 import { FirstLetterAvatar } from "~/components/FirstLetterAvatar";
 import { UserAvatar } from "~/components/UserDrowDown";
 import { getUser } from "~/lib/auth";
@@ -32,10 +32,26 @@ export default function ConsumptionReport() {
   // Column helper for the data table
   const columnHelper = createColumnHelper<any>();
 
-  const columns = [
+  const consumableOptions = createMemo(() => {
+    const data = allEntries();
+    if (!data) return [];
+    const uniqueValues = [...new Set(data.map(item => item.food_name))].sort();
+    return uniqueValues.map(value => ({ value, label: value }));
+  });
+
+  const statusOptions = createMemo(() => [
+    { value: "Available", label: "Available" },
+    { value: "Restricted", label: "Restricted" }
+  ]);
+
+  const columns = createMemo(() => [
     columnHelper.accessor("food_name", {
       header: "Consumable",
       size: 120,
+      meta: {
+        filterVariant: "select",
+        selectOptions: consumableOptions(),
+      },
       cell: (info) => (
         <div class="flex items-center gap-2">
           <FirstLetterAvatar name={info.getValue()} showIcon={true} />
@@ -104,6 +120,17 @@ export default function ConsumptionReport() {
     columnHelper.accessor("is_currently_overdue", {
       header: "Status",
       size: 100,
+      meta: {
+        filterVariant: "select",
+        selectOptions: statusOptions(),
+      },
+      filterFn: (row, columnId, filterValue) => {
+        if (!filterValue) return true;
+        const nextAllowedAt = row.original.next_allowed_at;
+        const available = isItemAvailable(nextAllowedAt);
+        const status = available ? "Available" : "Restricted";
+        return status === filterValue;
+      },
       cell: (info) => {
         // Use centralized logic for consistency
         const nextAllowedAt = info.row.original.next_allowed_at;
@@ -154,7 +181,7 @@ export default function ConsumptionReport() {
         });
       },
     }),
-  ];
+  ]);
 
   // Next consumption timeline data for bar chart
   const nextConsumptionData = () => {
@@ -516,7 +543,7 @@ export default function ConsumptionReport() {
             <Show when={allEntries()}>
               <VirtualizedDataTable
                 data={allEntries() || []}
-                columns={columns}
+                columns={columns()}
                 enableGlobalFilter={true}
                 enableColumnFilters={true}
                 enableSorting={true}
