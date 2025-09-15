@@ -89,11 +89,11 @@ export default function ConsumptionReport() {
       cell: (info) => {
         const nextAllowedAt = info.getValue();
         const available = isItemAvailable(nextAllowedAt);
-        
+
         if (available) {
           return <span class="text-success font-semibold">Available Now</span>;
         }
-        
+
         return (
           <span class="text-error">
             {formatNextAllowed(nextAllowedAt)}
@@ -131,7 +131,7 @@ export default function ConsumptionReport() {
             : username;
         return (
           <div class="flex items-center gap-2">
-            <Show when={username !== "unknown"} fallback={<UnknownAvatar />}>
+            <Show when={username !== nullUsername} fallback={<UnknownAvatar />}>
               <UserAvatar username={username} size="xs" />
             </Show>
             <span class="text-sm" title={username}>
@@ -241,7 +241,7 @@ export default function ConsumptionReport() {
 
   const formatNextAllowed = (nextAllowedAt: string) => {
     if (isItemAvailable(nextAllowedAt)) return "Available Now";
-    
+
     const date = new Date(nextAllowedAt);
     return date.toLocaleDateString("en-AU", {
       timeZone: "Australia/Sydney",
@@ -389,7 +389,7 @@ export default function ConsumptionReport() {
                                   return (
                                     <div title={username}>
                                       <Show
-                                        when={username !== "unknown"}
+                                        when={username !== nullUsername}
                                         fallback={<UnknownAvatar />}
                                       >
                                         <UserAvatar
