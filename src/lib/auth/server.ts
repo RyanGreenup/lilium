@@ -1,7 +1,7 @@
-import { useSession } from "vinxi/http";
-import { findUserByUsername, createUser, getUserPasswordHash } from "./db";
-import { verifyPassword } from "./hash";
 import { randomBytes } from "crypto";
+import { useSession } from "vinxi/http";
+import { createUser, findUserByUsername, getUserPasswordHash } from "./db";
+import { verifyPassword } from "./hash";
 
 ("use server");
 
@@ -61,7 +61,12 @@ export function getSession() {
   return useSession({
     password: SESSION_SECRET,
     cookie: {
-      secure: false, // Allow HTTP for managed VPN environments
+      secure: false, // process.env.NODE_ENV === 'production',
+      // Allows cookies to work with self-signed certificates in development
+      sameSite: "lax",
+      
+      // This may break on strictly compliant devices
+      // httpOnly: true,
     },
   });
 }
