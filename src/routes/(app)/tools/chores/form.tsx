@@ -27,6 +27,7 @@ import { Input } from "~/solid-daisy-components/components/Input";
 import { Select } from "~/solid-daisy-components/components/Select";
 import { Textarea } from "~/solid-daisy-components/components/Textarea";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
+import { renderMarkdown } from "~/utils/renderMarkdown";
 
 export const route = {
   preload() {
@@ -144,20 +145,6 @@ const TimeStampToDateString = (timestamp: number, includeTime?: boolean) => {
   });
 };
 
-// Markdown rendering function
-const renderMarkdown = async (markdownContent: string): Promise<string> => {
-  if (!markdownContent.trim()) return "No notes";
-
-  try {
-    // Dynamically import the marked library to parse markdown to HTML
-    const { marked } = await import("marked");
-    // Convert the markdown content to HTML and return it
-    return marked(markdownContent);
-  } catch (error) {
-    console.error("Failed to render markdown:", error);
-    return markdownContent; // Fallback to plain text
-  }
-};
 const ChoreForm = (props: { chore: ChoreWithStatus }) => {
   const [notes, setNotes] = createSignal("");
   const [duration, setDuration] = createSignal(props.chore.duration_hours);
@@ -169,9 +156,13 @@ const ChoreForm = (props: { chore: ChoreWithStatus }) => {
 
   // Load completions with automatic refresh when submissions complete
   const completions = createAsync(() => {
-    // React to completion changes
-    completeSubmission.result;
-    undoSubmission.result;
+    // React to completion changes safely
+    if (completeSubmission.result !== undefined) {
+      // Completion happened, trigger refresh
+    }
+    if (undoSubmission.result !== undefined) {
+      // Undo happened, trigger refresh
+    }
     return getCompletions(props.chore.id, 5);
   });
 
