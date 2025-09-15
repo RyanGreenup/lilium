@@ -6,6 +6,7 @@ import { getUser } from "~/lib/auth";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { Card } from "~/solid-daisy-components/components/Card";
 import { Hero } from "~/solid-daisy-components/components/Hero";
+import { MarkdownRenderer } from "~/utils/renderMarkdown";
 
 export const route = {
   preload() {
@@ -42,6 +43,22 @@ export default function Home() {
       {/* Content */}
 
       <section class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <MarkdownRenderer
+          content={() => `
+## Usage Notes
+
+### Android
+
+It seems on *Android*, it's necessary to restart the device for a *self-signed* TLS / SSL certificate to work for a new domain that's been added. We'll need to look into this.
+
+In addition, when updating the site, it's necessary to clear ALL site data from chrome. This may be related to the \`service-worker.js\` I added for the PWA.
+
+Basically, restart your phone, delete **all** the data and you're good to go. Each update, delete all the data.
+
+The benefit of the service worker is that the JS doesn't have to load. There's less benefit here though as we use server side rendering, the impact would be greater with an SPA.
+`}
+        />
+
         <div class="prose dark:prose-invert max-w-none">
           <h3>About</h3>
           <p>
@@ -51,7 +68,12 @@ export default function Home() {
             and stay on top of our responsibilities??
           </p>
           <p>I've already started with some tools above.</p>
-          <p>We've both been marked as collaborators in <a href="https://gitea.vidar/ryan/Chronicles/">gitea.vidar/ryan/Chronicles/</a></p>
+          <p>
+            We've both been marked as collaborators in{" "}
+            <a href="https://gitea.vidar/ryan/Chronicles/">
+              gitea.vidar/ryan/Chronicles/
+            </a>
+          </p>
         </div>
       </section>
     </main>
