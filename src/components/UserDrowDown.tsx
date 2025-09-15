@@ -61,3 +61,18 @@ function DropdownButton(props: { username: string }) {
     </Button>
   );
 }
+
+// xs sm md lg xl
+export function UserAvatar(props: {
+  username: string;
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
+}) {
+  return (
+    <Avatar
+      shape="circle"
+      src={`/users/${props.username}.png`}
+      alt="User avatar"
+      size={props.size || "xs"}
+    />
+  );
+}

@@ -113,6 +113,11 @@ export const loadConsumptionAnalytics = cache(async () => {
   const analytics = await Promise.all(
     items.map(async (item) => {
       const stats = await dbGetConsumptionStats(item.id, 90);
+      const history = await dbGetConsumptionHistory(item.id, 1000);
+      
+      // Get unique users who have consumed this item
+      const uniqueUsers = [...new Set(history.map(entry => entry.username || 'unknown'))];
+      
       return {
         ...item,
         ...stats,
@@ -124,6 +129,9 @@ export const loadConsumptionAnalytics = cache(async () => {
         consumption_frequency: stats.total_consumptions > 0 && stats.avg_days_between
           ? Math.round((30 / stats.avg_days_between) * 10) / 10
           : 0,
+        // Add user information
+        unique_users: uniqueUsers,
+        user_count: uniqueUsers.length,
       };
     })
   );
@@ -172,6 +180,8 @@ export const loadAllConsumptionEntries = cache(async () => {
         interval_days: item.interval_days,
         is_currently_overdue: item.is_overdue,
         next_allowed_at: item.next_allowed_at,
+        // Username should always be present in new schema, but fallback for safety
+        username: entry.username || 'unknown',
       });
     }
   }

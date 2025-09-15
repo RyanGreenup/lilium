@@ -122,6 +122,26 @@ export default function ConsumptionReport() {
         );
       },
     }),
+    columnHelper.accessor("username", {
+      header: "User",
+      size: 120,
+      cell: (info) => {
+        const username = info.getValue();
+        const displayName = username === 'unknown' ? 'Unknown' : username;
+        return (
+          <div class="flex items-center gap-2">
+            <div class="avatar placeholder">
+              <div class="bg-neutral text-neutral-content rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            </div>
+            <span class="text-sm" title={username}>
+              {displayName}
+            </span>
+          </div>
+        );
+      },
+    }),
     columnHelper.accessor("created_at", {
       header: "Entry Created",
       size: 140,
@@ -313,6 +333,7 @@ export default function ConsumptionReport() {
                     <th>Restriction Period</th>
                     <th>Total Consumed</th>
                     <th>Avg Frequency</th>
+                    <th>Users</th>
                     <th>Last Consumption</th>
                     <th>Status</th>
                   </tr>
@@ -354,6 +375,25 @@ export default function ConsumptionReport() {
                           <td>{item.total_consumptions || 0} times</td>
                           <td>
                             {getFrequencyText(item.consumption_frequency || 0)}
+                          </td>
+                          <td>
+                            <div class="flex flex-wrap gap-1 max-w-32">
+                              <For each={item.unique_users || []}>
+                                {(username) => {
+                                  const displayName = username === 'unknown' ? 'Unknown' : username;
+                                  return (
+                                    <div class="avatar placeholder">
+                                      <div class="bg-neutral text-neutral-content rounded-full w-5 h-5 flex items-center justify-center text-xs" title={username}>
+                                        {displayName.charAt(0).toUpperCase()}
+                                      </div>
+                                    </div>
+                                  );
+                                }}
+                              </For>
+                              <Show when={(item.unique_users || []).length === 0}>
+                                <span class="text-xs opacity-60">No users</span>
+                              </Show>
+                            </div>
                           </td>
                           <td>
                             {item.last_consumed_at

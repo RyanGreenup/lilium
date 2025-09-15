@@ -34,11 +34,13 @@ db.exec(`
     consumed_at DATETIME NOT NULL,
     quantity REAL NOT NULL DEFAULT 1.0,
     notes TEXT,
+    username TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (consumption_item_id) REFERENCES consumption_items(id) ON DELETE CASCADE
   )
 `);
+
 
 // Create indexes for better performance
 db.exec(`
@@ -65,6 +67,7 @@ export interface ConsumptionEntry {
   consumed_at: string;
   quantity: number;
   notes?: string;
+  username: string;
   created_at: string;
   updated_at: string;
 }
@@ -191,9 +194,9 @@ export async function createConsumptionEntry(
   }
   const id = randomBytes(16).toString("hex");
   const stmt = db.prepare(
-    "INSERT INTO consumption_entries (id, consumption_item_id, consumed_at, quantity, notes) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO consumption_entries (id, consumption_item_id, consumed_at, quantity, notes, username) VALUES (?, ?, ?, ?, ?, ?)",
   );
-  stmt.run(id, consumption_item_id, consumed_at, quantity, notes);
+  stmt.run(id, consumption_item_id, consumed_at, quantity, notes, user.username);
 
   const getStmt = db.prepare("SELECT * FROM consumption_entries WHERE id = ?");
   return getStmt.get(id) as ConsumptionEntry;

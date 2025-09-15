@@ -111,6 +111,7 @@ const SidebarItems: VoidComponent = () => (
   </>
 );
 
+
 const NavbarContent = () => (
   <>
     <div class="navbar-start">
