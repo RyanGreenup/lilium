@@ -193,15 +193,6 @@ const ChoreForm = (props: { chore: ChoreWithStatus }) => {
     }
   });
 
-  // Update local duration when duration update is successful
-  createEffect(() => {
-    if (updateDurationSubmission.result && !updateDurationSubmission.pending) {
-      const input = updateDurationSubmission.input as FormData;
-      const newDuration = parseInt(input.get("durationHours") as string) || 24;
-      setDuration(newDuration);
-    }
-  });
-
   const statusColor = props.chore.is_overdue
     ? "border-error"
     : "border-success";
@@ -266,7 +257,7 @@ const ChoreForm = (props: { chore: ChoreWithStatus }) => {
           <Input
             type="number"
             name="durationHours"
-            value={duration()}
+            value={duration().toString()}
             onInput={(e) => setDuration(parseInt(e.currentTarget.value) || 24)}
             placeholder="Duration Between Completion"
           />
