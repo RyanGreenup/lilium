@@ -62,7 +62,6 @@ function DropdownButton(props: { username: string }) {
   );
 }
 
-// xs sm md lg xl
 export function UserAvatar(props: {
   username: string;
   size?: "xs" | "sm" | "md" | "lg" | "xl";

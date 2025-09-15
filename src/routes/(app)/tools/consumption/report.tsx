@@ -2,11 +2,13 @@ import { createAsync, RouteDefinition } from "@solidjs/router";
 import { createColumnHelper } from "@tanstack/solid-table";
 import { For, Show, Suspense } from "solid-js";
 import { FirstLetterAvatar } from "~/components/FirstLetterAvatar";
+import { UserAvatar } from "~/components/UserDrowDown";
 import { getUser } from "~/lib/auth";
 import {
   loadAllConsumptionEntries,
   loadConsumptionAnalytics,
   loadConsumptionSummary,
+  nullUsername,
 } from "~/lib/consumption-actions";
 import { Card } from "~/solid-daisy-components/components/Card";
 import { VirtualizedDataTable } from "~/solid-daisy-components/components/Datatables/VirtualizedDataTable";
@@ -127,14 +129,15 @@ export default function ConsumptionReport() {
       size: 120,
       cell: (info) => {
         const username = info.getValue();
-        const displayName = username === 'unknown' ? 'Unknown' : username;
+        const displayName =
+          username === nullUsername
+            ? nullUsername.charAt(0).toUpperCase() + nullUsername.slice(1)
+            : username;
         return (
           <div class="flex items-center gap-2">
-            <div class="avatar placeholder">
-              <div class="bg-neutral text-neutral-content rounded-full w-6 h-6 flex items-center justify-center text-xs">
-                {displayName.charAt(0).toUpperCase()}
-              </div>
-            </div>
+            <Show when={username !== "unknown"} fallback={<UnknownAvatar />}>
+              <UserAvatar username={username} size="xs" />
+            </Show>
             <span class="text-sm" title={username}>
               {displayName}
             </span>
@@ -380,17 +383,24 @@ export default function ConsumptionReport() {
                             <div class="flex flex-wrap gap-1 max-w-32">
                               <For each={item.unique_users || []}>
                                 {(username) => {
-                                  const displayName = username === 'unknown' ? 'Unknown' : username;
                                   return (
-                                    <div class="avatar placeholder">
-                                      <div class="bg-neutral text-neutral-content rounded-full w-5 h-5 flex items-center justify-center text-xs" title={username}>
-                                        {displayName.charAt(0).toUpperCase()}
-                                      </div>
+                                    <div title={username}>
+                                      <Show
+                                        when={username !== "unknown"}
+                                        fallback={<UnknownAvatar />}
+                                      >
+                                        <UserAvatar
+                                          username={username}
+                                          size="xs"
+                                        />
+                                      </Show>
                                     </div>
                                   );
                                 }}
                               </For>
-                              <Show when={(item.unique_users || []).length === 0}>
+                              <Show
+                                when={(item.unique_users || []).length === 0}
+                              >
                                 <span class="text-xs opacity-60">No users</span>
                               </Show>
                             </div>
@@ -523,3 +533,11 @@ export default function ConsumptionReport() {
     </main>
   );
 }
+
+const UnknownAvatar = () => (
+  <div class="avatar placeholder">
+    <div class="bg-neutral text-neutral-content rounded-full w-6 h-6 flex items-center justify-center text-xs">
+      U
+    </div>
+  </div>
+);
