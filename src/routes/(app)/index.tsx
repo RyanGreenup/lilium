@@ -3,6 +3,7 @@ import Heart from "lucide-solid/icons/heart";
 import { JSXElement } from "solid-js";
 import { VoidComponent } from "solid-js/types/server/rendering.js";
 import { getUser } from "~/lib/auth";
+import { Alert } from "~/solid-daisy-components/components/Alert";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { Card } from "~/solid-daisy-components/components/Card";
 import { Hero } from "~/solid-daisy-components/components/Hero";
@@ -46,7 +47,16 @@ export default function Home() {
         <MarkdownRenderer
           content={() => `
 ## Usage Notes
+`}
+        />
 
+        <Alert color="info" showIcon={true}>
+          On Android, simply use the <code class="inline-block">http://</code>{" "}
+          site, self-signed certificates simply don't work properly on Android
+          with the Secure cookie store (i.e. Auth).
+        </Alert>
+        <MarkdownRenderer
+          content={() => `
 ### Android
 
 It seems on *Android*, it's necessary to restart the device for a *self-signed* TLS / SSL certificate to work for a new domain that's been added. We'll need to look into this.
