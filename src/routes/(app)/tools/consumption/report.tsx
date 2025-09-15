@@ -87,19 +87,16 @@ export default function ConsumptionReport() {
       header: "Next Allowed",
       size: 130,
       cell: (info) => {
-        const date = new Date(info.getValue());
-        const now = new Date();
-        if (date <= now) {
+        const nextAllowedAt = info.getValue();
+        const available = isItemAvailable(nextAllowedAt);
+        
+        if (available) {
           return <span class="text-success font-semibold">Available Now</span>;
         }
+        
         return (
           <span class="text-error">
-            {date.toLocaleDateString("en-AU", {
-              timeZone: "Australia/Sydney",
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })}
+            {formatNextAllowed(nextAllowedAt)}
           </span>
         );
       },
@@ -108,18 +105,17 @@ export default function ConsumptionReport() {
       header: "Status",
       size: 100,
       cell: (info) => {
-        // Use consistent logic with "Next Allowed" column
-        const nextAllowedDate = new Date(info.row.original.next_allowed_at);
-        const now = new Date();
-        const isRestricted = nextAllowedDate > now;
+        // Use centralized logic for consistency
+        const nextAllowedAt = info.row.original.next_allowed_at;
+        const available = isItemAvailable(nextAllowedAt);
 
         return (
           <span
             class={`badge whitespace-nowrap ${
-              isRestricted ? "badge-error" : "badge-success"
+              available ? "badge-success" : "badge-error"
             }`}
           >
-            {isRestricted ? "Restricted" : "Available"}
+            {available ? "Available" : "Restricted"}
           </span>
         );
       },
@@ -236,10 +232,17 @@ export default function ConsumptionReport() {
     };
   };
 
-  const formatNextAllowed = (nextAllowedAt: string) => {
-    const date = new Date(nextAllowedAt);
+  // Centralized logic for determining if an item is available
+  const isItemAvailable = (nextAllowedAt: string): boolean => {
+    const nextAllowedDate = new Date(nextAllowedAt);
     const now = new Date();
-    if (date <= now) return "Available Now";
+    return nextAllowedDate <= now;
+  };
+
+  const formatNextAllowed = (nextAllowedAt: string) => {
+    if (isItemAvailable(nextAllowedAt)) return "Available Now";
+    
+    const date = new Date(nextAllowedAt);
     return date.toLocaleDateString("en-AU", {
       timeZone: "Australia/Sydney",
       weekday: "short",
@@ -347,7 +350,7 @@ export default function ConsumptionReport() {
                       {(item) => (
                         <tr
                           class={
-                            item.is_overdue ? "bg-error/10" : "bg-success/5"
+                            isItemAvailable(item.next_allowed_at) ? "bg-success/5" : "bg-error/10"
                           }
                         >
                           <td>
@@ -361,9 +364,9 @@ export default function ConsumptionReport() {
                           </td>
                           <td
                             class={
-                              item.is_overdue
-                                ? "text-error font-semibold"
-                                : "text-success"
+                              isItemAvailable(item.next_allowed_at)
+                                ? "text-success font-semibold"
+                                : "text-error"
                             }
                           >
                             {formatNextAllowed(item.next_allowed_at)}
@@ -420,12 +423,12 @@ export default function ConsumptionReport() {
                           <td>
                             <span
                               class={`badge whitespace-nowrap ${
-                                item.is_overdue
-                                  ? "badge-error"
-                                  : "badge-success"
+                                isItemAvailable(item.next_allowed_at)
+                                  ? "badge-success"
+                                  : "badge-error"
                               }`}
                             >
-                              {item.is_overdue ? "Restricted" : "Available"}
+                              {isItemAvailable(item.next_allowed_at) ? "Available" : "Restricted"}
                             </span>
                           </td>
                         </tr>
@@ -450,9 +453,9 @@ export default function ConsumptionReport() {
                       <div>
                         <Card.Title class="text-lg">{item.name}</Card.Title>
                         <span
-                          class={`badge ${item.is_overdue ? "badge-error" : "badge-success"}`}
+                          class={`badge ${isItemAvailable(item.next_allowed_at) ? "badge-success" : "badge-error"}`}
                         >
-                          {item.is_overdue ? "Restricted" : "Available"}
+                          {isItemAvailable(item.next_allowed_at) ? "Available" : "Restricted"}
                         </span>
                       </div>
                     </div>
@@ -462,7 +465,7 @@ export default function ConsumptionReport() {
                         <span>Next allowed:</span>
                         <strong
                           class={
-                            item.is_overdue ? "text-error" : "text-success"
+                            isItemAvailable(item.next_allowed_at) ? "text-success" : "text-error"
                           }
                         >
                           {formatNextAllowed(item.next_allowed_at)}
