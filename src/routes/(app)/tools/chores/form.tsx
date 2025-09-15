@@ -1,6 +1,7 @@
-import { createAsync, RouteDefinition } from "@solidjs/router";
+import { createAsync, RouteDefinition, useSubmission } from "@solidjs/router";
 import {
   Accessor,
+  createEffect,
   createSignal,
   For,
   JSXElement,
@@ -19,7 +20,6 @@ import {
   updateDurationAction,
 } from "~/lib/chore-actions";
 import { type ChoreCompletion, type ChoreWithStatus } from "~/lib/db";
-import { Alert } from "~/solid-daisy-components/components/Alert";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { Fieldset, Label } from "~/solid-daisy-components/components/Fieldset";
 import { Hero } from "~/solid-daisy-components/components/Hero";
@@ -37,29 +37,20 @@ export const route = {
 export default function Home() {
   const [checked, setChecked] = createSignal(false);
   const [searchTerm, setSearchTerm] = createSignal("");
-  
-  // Global refresh trigger for all chore data
-  const [globalRefreshTrigger, setGlobalRefreshTrigger] = createSignal(0);
 
-  // Load real data from database with refresh capability
-  const allChores = createAsync(() => {
-    globalRefreshTrigger(); // Subscribe to global refresh
-    return loadChores();
-  });
-  const overdueChores = createAsync(() => {
-    globalRefreshTrigger(); // Subscribe to global refresh  
-    return loadOverdueChores();
-  });
+  // Load data using SolidJS router cache
+  const allChores = createAsync(() => loadChores());
+  const overdueChores = createAsync(() => loadOverdueChores());
 
   // Choose which data to display based on toggle, then filter by search
   const chores = () => {
     const baseChores = checked() ? overdueChores() : allChores();
     const search = searchTerm().toLowerCase().trim();
-    
+
     if (!search || !baseChores) return baseChores;
-    
-    return baseChores.filter(chore => 
-      chore.name.toLowerCase().includes(search)
+
+    return baseChores.filter((chore) =>
+      chore.name.toLowerCase().includes(search),
     );
   };
 
@@ -67,7 +58,10 @@ export default function Home() {
     <main class="">
       <HeroComponent />
       <div class="flex gap-4 mb-4 flex-wrap">
-        <SearchComponent searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        <SearchComponent
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+        />
         <ToggleComponent getChecked={checked} setChecked={setChecked} />
       </div>
       <Suspense
@@ -79,7 +73,7 @@ export default function Home() {
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8 auto-rows-max">
             <Show when={chores()} fallback={<div>Loading chores...</div>}>
               <For each={chores() || []}>
-                {(chore) => <ChoreForm chore={chore} onDataChange={() => setGlobalRefreshTrigger(prev => prev + 1)} />}
+                {(chore) => <ChoreForm chore={chore} />}
               </For>
             </Show>
           </div>
@@ -164,19 +158,23 @@ const renderMarkdown = async (markdownContent: string): Promise<string> => {
     return markdownContent; // Fallback to plain text
   }
 };
-const ChoreForm = (props: { 
-  chore: ChoreWithStatus;
-  onDataChange?: () => void;
-}) => {
+const ChoreForm = (props: { chore: ChoreWithStatus }) => {
   const [notes, setNotes] = createSignal("");
   const [duration, setDuration] = createSignal(props.chore.duration_hours);
-  
-  // Add refresh capability for completions data
-  const [refreshTrigger, setRefreshTrigger] = createSignal(0);
+
+  // Use SolidJS submissions for form handling
+  const completeSubmission = useSubmission(completeChoreAction);
+  const undoSubmission = useSubmission(undoChoreAction);
+  const updateDurationSubmission = useSubmission(updateDurationAction);
+
+  // Load completions with automatic refresh when submissions complete
   const completions = createAsync(() => {
-    refreshTrigger(); // Subscribe to refresh trigger
+    // React to completion changes
+    completeSubmission.result;
+    undoSubmission.result;
     return getCompletions(props.chore.id, 5);
   });
+
   const [selectedCompletion, setSelectedCompletion] = createSignal<
     ChoreCompletion | undefined
   >();
@@ -188,81 +186,21 @@ const ChoreForm = (props: {
     return renderMarkdown(notesContent);
   });
 
-  // Form feedback signals
-  const [durationSuccess, setDurationSuccess] = createSignal(false);
-  const [durationError, setDurationError] = createSignal(false);
-  const [completeSuccess, setCompleteSuccess] = createSignal(false);
-  const [completeError, setCompleteError] = createSignal(false);
-  const [undoSuccess, setUndoSuccess] = createSignal(false);
-  const [undoError, setUndoError] = createSignal(false);
-
-  // Form submission handlers
-  const handleDurationSubmit = async (event: Event) => {
-    event.preventDefault();
-    const form = event.target as HTMLFormElement;
-    const formData = new FormData(form);
-
-    try {
-      await fetch(form.action, { method: "POST", body: formData });
-      setDurationSuccess(true);
-      
-      // Update the local duration state
-      setDuration(parseInt(formData.get("durationHours") as string) || 24);
-      
-      // Refresh main chore data (duration change affects overdue status)
-      props.onDataChange?.();
-      
-      setTimeout(() => setDurationSuccess(false), 3000);
-    } catch (error) {
-      setDurationError(true);
-      setTimeout(() => setDurationError(false), 3000);
-    }
-  };
-
-  const handleCompleteSubmit = async (event: Event) => {
-    event.preventDefault();
-    const form = event.target as HTMLFormElement;
-    const formData = new FormData(form);
-
-    try {
-      await fetch(form.action, { method: "POST", body: formData });
-      setCompleteSuccess(true);
+  // Clear notes when completion is successful
+  createEffect(() => {
+    if (completeSubmission.result && !completeSubmission.pending) {
       setNotes("");
-      
-      // Refresh completions data
-      setRefreshTrigger(prev => prev + 1);
-      
-      // Refresh main chore data (completion changes overdue status)
-      props.onDataChange?.();
-      
-      setTimeout(() => setCompleteSuccess(false), 3000);
-    } catch (error) {
-      setCompleteError(true);
-      setTimeout(() => setCompleteError(false), 3000);
     }
-  };
+  });
 
-  const handleUndoSubmit = async (event: Event) => {
-    event.preventDefault();
-    const form = event.target as HTMLFormElement;
-    const formData = new FormData(form);
-
-    try {
-      await fetch(form.action, { method: "POST", body: formData });
-      setUndoSuccess(true);
-      
-      // Refresh completions data
-      setRefreshTrigger(prev => prev + 1);
-      
-      // Refresh main chore data (undo changes overdue status)
-      props.onDataChange?.();
-      
-      setTimeout(() => setUndoSuccess(false), 3000);
-    } catch (error) {
-      setUndoError(true);
-      setTimeout(() => setUndoError(false), 3000);
+  // Update local duration when duration update is successful
+  createEffect(() => {
+    if (updateDurationSubmission.result && !updateDurationSubmission.pending) {
+      const input = updateDurationSubmission.input as FormData;
+      const newDuration = parseInt(input.get("durationHours") as string) || 24;
+      setDuration(newDuration);
     }
-  };
+  });
 
   const statusColor = props.chore.is_overdue
     ? "border-error"
@@ -274,23 +212,9 @@ const ChoreForm = (props: {
       )
     : "Never";
 
-  // Animation classes based on form states
-  const formAnimationClasses = () => {
-    const hasSuccess = durationSuccess() || completeSuccess() || undoSuccess();
-    const hasError = durationError() || completeError() || undoError();
-
-    if (hasSuccess) {
-      return "transition-all duration-500 ease-out scale-105 rotate-1 shadow-lg ring-2 ring-success/50";
-    } else if (hasError) {
-      return "transition-all duration-300 ease-out animate-pulse ring-2 ring-error/50 rotate-0 scale-[1.02]";
-    } else {
-      return "transition-all duration-300 ease-in-out hover:scale-[1.01] rotate-0 scale-100";
-    }
-  };
-
   return (
     <Fieldset
-      class={`w-xs bg-base-200 border ${statusColor} p-4 rounded-box ${formAnimationClasses()}`}
+      class={`w-xs bg-base-200 border ${statusColor} p-4 rounded-box transition-all duration-300 ease-in-out hover:scale-[1.01]`}
     >
       <Fieldset.Legend>{props.chore.name}</Fieldset.Legend>
 
@@ -336,11 +260,7 @@ const ChoreForm = (props: {
           </Show>
         </div>
 
-        <form
-          action={updateDurationAction}
-          method="post"
-          onSubmit={handleDurationSubmit}
-        >
+        <form action={updateDurationAction} method="post">
           <input type="hidden" name="choreId" value={props.chore.id} />
           <Label>Duration Interval (H)</Label>
           <Input
@@ -351,29 +271,21 @@ const ChoreForm = (props: {
             placeholder="Duration Between Completion"
           />
           <div class="flex items-center gap-2 mt-2">
-            <Button type="submit" size="sm" color="secondary">
-              Update Duration
+            <Button
+              type="submit"
+              size="sm"
+              color="secondary"
+              disabled={updateDurationSubmission.pending}
+            >
+              {updateDurationSubmission.pending
+                ? "Updating..."
+                : "Update Duration"}
             </Button>
-            <Show when={durationSuccess()}>
-              <Alert color="success" class="alert-sm">
-                <span class="text-xs">Updated!</span>
-              </Alert>
-            </Show>
-            <Show when={durationError()}>
-              <Alert color="error" class="alert-sm">
-                <span class="text-xs">Error!</span>
-              </Alert>
-            </Show>
           </div>
         </form>
       </Details>
 
-      <form
-        action={completeChoreAction}
-        method="post"
-        class="mt-4"
-        onSubmit={handleCompleteSubmit}
-      >
+      <form action={completeChoreAction} method="post" class="mt-4">
         <input type="hidden" name="choreId" value={props.chore.id} />
         <Label>Notes</Label>
         <Textarea
@@ -384,28 +296,20 @@ const ChoreForm = (props: {
           placeholder="Add notes for this completion..."
         />
         <div class="flex items-center gap-2 mt-4">
-          <Button type="submit" size="sm" color="primary">
+          <Button
+            type="submit"
+            size="sm"
+            color="primary"
+            // disabled={completeSubmission.pending}
+          >
+            {/*This flashes the user, too disruptive*/}
+            {/*{completeSubmission.pending ? "Completing..." : "Mark Completed"}*/}
             Mark Completed
           </Button>
-          <Show when={completeSuccess()}>
-            <Alert color="success" class="alert-sm">
-              <span class="text-xs">Completed!</span>
-            </Alert>
-          </Show>
-          <Show when={completeError()}>
-            <Alert color="error" class="alert-sm">
-              <span class="text-xs">Error!</span>
-            </Alert>
-          </Show>
         </div>
       </form>
 
-      <form
-        action={undoChoreAction}
-        method="post"
-        class="mt-2"
-        onSubmit={handleUndoSubmit}
-      >
+      <form action={undoChoreAction} method="post" class="mt-2">
         <input type="hidden" name="choreId" value={props.chore.id} />
         <div class="flex items-center gap-2">
           <div
@@ -416,21 +320,14 @@ const ChoreForm = (props: {
               type="submit"
               size="sm"
               color="error"
+              // disabled={!props.chore.last_completed || undoSubmission.pending}
               disabled={!props.chore.last_completed}
             >
+              {/*This flashes the user, too disruptive*/}
+              {/*{undoSubmission.pending ? "Undoing..." : "Mark Not Completed"}*/}
               Mark Not Completed
             </Button>
           </div>
-          <Show when={undoSuccess()}>
-            <Alert color="success" class="alert-sm">
-              <span class="text-xs">Undone!</span>
-            </Alert>
-          </Show>
-          <Show when={undoError()}>
-            <Alert color="error" class="alert-sm">
-              <span class="text-xs">Error!</span>
-            </Alert>
-          </Show>
         </div>
       </form>
     </Fieldset>

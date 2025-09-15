@@ -1,10 +1,10 @@
 import { cache, action } from "@solidjs/router";
-import { 
-  getChoresWithStatus, 
+import {
+  getChoresWithStatus,
   getOverdueChores,
-  completeChore as dbCompleteChore, 
-  undoLastCompletion as dbUndoLastCompletion, 
-  updateChoreDuration as dbUpdateChoreDuration, 
+  completeChore as dbCompleteChore,
+  undoLastCompletion as dbUndoLastCompletion,
+  updateChoreDuration as dbUpdateChoreDuration,
   getChoreCompletions as dbGetChoreCompletions,
   seedChoresIfEmpty as dbSeedChoresIfEmpty,
   getChoreStatistics,
