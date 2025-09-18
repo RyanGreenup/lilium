@@ -146,13 +146,7 @@ const SidebarItems: VoidComponent = () => {
         </Show>
 
         <Show when={activeTab() === 1}>
-          <div class="p-4">
-            <input
-              type="text"
-              placeholder="Search..."
-              class="input input-bordered w-full"
-            />
-          </div>
+          <SidebarSearchContent />
         </Show>
 
         <Show when={activeTab() === 2}>
@@ -234,5 +228,15 @@ const DockContent = () => (
         <span class="dock-label">Navbar</span>
       </div>
     </ToggleButton>
+  </div>
+);
+
+const SidebarSearchContent = () => (
+  <div class="p-4">
+    <input
+      type="text"
+      placeholder="Search..."
+      class="input input-bordered w-full"
+    />
   </div>
 );
