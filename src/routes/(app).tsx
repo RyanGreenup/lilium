@@ -25,7 +25,15 @@ import {
   ToggleButton,
 } from "~/solid-daisy-components/components/Layouts/ResponsiveDrawer";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
-import { LucideProps, Notebook, Search, ArrowLeft, ArrowRight, Sparkles, MessageSquare } from "lucide-solid";
+import {
+  LucideProps,
+  Notebook,
+  Search,
+  ArrowLeft,
+  ArrowRight,
+  Sparkles,
+  MessageSquare,
+} from "lucide-solid";
 
 // Route Guard
 export const route = {
@@ -59,17 +67,16 @@ export default function MainLayout(props: { children: JSXElement }) {
   );
 }
 
-
 const SidebarItems: VoidComponent = () => {
   const [activeTab, setActiveTab] = createSignal(0);
 
   const tabs = [
-    { id: 0, label: "Notes", icon: <Notebook class="w-4 h-4"/> },
-    { id: 1, label: "Search", icon: <Search class="w-4 h-4"/> },
-    { id: 2, label: "Backlinks", icon: <ArrowLeft class="w-4 h-4"/> },
-    { id: 3, label: "Forward", icon: <ArrowRight class="w-4 h-4"/> },
-    { id: 4, label: "Related", icon: <Sparkles class="w-4 h-4"/> },
-    { id: 5, label: "Discussion", icon: <MessageSquare class="w-4 h-4"/> },
+    { id: 0, label: "Notes", icon: <Notebook class="w-4 h-4" /> },
+    { id: 1, label: "Search", icon: <Search class="w-4 h-4" /> },
+    { id: 2, label: "Backlinks", icon: <ArrowLeft class="w-4 h-4" /> },
+    { id: 3, label: "Forward", icon: <ArrowRight class="w-4 h-4" /> },
+    { id: 4, label: "Related", icon: <Sparkles class="w-4 h-4" /> },
+    { id: 5, label: "Discussion", icon: <MessageSquare class="w-4 h-4" /> },
   ];
 
   return (
