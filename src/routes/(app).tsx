@@ -9,7 +9,7 @@ import NotebookPen from "lucide-solid/icons/notebook-pen";
 import Settings from "lucide-solid/icons/settings";
 
 import ToggleLeft from "lucide-solid/icons/toggle-left";
-import { For, JSXElement, VoidComponent } from "solid-js";
+import { For, JSXElement, VoidComponent, createSignal, Show } from "solid-js";
 import { UserDropdown } from "~/components/UserDrowDown";
 import { getUser } from "~/lib/auth";
 import {
@@ -24,6 +24,8 @@ import {
   SidebarContent,
   ToggleButton,
 } from "~/solid-daisy-components/components/Layouts/ResponsiveDrawer";
+import { Tabs } from "~/solid-daisy-components/components/Tabs";
+import { LucideProps, Notebook, Search, ArrowLeft, ArrowRight, Sparkles, MessageSquare } from "lucide-solid";
 
 // Route Guard
 export const route = {
@@ -57,60 +59,122 @@ export default function MainLayout(props: { children: JSXElement }) {
   );
 }
 
-const SidebarItems: VoidComponent = () => (
-  <>
-    <div class="menu">
-      <div class="menu-title">Navigation</div>
-      <For
-        each={[
-          {
-            name: "Chores",
-            icon: <BrushCleaning class="w-4 h-4" />,
-            link: "tools/chores/",
-          },
-          {
-            name: "Consumption",
-            icon: <Candy class="w-4 h-4" />,
-            link: "tools/consumption/",
-          },
-        ]}
-      >
-        {(item) => (
-          <li>
-            <A href={`/${item.link}`} class="flex items-center gap-2">
-              <span>{item.icon}</span>
-              {item.name}
-            </A>
-          </li>
-        )}
-      </For>
-    </div>
 
-    <div class="divider"></div>
+const SidebarItems: VoidComponent = () => {
+  const [activeTab, setActiveTab] = createSignal(0);
 
-    <div class="menu">
-      <div class="menu-title">Tools</div>
-      <li>
-        <a href="https://dokuwiki.vidar">
-          {" "}
-          <NotebookPen class="w-4 h-4" /> Wiki
-        </a>
-      </li>
-      <li>
-        <a href="https://photon.vidar">
-          <MessageCircleIcon class="w-4 h-4" /> Forum
-        </a>
-      </li>
+  const tabs = [
+    { id: 0, label: "Notes", icon: <Notebook class="w-4 h-4"/> },
+    { id: 1, label: "Search", icon: <Search class="w-4 h-4"/> },
+    { id: 2, label: "Backlinks", icon: <ArrowLeft class="w-4 h-4"/> },
+    { id: 3, label: "Forward", icon: <ArrowRight class="w-4 h-4"/> },
+    { id: 4, label: "Related", icon: <Sparkles class="w-4 h-4"/> },
+    { id: 5, label: "Discussion", icon: <MessageSquare class="w-4 h-4"/> },
+  ];
 
-      <li>
-        <a href="https://immich.vidar">
-          <Camera class="w-4 h-4" /> Gallery
-        </a>
-      </li>
-    </div>
-  </>
-);
+  return (
+    <>
+      <Tabs style="lift">
+        <For each={tabs}>
+          {(tab) => (
+            <Tabs.Tab
+              active={activeTab() === tab.id}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.icon}
+            </Tabs.Tab>
+          )}
+        </For>
+      </Tabs>
 
+      <div class="mt-4">
+        <Show when={activeTab() === 0}>
+          <div class="menu">
+            <div class="menu-title">Navigation</div>
+            <For
+              each={[
+                {
+                  name: "Chores",
+                  icon: <BrushCleaning class="w-4 h-4" />,
+                  link: "tools/chores/",
+                },
+                {
+                  name: "Consumption",
+                  icon: <Candy class="w-4 h-4" />,
+                  link: "tools/consumption/",
+                },
+              ]}
+            >
+              {(item) => (
+                <li>
+                  <A href={`/${item.link}`} class="flex items-center gap-2">
+                    <span>{item.icon}</span>
+                    {item.name}
+                  </A>
+                </li>
+              )}
+            </For>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="menu">
+            <div class="menu-title">Tools</div>
+            <li>
+              <a href="https://dokuwiki.vidar">
+                <NotebookPen class="w-4 h-4" /> Wiki
+              </a>
+            </li>
+            <li>
+              <a href="https://photon.vidar">
+                <MessageCircleIcon class="w-4 h-4" /> Forum
+              </a>
+            </li>
+            <li>
+              <a href="https://immich.vidar">
+                <Camera class="w-4 h-4" /> Gallery
+              </a>
+            </li>
+          </div>
+        </Show>
+
+        <Show when={activeTab() === 1}>
+          <div class="p-4">
+            <input
+              type="text"
+              placeholder="Search..."
+              class="input input-bordered w-full"
+            />
+          </div>
+        </Show>
+
+        <Show when={activeTab() === 2}>
+          <div class="p-4 text-center text-base-content/60">
+            Backlinks will appear here
+          </div>
+        </Show>
+
+        <Show when={activeTab() === 3}>
+          <div class="p-4 text-center text-base-content/60">
+            Forward links will appear here
+          </div>
+        </Show>
+
+        <Show when={activeTab() === 4}>
+          <div class="p-4 text-center text-base-content/60">
+            Related content will appear here
+          </div>
+        </Show>
+
+        <Show when={activeTab() === 5}>
+          <div class="p-4 text-center text-base-content/60">
+            Discussion will appear here
+          </div>
+        </Show>
+      </div>
+    </>
+  );
+};
 
 const NavbarContent = () => (
   <>
