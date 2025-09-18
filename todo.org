@@ -1,0 +1,25 @@
+#+TITLE: Lilium
+* Feature Goals
+** TODO Multiple Inputs
+*** Overview
+- [ ] Org Mode
+- [ ] JSX
+- HTML
+  - Toggle WYSIWYG with CKEditor
+- [ ] Markdown
+*** Discussion
+**** Org Mode
+**** JSX
+Use a function to render markdown in between JSX. Much Simpler
+**** HTML
+
+**** Markdown
+* First Steps
+** Layout
+** Users
+** Docker Container
+** Modify Components Layout
+*** TODO Move Stories Next to Components
+Better LLM and in Place Docs
+*** TODO Remove index exports
+Minimizes need for deps in consuming libraries
