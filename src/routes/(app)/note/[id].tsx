@@ -1,14 +1,6 @@
 import { useParams } from "@solidjs/router";
 import { createSignal, createEffect, Show } from "solid-js";
-import {
-  Save,
-  Eye,
-  Edit3,
-  FileText,
-  Settings,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-solid";
+import { Save, Eye, FileText, ChevronUp, NotebookPen } from "lucide-solid";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
@@ -116,7 +108,6 @@ def engineer_features(df):
         {/* Title Section */}
         <div class="px-4 pt-4 pb-3">
           <div class="flex items-start gap-3">
-            <FileText class="w-5 h-5 text-base-content/70 flex-shrink-0 mt-0.5" />
             <div class="flex-1 min-w-0">
               <Show
                 when={!metadataExpanded()}
@@ -165,14 +156,13 @@ def engineer_features(df):
                   >
                     {note().title}
                   </h1>
-                  <div class="tooltip" data-tip={note().abstract}>
-                    <p
-                      class="text-sm text-base-content/60 truncate mt-1"
-                      title={note().abstract}
-                    >
-                      {note().abstract}
-                    </p>
-                  </div>
+
+                  <p
+                    class="text-sm text-base-content/60 truncate mt-1"
+                    title={note().abstract}
+                  >
+                    {note().abstract}
+                  </p>
                 </div>
               </Show>
             </div>
@@ -184,7 +174,7 @@ def engineer_features(df):
               {metadataExpanded() ? (
                 <ChevronUp class="w-4 h-4" />
               ) : (
-                <Edit3 class="w-4 h-4" />
+                <NotebookPen class="w-4 h-4" />
               )}
             </button>
           </div>
