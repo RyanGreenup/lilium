@@ -1,8 +1,11 @@
 import { children, JSXElement, splitProps } from "solid-js";
 import { Button } from "~/solid-daisy-components/components/Button";
+import  FileText  from "lucide-solid/icons/file-text";
+import Folder from "lucide-solid/icons/folder";
+
 
 interface MenuItemProps {
-  icon?: string;
+  icon?: JSXElement;
   children: JSXElement;
   size?: "sm" | "md";
   onClick?: () => void;
@@ -19,7 +22,7 @@ const MenuItem = (props: MenuItemProps) => {
         class={props.size === "sm" ? "text-sm py-1" : ""}
         onClick={props.onClick}
       >
-        {local.icon && `${local.icon} `}
+        {local.icon && <span class="mr-2">{local.icon}</span>}
         {safeChildren()}
       </a>
       {safeSubMenu() && <ul>{safeSubMenu()}</ul>}
@@ -34,14 +37,14 @@ export default function NotesTab() {
       <ul class="menu  rounded-box w-full text-sm">
         <li class="menu-title text-xs">Path</li>
         <MenuItem
-          icon="📁"
+          icon={<Folder size={16} />}
           size="sm"
           submenu={
             <MenuItem
-              icon="📁"
+              icon={<Folder size={16} />}
               size="sm"
               submenu={
-                <MenuItem icon="📁" size="sm">
+                <MenuItem icon={<Folder size={16} />} size="sm">
                   wikijs
                 </MenuItem>
               }
@@ -69,10 +72,10 @@ export default function NotesTab() {
           </h3>
         </Button>
         <ul class="menu bg-base-200 rounded-box w-full">
-          <MenuItem icon="📁">tools</MenuItem>
-          <MenuItem icon="📄">Custom CSS for Heirarçhy in...</MenuItem>
-          <MenuItem icon="📄">Directories and Wikiïs</MenuItem>
-          <MenuItem icon="📄">Wikijs</MenuItem>
+          <MenuItem icon={<Folder size={16} />}>tools</MenuItem>
+          <MenuItem icon={<FileText size={16} />}>Custom CSS for Heirarçhy in...</MenuItem>
+          <MenuItem icon={<FileText size={16} />}>Directories and Wikiïs</MenuItem>
+          <MenuItem icon={<FileText size={16} />}>Wikijs</MenuItem>
         </ul>
       </div>
     </div>
