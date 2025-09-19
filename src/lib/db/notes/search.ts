@@ -22,8 +22,8 @@ export async function searchNotes(searchQuery: string): Promise<Note[]> {
   const stmt = db.prepare(`
     SELECT n.* FROM notes n
     INNER JOIN notes_fts fts ON n.id = fts.id
-    WHERE fts MATCH ? AND n.user_id = ?
-    ORDER BY rank, n.updated_at DESC
+    WHERE notes_fts MATCH ? AND fts.user_id = ?
+    ORDER BY bm25(notes_fts), n.updated_at DESC
   `);
 
   // Escape and prepare the search query for FTS5
@@ -111,8 +111,8 @@ export async function searchNotesAdvanced(options: {
 
   // Add FTS5 search if query provided
   if (options.query) {
-    whereConditions.push("id IN (SELECT id FROM notes_fts WHERE notes_fts MATCH ?)");
-    params.push(options.query.trim().replace(/['"]/g, '""'));
+    whereConditions.push("id IN (SELECT id FROM notes_fts WHERE notes_fts MATCH ? AND user_id = ?)");
+    params.push(options.query.trim().replace(/['"]/g, '""'), user.id);
   }
 
   // Add syntax filter

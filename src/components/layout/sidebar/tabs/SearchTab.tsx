@@ -1,17 +1,22 @@
-import { createSignal, For, JSXElement, onMount, createEffect } from "solid-js";
-import { useSearchParams } from "@solidjs/router";
+import { createSignal, For, JSXElement, onMount, createEffect, createMemo, Show, Suspense } from "solid-js";
+import { useSearchParams, createAsync } from "@solidjs/router";
 import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
 import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
 import { Radio } from "~/solid-daisy-components/components/Radio";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
+import { Select } from "~/solid-daisy-components/components/Select";
 import { ContentList, ContentItemData } from "../shared/ContentItem";
+import { searchNotesQuery, searchNotesSimpleQuery, searchNotesAdvancedQuery } from "~/lib/db/notes/search";
+import type { Note } from "~/lib/db/types";
 
 export const SidebarSearchContent = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [searchAllNotes, setSearchAllNotes] = createSignal(true);
-  const [useSemanticSearch, setUseSemanticSearch] = createSignal(false);
+  const [useFtsSearch, setUseFtsSearch] = createSignal(true);
+  const [syntaxFilter, setSyntaxFilter] = createSignal<string>("");
+  const [hasAbstractFilter, setHasAbstractFilter] = createSignal<boolean | undefined>(undefined);
   const [pathDisplay, setPathDisplay] = createSignal(0); // 0: Absolute, 1: Relative, 2: Title
   const [searchTerm, setSearchTerm] = createSignal("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = createSignal("");
 
   const pathDisplayOptions = [
     { id: 0, label: "Absolute" },
@@ -19,29 +24,65 @@ export const SidebarSearchContent = () => {
     { id: 2, label: "Title" },
   ];
 
-  const searchResults: ContentItemData[] = [
-    {
-      id: "1",
-      title: "Machine Learning Pipeline Design",
-      abstract:
-        "Comprehensive guide to building robust machine learning pipelines including data preprocessing, feature engineering, and model deployment strategies.",
-      path: "/notes/computer-science/ai/ml-pipeline.md",
-    },
-    {
-      id: "2",
-      title: "Statistical Hypothesis Testing",
-      abstract:
-        "Methods for testing statistical hypotheses including t-tests, ANOVA, and non-parametric tests. Covers p-values and effect sizes.",
-      path: "/notes/mathematics/statistics/hypothesis-testing.md",
-    },
-    {
-      id: "3",
-      title: "Python Data Analysis Tools",
-      abstract:
-        "Pandas, NumPy, and Matplotlib for data manipulation and visualization. Includes best practices for exploratory data analysis.",
-      path: "/notes/programming/python/data-analysis.md",
-    },
+  const syntaxOptions = [
+    { value: "", label: "All" },
+    { value: "markdown", label: "Markdown" },
+    { value: "org", label: "Org Mode" },
+    { value: "html", label: "HTML" },
+    { value: "jsx", label: "JSX" },
   ];
+
+  const abstractFilterOptions = [
+    { value: undefined, label: "All" },
+    { value: true, label: "With Abstract" },
+    { value: false, label: "Without Abstract" },
+  ];
+
+  // Debounce search term to avoid excessive API calls
+  createEffect(() => {
+    const term = searchTerm();
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchTerm(term);
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
+  });
+
+  // Perform search based on current settings
+  const searchResults = createAsync(() => {
+    const term = debouncedSearchTerm();
+    if (!term || term.length < 2) return Promise.resolve([]);
+
+    const syntax = syntaxFilter();
+    const hasAbstract = hasAbstractFilter();
+
+    // Use advanced search if filters are applied, otherwise use simple/FTS search
+    if (syntax || hasAbstract !== undefined) {
+      return searchNotesAdvancedQuery({
+        query: term,
+        syntax: syntax || undefined,
+        hasAbstract,
+        limit: 50
+      });
+    } else if (useFtsSearch()) {
+      return searchNotesQuery(term);
+    } else {
+      return searchNotesSimpleQuery(term);
+    }
+  });
+
+  // Convert Note objects to ContentItemData format
+  const formattedResults = createMemo(() => {
+    const results = searchResults();
+    if (!results) return [];
+    
+    return results.map((note: Note): ContentItemData => ({
+      id: note.id,
+      title: note.title,
+      abstract: note.abstract || "",
+      path: `/note/${note.id}`,
+    }));
+  });
 
   // Initialize search term from URL parameters
   onMount(() => {
@@ -76,25 +117,59 @@ export const SidebarSearchContent = () => {
           onInput={handleSearchInput}
         />
 
-        <Collapsible class="p-0" title="Settings">
+        <Collapsible class="p-0" title="Search Settings">
           <Fieldset class="bg-base-200 border-base-300 rounded-box border p-4 space-y-3">
-            <Fieldset.Legend>Search Options</Fieldset.Legend>
+            <Fieldset.Legend>Search Type</Fieldset.Legend>
 
-            <VStack label={<>Children Only</>}>
-              <Toggle
-                size="sm"
-                checked={searchAllNotes()}
-                onChange={(e) => setSearchAllNotes(e.currentTarget.checked)}
-              />
-            </VStack>
-
-            <VStack label={<>Semantic search</>}>
+            <VStack label={<>Use FTS5 Search</>}>
               <Toggle
                 size="sm"
                 color="primary"
-                checked={useSemanticSearch()}
-                onChange={(e) => setUseSemanticSearch(e.currentTarget.checked)}
+                checked={useFtsSearch()}
+                onChange={(e) => setUseFtsSearch(e.currentTarget.checked)}
               />
+              <span class="text-xs text-base-content/60 mt-1">
+                {useFtsSearch() ? "Full-text search with ranking" : "Simple LIKE search"}
+              </span>
+            </VStack>
+          </Fieldset>
+
+          <Fieldset class="bg-base-200 border-base-300 rounded-box border p-4 space-y-3">
+            <Fieldset.Legend>Filters</Fieldset.Legend>
+
+            <VStack label={<>Syntax Type</>}>
+              <Select
+                size="sm"
+                value={syntaxFilter()}
+                onChange={(e) => setSyntaxFilter(e.currentTarget.value)}
+              >
+                <For each={syntaxOptions}>
+                  {(option) => (
+                    <option value={option.value}>{option.label}</option>
+                  )}
+                </For>
+              </Select>
+            </VStack>
+
+            <VStack label={<>Abstract</>}>
+              <Select
+                size="sm"
+                value={hasAbstractFilter()?.toString() ?? ""}
+                onChange={(e) => {
+                  const value = e.currentTarget.value;
+                  setHasAbstractFilter(
+                    value === "" ? undefined : value === "true"
+                  );
+                }}
+              >
+                <For each={abstractFilterOptions}>
+                  {(option) => (
+                    <option value={option.value?.toString() ?? ""}>
+                      {option.label}
+                    </option>
+                  )}
+                </For>
+              </Select>
             </VStack>
           </Fieldset>
 
@@ -120,31 +195,53 @@ export const SidebarSearchContent = () => {
       </div>
 
       {/* Search Results */}
-      {searchTerm().length > 0 && (
+      <Show when={searchTerm().length >= 2}>
         <div>
           <div class="px-4 pb-2">
             <h3 class="text-sm font-medium text-base-content/70">
               Results for "{searchTerm()}"
+              <Show when={formattedResults().length > 0}>
+                <span class="text-xs text-base-content/50 ml-2">
+                  ({formattedResults().length} found)
+                </span>
+              </Show>
             </h3>
           </div>
-          <ContentList
-            items={searchResults}
-            showPath={pathDisplay() !== 2}
-            emptyMessage="No search results found"
-          />
+          <Suspense fallback={
+            <div class="px-4 py-8 text-center">
+              <div class="loading loading-spinner loading-sm"></div>
+              <div class="text-sm text-base-content/60 mt-2">Searching...</div>
+            </div>
+          }>
+            <ContentList
+              items={formattedResults()}
+              showPath={pathDisplay() !== 2}
+              emptyMessage="No search results found"
+            />
+          </Suspense>
         </div>
-      )}
+      </Show>
+      
+      <Show when={searchTerm().length > 0 && searchTerm().length < 2}>
+        <div class="px-4 py-8 text-center">
+          <div class="text-sm text-base-content/60">
+            Enter at least 2 characters to search
+          </div>
+        </div>
+      </Show>
     </div>
   );
 };
 
 export const VStack = (props: { children: any; label: JSXElement }) => (
-  <div class="form-control flex flex-col">
-    <label class="label cursor-pointer flex flex-col items-start">
-      <span class="label-text text-sm flex items-center gap-2">
+  <div class="form-control">
+    <label class="label">
+      <span class="label-text text-sm font-medium">
         {props.label}
       </span>
-      {props.children}
     </label>
+    <div class="space-y-1">
+      {props.children}
+    </div>
   </div>
 );

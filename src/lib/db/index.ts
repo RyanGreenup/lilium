@@ -78,33 +78,41 @@ db.exec(`
     title,
     abstract,
     content,
-    user_id UNINDEXED,
-    content='notes',
-    content_rowid='id'
+    user_id UNINDEXED
   );
 `);
 
 // Create triggers to keep FTS5 table in sync with notes table
 db.exec(`
   CREATE TRIGGER IF NOT EXISTS notes_fts_insert AFTER INSERT ON notes BEGIN
-    INSERT INTO notes_fts(rowid, id, title, abstract, content, user_id)
-    VALUES (new.rowid, new.id, new.title, new.abstract, new.content, new.user_id);
+    INSERT INTO notes_fts(id, title, abstract, content, user_id)
+    VALUES (new.id, new.title, new.abstract, new.content, new.user_id);
   END;
 `);
 
 db.exec(`
   CREATE TRIGGER IF NOT EXISTS notes_fts_delete AFTER DELETE ON notes BEGIN
-    DELETE FROM notes_fts WHERE rowid = old.rowid;
+    DELETE FROM notes_fts WHERE id = old.id;
   END;
 `);
 
 db.exec(`
   CREATE TRIGGER IF NOT EXISTS notes_fts_update AFTER UPDATE ON notes BEGIN
-    DELETE FROM notes_fts WHERE rowid = old.rowid;
-    INSERT INTO notes_fts(rowid, id, title, abstract, content, user_id)
-    VALUES (new.rowid, new.id, new.title, new.abstract, new.content, new.user_id);
+    DELETE FROM notes_fts WHERE id = old.id;
+    INSERT INTO notes_fts(id, title, abstract, content, user_id)
+    VALUES (new.id, new.title, new.abstract, new.content, new.user_id);
   END;
 `);
+
+// Populate FTS5 table with existing data if it's empty
+const ftsCount = db.prepare("SELECT COUNT(*) as count FROM notes_fts").get() as { count: number };
+if (ftsCount.count === 0) {
+  // Insert existing notes into FTS5 table
+  db.exec(`
+    INSERT INTO notes_fts(id, title, abstract, content, user_id)
+    SELECT id, title, abstract, content, user_id FROM notes;
+  `);
+}
 
 // Create indexes for better query performance
 db.exec(`
