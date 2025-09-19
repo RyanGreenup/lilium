@@ -234,34 +234,6 @@ export async function getNotesWithTags(): Promise<NoteWithTags[]> {
 // Tag Management //////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-/**
- * Create a new tag
- */
-export async function createTag(
-  title: string,
-  parent_id?: string,
-): Promise<Tag> {
-  const user = await requireUser();
-  if (!user.id) {
-    throw redirect("/login");
-  }
-
-  const id = randomBytes(16).toString("hex");
-  const stmt = db.prepare(`
-    INSERT INTO tags (id, title, parent_id, user_id)
-    VALUES (?, ?, ?, ?)
-  `);
-
-  try {
-    stmt.run(id, title, parent_id, user.id);
-    return getTagById(id);
-  } catch (error: any) {
-    if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
-      throw new Error("Tag with this title already exists");
-    }
-    throw error;
-  }
-}
 
 /**
  * Get tag by ID
