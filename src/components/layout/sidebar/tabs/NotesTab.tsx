@@ -32,6 +32,7 @@ import { Input } from "~/solid-daisy-components/components/Input";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import { createNewNote } from "~/lib/db/notes/create";
 import { updateNoteTitle, moveNoteQuery } from "~/lib/db/notes/update";
+import { deleteNoteQuery } from "~/lib/db/notes/delete";
 
 // Hook for navigation keybindings
 function useNavigationKeybindings(
@@ -296,12 +297,6 @@ function useNoteRenaming(
 
 
 
-// Query function to delete a note
-const deleteNote = query(async (noteId: string) => {
-  "use server";
-  const { deleteNote } = await import("~/lib/db");
-  return await deleteNote(noteId);
-}, "delete-note");
 
 /**
  * Generates a unique identifier for sidebar content based on what's actually displayed.
@@ -574,11 +569,11 @@ export default function NotesTab() {
       const currentIndex = focusedItemIndex();
       const items = displayItems();
       
-      await deleteNote(focused.id);
+      await deleteNoteQuery(focused.id);
 
       // Invalidate relevant caches to show the updated list
       revalidate([
-        deleteNote.key,
+        deleteNoteQuery.key,
         "children-with-folder-status",
         "note-by-id",
       ]);
