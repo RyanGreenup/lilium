@@ -1,25 +1,28 @@
 import Home from "lucide-solid/icons/home";
 import { For, Show, Accessor } from "solid-js";
+import { createAsync, query } from "@solidjs/router";
 import { Breadcrumbs } from "~/solid-daisy-components/components/Breadcrumbs";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { useNoteNavigation } from "~/lib/hooks/useNoteNavigation";
 import { useNoteParents } from "~/lib/hooks/useNoteParents";
-import { createAsync } from "@solidjs/router";
 
 interface NoteBreadcrumbsByIdProps {
   noteId: Accessor<string | undefined>;
 }
 
-// TODO there's already a getNoteById I think?
-const getNoteById = async (id: string | undefined) => {
-  if (!id) return null;
-  ("use server");
+// Query function to get note by ID
+const getNoteByIdQuery = query(async (id: string) => {
+  "use server";
   const { getNoteById: dbGetNoteById } = await import("~/lib/db");
   return await dbGetNoteById(id);
-};
+}, "note-by-id");
 
 export function NoteBreadcrumbsById(props: NoteBreadcrumbsByIdProps) {
-  const note = createAsync(() => getNoteById(props.noteId()));
+  const note = createAsync(async () => {
+    const id = props.noteId();
+    if (!id) return null;
+    return await getNoteByIdQuery(id);
+  });
   const parents = useNoteParents(props.noteId);
   const { navigateToNote, navigateToRoot } = useNoteNavigation();
 

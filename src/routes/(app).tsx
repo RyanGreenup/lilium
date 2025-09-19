@@ -4,11 +4,12 @@ import Menu from "lucide-solid/icons/menu";
 import Settings from "lucide-solid/icons/settings";
 
 import ToggleLeft from "lucide-solid/icons/toggle-left";
-import { JSXElement, VoidComponent } from "solid-js";
+import { JSXElement, VoidComponent, Suspense } from "solid-js";
 import { SidebarTabs } from "~/components/layout/sidebar/SidebarContent";
 import { UserDropdown } from "~/components/UserDrowDown";
 import { Logo } from "~/components/Logo";
 import { getUser } from "~/lib/auth";
+import NoteBreadcrumbs from "~/components/NoteBreadcrumbs";
 import {
   BottomDock,
   CheckboxId,
@@ -68,6 +69,12 @@ const NavbarContent = () => (
           {/*<span>Lilium</span>*/}
         </div>
       </A>
+    </div>
+
+    <div class="navbar-center flex-1 px-4">
+      <Suspense fallback={<div class="text-sm text-base-content/60">Loading...</div>}>
+        <NoteBreadcrumbs />
+      </Suspense>
     </div>
 
     {/*This would be used if the right drawer was included*/}
