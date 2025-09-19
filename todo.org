@@ -28,6 +28,30 @@ Then we can write jsx as a note and transclude it as a widget!
 * First Steps
 ** Layout
 *** TODO Hide the dock on Mobile
+** Schema
+*** Tables
+**** Shares
+Later, we'll need the server to filter what is permitted and implement things like share all children, share only item etc.
+**** Tags
+***** Tags
+- id
+- title
+- parent_id
+***** NoteTags
+- tag_id
+- note_id
+**** Notes
+- id
+- title
+- abstract
+- content
+- syntax / syntax id (avoiding joins is simpler, just use ext as id)
+- parent_id
+- user_id
+*** Views
+**** Notes With Number of Children
+**** All Notes under a Tag
+**** Search obviously
 ** Users
 ** Docker Container
 ** Modify Components Layout
