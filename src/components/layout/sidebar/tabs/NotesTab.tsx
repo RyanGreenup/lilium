@@ -1,4 +1,4 @@
-import { JSXElement } from "solid-js";
+import { children, JSXElement, splitProps } from "solid-js";
 
 interface MenuItemProps {
   icon?: string;
@@ -8,18 +8,23 @@ interface MenuItemProps {
   submenu?: JSXElement;
 }
 
-const MenuItem = (props: MenuItemProps) => (
-  <li>
-    <a
-      class={props.size === "sm" ? "text-sm py-1" : ""}
-      onClick={props.onClick}
-    >
-      {props.icon && `${props.icon} `}
-      {props.children}
-    </a>
-    {props.submenu && <ul>{props.submenu}</ul>}
-  </li>
-);
+const MenuItem = (props: MenuItemProps) => {
+  const [local, others] = splitProps(props, ["children", "icon", "submenu"]);
+  const safeSubMenu = children(() => local.submenu);
+  const safeChildren = children(() => local.children);
+  return (
+    <li>
+      <a
+        class={props.size === "sm" ? "text-sm py-1" : ""}
+        onClick={props.onClick}
+      >
+        {local.icon && `${local.icon} `}
+        {safeChildren()}
+      </a>
+      {safeSubMenu() && <ul>{safeSubMenu()}</ul>}
+    </li>
+  );
+};
 
 export default function NotesTab() {
   return (
