@@ -143,6 +143,17 @@ export const updateNoteTitle = query(async (noteId: string, newTitle: string) =>
 }, "update-note-title");
 
 /**
+ * Query function to update a note (for client-side use)
+ */
+export const updateNoteQuery = query(async (
+  noteId: string, 
+  updates: Partial<Pick<Note, "title" | "abstract" | "content" | "syntax" | "parent_id">>
+) => {
+  "use server";
+  return await updateNote(noteId, updates);
+}, "update-note");
+
+/**
  * Query function to move a note (for client-side use)
  */
 export const moveNoteQuery = query(async (noteId: string, newParentId?: string) => {
