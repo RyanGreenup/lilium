@@ -1,7 +1,9 @@
+import { AccessorWithLatest } from "@solidjs/router";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
-import { For, Show, createMemo } from "solid-js";
+import { Accessor, For, Show, createMemo } from "solid-js";
+import { Note } from "~/lib/db";
 import { useCurrentNoteChildren } from "~/lib/hooks/useCurrentDirectory";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import {
@@ -35,13 +37,7 @@ export default function NotesTab() {
           <Show
             when={displayItems().length > 0}
             fallback={
-              <li class="text-center text-base-content/50 py-4">
-                <span class="pointer-events-none">
-                  <Show when={note()} fallback="No notes found">
-                    {isCurrentNoteFolder() ? "No child notes" : "No siblings"}
-                  </Show>
-                </span>
-              </li>
+              <EmptyMessage note={note} isFolder={isCurrentNoteFolder} />
             }
           >
             <For each={displayItems()}>
@@ -78,5 +74,18 @@ const MenuItem = (props: {
         <ChevronRight size={14} class="text-base-content/40" />
       </Show>
     </a>
+  </li>
+);
+
+const EmptyMessage = (props: {
+  note: AccessorWithLatest<Note | null | undefined>;
+  isFolder: Accessor<boolean>;
+}) => (
+  <li class="text-center text-base-content/50 py-4">
+    <span class="pointer-events-none">
+      <Show when={props.note()} fallback="No notes found">
+        {props.isFolder() ? "No child notes" : "No siblings"}
+      </Show>
+    </span>
   </li>
 );
