@@ -8,42 +8,29 @@ export interface NavigationItem {
 
 /**
  * Hook to handle navigation logic for notes and folders
+ * Everything is just a note - folders are notes that have children
  */
 export function useNoteNavigation() {
   const navigate = useNavigate();
 
-  // Navigate to a note (opens the note for viewing/editing)
+  // Navigate to any note (folder or regular note)
   const navigateToNote = (noteId: string) => {
     navigate(`/note/${noteId}`);
   };
 
-  // Navigate to a folder (shows folder contents in sidebar)
-  const navigateToFolder = (folderId: string) => {
-    navigate(`/folder/${folderId}`);
-  };
-
-  // Navigate to root directory
+  // Navigate to root (home page)
   const navigateToRoot = () => {
-    navigate('/');
+    navigate("/");
   };
 
-  // Handle clicking on an item - folder or note
+  // Handle clicking on any item - just navigate to it
   const handleItemClick = (item: NavigationItem) => {
-    console.log('Navigation clicked:', item);
-    if (item.is_folder) {
-      // Navigate to folder (changes sidebar context)
-      console.log('Navigating to folder:', item.id);
-      navigateToFolder(item.id);
-    } else {
-      // Navigate to note (opens note content)
-      console.log('Navigating to note:', item.id);
-      navigateToNote(item.id);
-    }
+    console.log("Navigation clicked:", item);
+    navigateToNote(item.id);
   };
 
   return {
     navigateToNote,
-    navigateToFolder,
     navigateToRoot,
     handleItemClick,
   };

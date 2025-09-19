@@ -1,4 +1,5 @@
 import { createAsync } from "@solidjs/router";
+import { Accessor } from "solid-js";
 
 // Server function to get note parents
 const getNoteParents = async (noteId: string) => {
@@ -11,11 +12,12 @@ const getNoteParents = async (noteId: string) => {
  * Hook to get the parent hierarchy of a note
  * Returns an array of parent notes from root to immediate parent
  */
-export function useNoteParents(noteId: string | undefined) {
+export function useNoteParents(noteId: Accessor<string | undefined>) {
   const parents = createAsync(async () => {
-    if (!noteId) return [];
+    const currentNoteId = noteId();
+    if (!currentNoteId) return [];
     try {
-      const parentChain = await getNoteParents(noteId);
+      const parentChain = await getNoteParents(currentNoteId);
       // Add folder status for navigation
       return parentChain.map(parent => ({
         ...parent,

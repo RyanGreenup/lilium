@@ -1,4 +1,5 @@
-import { createAsync, useParams, useLocation } from "@solidjs/router";
+import { createAsync } from "@solidjs/router";
+import { useCurrentNote } from "./useCurrentNote";
 
 // Server function to get children with folder status
 const getChildrenWithFolderStatus = async (parentId?: string) => {
@@ -7,40 +8,17 @@ const getChildrenWithFolderStatus = async (parentId?: string) => {
   return await getChildNotesWithFolderStatus(parentId);
 };
 
-// Server function to get note by ID
-const getNoteById = async (noteId: string) => {
-  "use server";
-  const { getNoteById: dbGetNoteById } = await import("~/lib/db");
-  return await dbGetNoteById(noteId);
-};
-
 /**
- * Hook to manage the current directory context in the sidebar
- * Uses route params to track the current directory (/folder/:id or root)
+ * Hook to get the children of the current note
+ * The sidebar always shows the children of whatever note is currently open
  */
-export function useCurrentDirectory() {
-  const params = useParams();
-  const location = useLocation();
-  
-  // Determine if we're in a folder route and get the folder ID
-  const isInFolder = location.pathname.startsWith('/folder/');
-  const dirId = isInFolder ? params.id : undefined;
+export function useCurrentNoteChildren() {
+  const { noteId } = useCurrentNote();
 
-  // Get the current directory note (if any)
-  const currentDir = createAsync(async () => {
-    if (!dirId) return null;
-    try {
-      return await getNoteById(dirId);
-    } catch (error) {
-      console.error("Failed to fetch directory:", error);
-      return null;
-    }
-  });
-
-  // Get children of the current directory
+  // Get children of the current note
   const children = createAsync(async () => {
     try {
-      return await getChildrenWithFolderStatus(dirId);
+      return await getChildrenWithFolderStatus(noteId());
     } catch (error) {
       console.error("Failed to fetch children:", error);
       return [];
@@ -48,9 +26,7 @@ export function useCurrentDirectory() {
   });
 
   return {
-    currentDir,
-    dirId,
     children,
-    isInFolder,
+    parentNoteId: noteId,
   };
 }
