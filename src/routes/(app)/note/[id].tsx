@@ -46,6 +46,7 @@ export default function NoteEditor() {
     { value: "org", label: "Org Mode", extension: ".org" },
     { value: "html", label: "HTML", extension: ".html" },
     { value: "jsx", label: "JSX", extension: ".jsx" },
+    { value: "ipynb", label: "Jupyter Notebook", extension: ".ipynb" },
   ];
 
   const updateNote = (field: keyof Note, value: any) => {

@@ -1,6 +1,6 @@
 import { createSignal, createEffect, type Accessor, Suspense, Switch, Match } from "solid-js";
 import { createAsync } from "@solidjs/router";
-import { renderOrgModeQuery } from "~/lib/pandoc";
+import { renderOrgModeQuery, renderJupyterNotebookQuery } from "~/lib/pandoc";
 
 const renderMarkdownClient = async (markdownContent: string): Promise<string> => {
   if (!markdownContent.trim()) return "No notes";
@@ -21,21 +21,24 @@ export const MarkdownRenderer = (props: {
   const [markdownHtml, setMarkdownHtml] = createSignal<string>("");
   const [isLoadingMarkdown, setIsLoadingMarkdown] = createSignal(false);
 
-  // Server-side Org mode rendering
-  const orgHtml = createAsync(async () => {
+  // Server-side Pandoc rendering
+  const pandocHtml = createAsync(async () => {
     const syntax = props.syntax?.() || "markdown";
     const content = props.content();
     
-    if (syntax === "org" && content.trim()) {
-      try {
-        const result = await renderOrgModeQuery(content);
-        console.log("Org render result:", result);
-        return result;
-      } catch (error) {
-        console.error("Org rendering failed:", error);
-        return `<pre class="error">Org rendering failed: ${error}</pre>`;
+    if (!content.trim()) return "";
+    
+    try {
+      if (syntax === "org") {
+        return await renderOrgModeQuery(content);
+      } else if (syntax === "ipynb") {
+        return await renderJupyterNotebookQuery(content);
       }
+    } catch (error) {
+      console.error(`${syntax} rendering failed:`, error);
+      return `<pre class="error">${syntax} rendering failed: ${error}</pre>`;
     }
+    
     return "";
   });
 
@@ -61,16 +64,16 @@ export const MarkdownRenderer = (props: {
   return (
     <div class="prose prose-sm max-w-none dark:prose-invert">
       <Switch>
-        <Match when={props.syntax?.() === "org"}>
+        <Match when={props.syntax?.() === "org" || props.syntax?.() === "ipynb"}>
           <Suspense 
             fallback={
               <div class="flex items-center justify-center p-4">
                 <div class="loading loading-spinner loading-sm"></div>
-                <span class="ml-2 text-sm text-base-content/60">Rendering Org mode...</span>
+                <span class="ml-2 text-sm text-base-content/60">Rendering {props.syntax?.()}...</span>
               </div>
             }
           >
-            <div innerHTML={orgHtml()} />
+            <div innerHTML={pandocHtml()} />
           </Suspense>
         </Match>
         
