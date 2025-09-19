@@ -35,29 +35,35 @@ function useNoteRenaming(
   setFocusedItemIndex: (index: number) => void
 ) {
   const [editingItemId, setEditingItemId] = createSignal<string | null>(null);
-  const [justRenamedItemId, setJustRenamedItemId] = createSignal<string | null>(null);
+  const [renamedItemInfo, setRenamedItemInfo] = createSignal<{id: string, newTitle: string} | null>(null);
 
-  // Track when a rename completes and refocus the item
+  // Track when a rename completes and refocus the item by looking for the updated title
   createEffect(() => {
-    const renamedId = justRenamedItemId();
+    const renamed = renamedItemInfo();
     const items = displayItems();
     
-    if (renamedId && items.length > 0) {
-      const newIndex = items.findIndex(item => item.id === renamedId);
+    if (renamed && items.length > 0) {
+      // Find the item with the renamed ID and check if its title has been updated
+      const renamedItem = items.find(item => item.id === renamed.id);
       
-      if (newIndex !== -1) {
-        // Set focus to the renamed item's new position
-        setFocusedItemIndex(newIndex);
+      if (renamedItem && renamedItem.title === renamed.newTitle) {
+        // The title has been updated, find its new position
+        const newIndex = items.findIndex(item => item.id === renamed.id);
         
-        // Restore focus to the tab container
-        const ref = tabRef();
-        if (ref) {
-          ref.focus();
+        if (newIndex !== -1) {
+          // Set focus to the renamed item's new position
+          setFocusedItemIndex(newIndex);
+          
+          // Restore focus to the tab container
+          const ref = tabRef();
+          if (ref) {
+            ref.focus();
+          }
         }
+        
+        // Clear the renamed item tracking
+        setRenamedItemInfo(null);
       }
-      
-      // Clear the renamed item tracking
-      setJustRenamedItemId(null);
     }
   });
 
@@ -71,7 +77,7 @@ function useNoteRenaming(
       revalidate([updateNoteTitle.key, "children-with-folder-status", "note-by-id"]);
       
       // Track that this item was just renamed for refocusing
-      setJustRenamedItemId(noteId);
+      setRenamedItemInfo({ id: noteId, newTitle });
     } catch (error) {
       console.error("Failed to rename note:", error);
       alert("Failed to rename note. Please try again.");
