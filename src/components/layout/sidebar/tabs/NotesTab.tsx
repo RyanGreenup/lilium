@@ -3,7 +3,8 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
 import FolderUp from "lucide-solid/icons/folder-up";
-import { Accessor, For, Show, createMemo } from "solid-js";
+import { Accessor, For, Show, createMemo, createSignal, createEffect } from "solid-js";
+import { Transition } from "solid-transition-group";
 import { Note } from "~/lib/db";
 import { useCurrentNoteChildren } from "~/lib/hooks/useCurrentDirectory";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
@@ -22,6 +23,9 @@ export default function NotesTab() {
   const { handleItemClick, navigateToNote, navigateToRoot } =
     useNoteNavigation();
 
+  // Track navigation direction for slide animation
+  const [isGoingDeeper, setIsGoingDeeper] = createSignal(true);
+
   const siblings = useNoteSiblings(
     noteId,
     createMemo(() => note()?.parent_id),
@@ -34,12 +38,31 @@ export default function NotesTab() {
 
   // Handle up directory navigation
   const handleUpDirectory = () => {
+    setIsGoingDeeper(false); // Going up
     const currentNote = note();
     if (currentNote?.parent_id) {
       navigateToNote(currentNote.parent_id);
     } else {
       navigateToRoot();
     }
+  };
+
+  // Enhanced item click handler with direction tracking
+  const handleItemClickWithDirection = (item: NavigationItem) => {
+    console.log('🖱️ Item clicked:', { 
+      title: item.title, 
+      isFolder: item.is_folder,
+      id: item.id 
+    });
+    
+    // Only set direction for folders - notes don't change sidebar content
+    if (item.is_folder) {
+      console.log('📁 Folder clicked - setting direction deeper');
+      setIsGoingDeeper(true); // Going deeper into folders
+    } else {
+      console.log('📄 Note clicked - no direction change');
+    }
+    handleItemClick(item);
   };
 
   // Show up button only when there's actually a parent to navigate to
@@ -55,29 +78,127 @@ export default function NotesTab() {
     return true;
   });
 
+  // Track when content should be shown for transition
+  const [showContent, setShowContent] = createSignal(true);
+  
+  // Create a unique identifier based on what's actually displayed in the sidebar
+  const currentContentId = createMemo(() => {
+    const currentNote = note();
+    const folder = isCurrentNoteFolder();
+    
+    let contentId;
+    if (folder) {
+      // For folders, the content is the children of this note
+      contentId = `children-of-${currentNote?.id || 'root'}`;
+    } else {
+      // For notes, the content is the siblings (children of the parent)
+      // Use the parent ID since that's what determines the displayed items
+      contentId = `children-of-${currentNote?.parent_id || 'root'}`;
+    }
+    
+    console.log('📋 Content ID generated:', {
+      contentId,
+      noteTitle: currentNote?.title,
+      noteId: currentNote?.id,
+      parentId: currentNote?.parent_id,
+      isFolder: folder,
+      explanation: folder ? 'showing children of current note' : 'showing siblings (children of parent)'
+    });
+    
+    return contentId;
+  });
+
+  // Track previous content id to detect changes
+  const [prevContentId, setPrevContentId] = createSignal(currentContentId());
+  
+  // Handle content change with animation
+  createEffect(() => {
+    const currentId = currentContentId();
+    const prevId = prevContentId();
+    
+    console.log('Content ID check:', {
+      currentId,
+      prevId,
+      changed: currentId !== prevId,
+      currentNote: note()?.title,
+      isFolder: isCurrentNoteFolder()
+    });
+    
+    if (currentId !== prevId) {
+      console.log('🎬 Triggering animation from', prevId, 'to', currentId);
+      setShowContent(false);
+      setTimeout(() => {
+        setPrevContentId(currentId);
+        setShowContent(true);
+      }, 0);
+    }
+  });
+
   return (
     <div class="space-y-4">
       <div>
-        <ul class="menu bg-base-200 rounded-box w-full">
+        <ul class="menu bg-base-200 rounded-box w-full relative overflow-hidden">
           <Show when={showUpButton()}>
             <UpDirectoryButton onClick={handleUpDirectory} />
           </Show>
-          <Show
-            when={displayItems().length > 0}
-            fallback={
-              <EmptyMessage note={note} isFolder={isCurrentNoteFolder} />
-            }
+          
+          <Transition
+            onEnter={(el, done) => {
+              const direction = isGoingDeeper() ? 1 : -1; // 1 = slide from right, -1 = slide from left
+              const a = el.animate([
+                { 
+                  transform: `translateX(${direction * 100}%)`,
+                  opacity: 0 
+                },
+                { 
+                  transform: 'translateX(0%)',
+                  opacity: 1 
+                }
+              ], {
+                duration: 300,
+                easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
+              });
+              a.finished.then(done);
+            }}
+            onExit={(el, done) => {
+              const direction = isGoingDeeper() ? -1 : 1; // Opposite direction for exit
+              const a = el.animate([
+                { 
+                  transform: 'translateX(0%)',
+                  opacity: 1 
+                },
+                { 
+                  transform: `translateX(${direction * 100}%)`,
+                  opacity: 0 
+                }
+              ], {
+                duration: 300,
+                easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
+              });
+              a.finished.then(done);
+            }}
           >
-            <For each={displayItems()}>
-              {(item: NavigationItem) => (
-                <MenuItem
-                  item={item}
-                  isActive={noteId() === item.id}
-                  handleItemClick={handleItemClick}
-                />
-              )}
-            </For>
-          </Show>
+            {showContent() && (
+              <div>
+                <Show
+                  when={displayItems().length > 0}
+                  fallback={
+                    <EmptyMessage note={note} isFolder={isCurrentNoteFolder} />
+                  }
+                >
+                  <For each={displayItems()}>
+                    {(item: NavigationItem) => (
+                      <MenuItem
+                        item={item}
+                        isActive={noteId() === item.id}
+                        handleItemClick={handleItemClickWithDirection}
+                      />
+                    )}
+                  </For>
+                </Show>
+              </div>
+            )}
+          </Transition>
         </ul>
       </div>
     </div>
