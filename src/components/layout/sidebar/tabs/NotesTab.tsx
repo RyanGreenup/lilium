@@ -111,7 +111,7 @@ export default function NotesTab() {
   );
 
   // Track previous content id to detect changes
-  const [prevContentId, setPrevContentId] = createSignal(currentContentId());
+  const [prevContentId, setPrevContentId] = createSignal<string | null>(null);
 
   // Handle content change with animation
   createEffect(() => {
@@ -119,17 +119,16 @@ export default function NotesTab() {
     const prevId = prevContentId();
 
     if (currentId !== prevId) {
+      // Skip animation on initial load (when prevId is null)
+      if (prevId === null) {
+        setPrevContentId(currentId);
+        return;
+      }
+
       setShowContent(false);
       setTimeout(() => {
         setPrevContentId(currentId);
         setShowContent(true);
-        // Focus first item when content changes
-        const items = displayItems();
-        if (items.length > 0) {
-          setFocusedItemIndex(0);
-        } else {
-          setFocusedItemIndex(-1);
-        }
       }, 0);
     }
   });
