@@ -29,7 +29,7 @@ import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding"
 
 // Hook for note renaming functionality
 function useNoteRenaming(
-  tabRef: () => HTMLElement | undefined, 
+  tabRef: () => HTMLElement | undefined,
   focusedItem: Accessor<NavigationItem | null>,
   displayItems: Accessor<NavigationItem[]>,
   setFocusedItemIndex: (index: number) => void
@@ -41,26 +41,26 @@ function useNoteRenaming(
   createEffect(() => {
     const renamed = renamedItemInfo();
     const items = displayItems();
-    
+
     if (renamed && items.length > 0) {
       // Find the item with the renamed ID and check if its title has been updated
       const renamedItem = items.find(item => item.id === renamed.id);
-      
+
       if (renamedItem && renamedItem.title === renamed.newTitle) {
         // The title has been updated, find its new position
         const newIndex = items.findIndex(item => item.id === renamed.id);
-        
+
         if (newIndex !== -1) {
           // Set focus to the renamed item's new position
           setFocusedItemIndex(newIndex);
-          
+
           // Restore focus to the tab container
           const ref = tabRef();
           if (ref) {
             ref.focus();
           }
         }
-        
+
         // Clear the renamed item tracking
         setRenamedItemInfo(null);
       }
@@ -72,10 +72,10 @@ function useNoteRenaming(
     try {
       await updateNoteTitle(noteId, newTitle);
       setEditingItemId(null);
-      
+
       // Invalidate relevant caches to show the updated title
       revalidate([updateNoteTitle.key, "children-with-folder-status", "note-by-id"]);
-      
+
       // Track that this item was just renamed for refocusing
       setRenamedItemInfo({ id: noteId, newTitle });
     } catch (error) {
@@ -271,7 +271,7 @@ export default function NotesTab() {
     try {
       const currentNote = note();
       let parentId: string | undefined;
-      
+
       if (isCurrentNoteFolder()) {
         // If current note is a folder, create note inside it
         parentId = currentNote?.id;
@@ -281,10 +281,10 @@ export default function NotesTab() {
       }
 
       const newNote = await createNewNote("New Note", "", parentId);
-      
+
       // Invalidate relevant caches to show the new note
       revalidate([createNewNote.key, "children-with-folder-status", "note-by-id"]);
-      
+
       // Navigate to the newly created note
       navigateToNote(newNote.id);
     } catch (error) {
@@ -334,7 +334,7 @@ export default function NotesTab() {
       const focused = focusedItem();
       if (focused?.is_folder) {
         // Navigate into the folder
-        handleItemClick(focused);
+        handleItemClickWithDirection(focused);
       }
     },
     { ref: () => tabRef }
@@ -346,7 +346,7 @@ export default function NotesTab() {
     () => {
       const focused = focusedItem();
       if (focused) {
-        handleItemClick(focused);
+        handleItemClickWithDirection(focused);
       }
     },
     { ref: () => tabRef }
@@ -469,7 +469,7 @@ const MenuItem = (props: {
         <Show when={props.item.is_folder} fallback={<FileText size={16} />}>
           <Folder size={16} />
         </Show>
-        
+
         <Show
           when={props.isEditing}
           fallback={<span class="flex-1">{props.item.title}</span>}
@@ -483,7 +483,7 @@ const MenuItem = (props: {
             onBlur={handleBlur}
           />
         </Show>
-        
+
         <Show when={props.item.is_folder && !props.isEditing}>
           <ChevronRight size={14} class="text-base-content/40" />
         </Show>
