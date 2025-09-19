@@ -177,7 +177,9 @@ function useNoteRenaming(
     id: string;
     newTitle: string;
   } | null>(null);
-  const [newlyCreatedNoteId, setNewlyCreatedNoteId] = createSignal<string | null>(null);
+  const [newlyCreatedNoteId, setNewlyCreatedNoteId] = createSignal<
+    string | null
+  >(null);
 
   // Track when a rename completes or new note appears and refocus the item
   createEffect(() => {
@@ -456,7 +458,7 @@ export default function NotesTab() {
   const handleCreateChildNote = async () => {
     try {
       const currentNote = note();
-      
+
       // Always create as a child of the current note
       const parentId = currentNote?.id;
 
@@ -520,69 +522,75 @@ export default function NotesTab() {
     <div
       ref={tabRef}
       tabIndex={0}
-      class="space-y-4 outline-none focus:outline-none group"
+      class="flex flex-col h-full outline-none focus:outline-none group"
     >
-      <div>
+      <div class="flex-1 space-y-4">
         {/*TODO Down the line we'll have to use context provider for keybindings to focus elements*/}
-        <div class="hidden group-focus:block">
-          <Badge color="primary" class="w-full" size="xs" variant="soft">
-            <Focus size={12} class="mr-1" />
-          </Badge>
-        </div>
 
-        {/* Show alert when a note is cut */}
-        <Show when={cutNoteId()}>
-          <Alert color="warning" class="mb-4">
-            <Scissors size={16} class="mr-2" />
-            <span class="flex-1">
-              Note "{displayItems().find(item => item.id === cutNoteId())?.title || 'Unknown'}" is cut
-            </span>
-            <button 
-              onClick={handleClearCut}
-              class="btn btn-xs btn-ghost ml-2"
-              title="Clear cut (Escape)"
-            >
-              <X size={14} />
-            </button>
-          </Alert>
-        </Show>
-        <ul class="menu bg-base-200 rounded-box w-full relative overflow-hidden">
-          <Show when={showUpButton()}>
-            <UpDirectoryButton onClick={handleUpDirectory} />
+        <div class="w-full h-full bg-base-200 group-focus:bg-base-300  transition-bg duration-300 ease-in-out rounded">
+          <Show when={cutNoteId()}>
+            <CutIndicator
+              noteTitle={
+                displayItems().find((item) => item.id === cutNoteId())?.title ||
+                "Unknown"
+              }
+              onClearCut={handleClearCut}
+            />
           </Show>
+          <ul class="menu  rounded-box w-full relative overflow-hidden">
+            <Show when={showUpButton()}>
+              <UpDirectoryButton onClick={handleUpDirectory} />
+            </Show>
 
-          <SlideTransition
-            isGoingDeeper={isGoingDeeper}
-            contentId={currentContentId()}
-          >
-            <div>
-              <Show
-                when={displayItems().length > 0}
-                fallback={
-                  <EmptyMessage note={note} isFolder={isCurrentNoteFolder} />
-                }
-              >
-                <For each={displayItems()}>
-                  {(item: NavigationItem, index) => (
-                    <MenuItem
-                      item={item}
-                      isActive={noteId() === item.id}
-                      isFocused={focusedItemIndex() === index()}
-                      isEditing={editingItemId() === item.id}
-                      handleItemClick={handleItemClickWithDirection}
-                      handleRename={handleRenameNote}
-                      onCancelEdit={cancelEditing}
-                    />
-                  )}
-                </For>
-              </Show>
-            </div>
-          </SlideTransition>
-        </ul>
+            <SlideTransition
+              isGoingDeeper={isGoingDeeper}
+              contentId={currentContentId()}
+            >
+              <div>
+                <Show
+                  when={displayItems().length > 0}
+                  fallback={
+                    <EmptyMessage note={note} isFolder={isCurrentNoteFolder} />
+                  }
+                >
+                  <For each={displayItems()}>
+                    {(item: NavigationItem, index) => (
+                      <MenuItem
+                        item={item}
+                        isActive={noteId() === item.id}
+                        isFocused={focusedItemIndex() === index()}
+                        isEditing={editingItemId() === item.id}
+                        handleItemClick={handleItemClickWithDirection}
+                        handleRename={handleRenameNote}
+                        onCancelEdit={cancelEditing}
+                      />
+                    )}
+                  </For>
+                </Show>
+              </div>
+            </SlideTransition>
+          </ul>
+        </div>
       </div>
     </div>
   );
 }
+
+const CutIndicator = (props: { noteTitle: string; onClearCut: () => void }) => {
+  return (
+    <Alert style="outline" color="info" class="my-4" showIcon={false}>
+      <Scissors size={16} class="mr-2" />
+      <span class="">"{props.noteTitle}"</span>
+      <button
+        onClick={props.onClearCut}
+        class="btn btn-xs btn-ghost ml-2"
+        title="Clear cut (Escape)"
+      >
+        <X size={14} />
+      </button>
+    </Alert>
+  );
+};
 
 const MenuItem = (props: {
   item: NavigationItem;
