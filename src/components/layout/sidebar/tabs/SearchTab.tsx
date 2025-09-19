@@ -1,22 +1,36 @@
-import { createSignal, For, JSXElement, onMount, createEffect, createMemo, Show, Suspense } from "solid-js";
-import { useSearchParams, createAsync } from "@solidjs/router";
+import {
+  createSignal,
+  For,
+  JSXElement,
+  onMount,
+  createEffect,
+  createMemo,
+  Show,
+  Suspense,
+  onCleanup,
+} from "solid-js";
+import { createAsync } from "@solidjs/router";
 import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
 import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
 import { Radio } from "~/solid-daisy-components/components/Radio";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Select } from "~/solid-daisy-components/components/Select";
 import { ContentList, ContentItemData } from "../shared/ContentItem";
-import { searchNotesQuery, searchNotesSimpleQuery, searchNotesAdvancedQuery } from "~/lib/db/notes/search";
+import {
+  searchNotesQuery,
+  searchNotesSimpleQuery,
+  searchNotesAdvancedQuery,
+} from "~/lib/db/notes/search";
 import type { Note } from "~/lib/db/types";
 
 export const SidebarSearchContent = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
   const [useFtsSearch, setUseFtsSearch] = createSignal(true);
   const [syntaxFilter, setSyntaxFilter] = createSignal<string>("");
-  const [hasAbstractFilter, setHasAbstractFilter] = createSignal<boolean | undefined>(undefined);
+  const [hasAbstractFilter, setHasAbstractFilter] = createSignal<
+    boolean | undefined
+  >(undefined);
   const [pathDisplay, setPathDisplay] = createSignal(0); // 0: Absolute, 1: Relative, 2: Title
   const [searchTerm, setSearchTerm] = createSignal("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = createSignal("");
 
   const pathDisplayOptions = [
     { id: 0, label: "Absolute" },
@@ -38,36 +52,40 @@ export const SidebarSearchContent = () => {
     { value: false, label: "Without Abstract" },
   ];
 
-  // Debounce search term to avoid excessive API calls
+  // Separate search execution from reactive search term
+  const [searchQuery, setSearchQuery] = createSignal("");
+  const [searchResults, setSearchResults] = createSignal<Note[]>([]);
+
+  // Debounced search effect
   createEffect(() => {
     const term = searchTerm();
-    const timeoutId = setTimeout(() => {
-      setDebouncedSearchTerm(term);
-    }, 300);
     
-    return () => clearTimeout(timeoutId);
+    if (!term || term.length < 2) {
+      setSearchQuery("");
+      setSearchResults([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setSearchQuery(term);
+    }, 300);
+
+    onCleanup(() => clearTimeout(timeoutId));
   });
 
-  // Perform search based on current settings
-  const searchResults = createAsync(() => {
-    const term = debouncedSearchTerm();
-    if (!term || term.length < 2) return Promise.resolve([]);
-
-    const syntax = syntaxFilter();
-    const hasAbstract = hasAbstractFilter();
-
-    // Use advanced search if filters are applied, otherwise use simple/FTS search
-    if (syntax || hasAbstract !== undefined) {
-      return searchNotesAdvancedQuery({
-        query: term,
-        syntax: syntax || undefined,
-        hasAbstract,
-        limit: 50
-      });
-    } else if (useFtsSearch()) {
-      return searchNotesQuery(term);
-    } else {
-      return searchNotesSimpleQuery(term);
+  // Execute search when debounced query changes
+  createEffect(async () => {
+    const query = searchQuery();
+    if (!query || query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    try {
+      const results = await searchNotesQuery(query);
+      setSearchResults(results || []);
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchResults([]);
     }
   });
 
@@ -75,35 +93,21 @@ export const SidebarSearchContent = () => {
   const formattedResults = createMemo(() => {
     const results = searchResults();
     if (!results) return [];
-    
-    return results.map((note: Note): ContentItemData => ({
-      id: note.id,
-      title: note.title,
-      abstract: note.abstract || "",
-      path: `/note/${note.id}`,
-    }));
-  });
 
-  // Initialize search term from URL parameters
-  onMount(() => {
-    if (searchParams.q) {
-      setSearchTerm(searchParams.q);
-    }
-  });
-
-  // Update URL when search term changes
-  createEffect(() => {
-    const term = searchTerm();
-    if (term && term.length > 0) {
-      setSearchParams({ q: term });
-    } else {
-      setSearchParams({ q: undefined });
-    }
+    return results.map(
+      (note: Note): ContentItemData => ({
+        id: note.id,
+        title: note.title,
+        abstract: note.abstract || "",
+        path: `/note/${note.id}`,
+      }),
+    );
   });
 
   const handleSearchInput = (e: Event) => {
     const target = e.currentTarget as HTMLInputElement;
-    setSearchTerm(target.value);
+    const value = target.value;
+    setSearchTerm(value);
   };
 
   return (
@@ -129,7 +133,9 @@ export const SidebarSearchContent = () => {
                 onChange={(e) => setUseFtsSearch(e.currentTarget.checked)}
               />
               <span class="text-xs text-base-content/60 mt-1">
-                {useFtsSearch() ? "Full-text search with ranking" : "Simple LIKE search"}
+                {useFtsSearch()
+                  ? "Full-text search with ranking"
+                  : "Simple LIKE search"}
               </span>
             </VStack>
           </Fieldset>
@@ -158,7 +164,7 @@ export const SidebarSearchContent = () => {
                 onChange={(e) => {
                   const value = e.currentTarget.value;
                   setHasAbstractFilter(
-                    value === "" ? undefined : value === "true"
+                    value === "" ? undefined : value === "true",
                   );
                 }}
               >
@@ -207,12 +213,16 @@ export const SidebarSearchContent = () => {
               </Show>
             </h3>
           </div>
-          <Suspense fallback={
-            <div class="px-4 py-8 text-center">
-              <div class="loading loading-spinner loading-sm"></div>
-              <div class="text-sm text-base-content/60 mt-2">Searching...</div>
-            </div>
-          }>
+          <Suspense
+            fallback={
+              <div class="px-4 py-8 text-center">
+                <div class="loading loading-spinner loading-sm"></div>
+                <div class="text-sm text-base-content/60 mt-2">
+                  Searching...
+                </div>
+              </div>
+            }
+          >
             <ContentList
               items={formattedResults()}
               showPath={pathDisplay() !== 2}
@@ -221,7 +231,7 @@ export const SidebarSearchContent = () => {
           </Suspense>
         </div>
       </Show>
-      
+
       <Show when={searchTerm().length > 0 && searchTerm().length < 2}>
         <div class="px-4 py-8 text-center">
           <div class="text-sm text-base-content/60">
@@ -236,12 +246,8 @@ export const SidebarSearchContent = () => {
 export const VStack = (props: { children: any; label: JSXElement }) => (
   <div class="form-control">
     <label class="label">
-      <span class="label-text text-sm font-medium">
-        {props.label}
-      </span>
+      <span class="label-text text-sm font-medium">{props.label}</span>
     </label>
-    <div class="space-y-1">
-      {props.children}
-    </div>
+    <div class="space-y-1">{props.children}</div>
   </div>
 );
