@@ -1,7 +1,8 @@
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
-import { children, JSXElement, splitProps } from "solid-js";
+import { children, JSXElement, Show, splitProps } from "solid-js";
 import { Button } from "~/solid-daisy-components/components/Button";
+import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 
 interface MenuItemProps {
   icon?: JSXElement;
@@ -30,15 +31,28 @@ const MenuItem = (props: MenuItemProps) => {
   );
 };
 
+
 export default function NotesTab() {
+  const { note, noteId } = useCurrentNote();
   return (
     <div class="space-y-4">
       {/* Hierarchical Context */}
-      <ul class="menu bg-base-200 rounded-box w-56 shadow-sm w-full">
+      <ul class="menu bg-base-200 rounded-box shadow-sm w-full">
         <li>
           <details open>
             <summary>
-              <li class="menu-title text-xs">Path</li>
+              <Show
+                when={note()}
+                fallback={
+                  <li class="menu-title text-xs">
+                    Path of ({noteId?.slice(0, 7)}...)
+                  </li>
+                }
+              >
+                {(noteData) => (
+                  <li class="menu-title text-xs">Path of {noteData().title}</li>
+                )}
+              </Show>
             </summary>
             <ul>
               <MenuItem
@@ -76,7 +90,9 @@ export default function NotesTab() {
           }}
         >
           <h3 class="text-sm font-medium text-base-content/70 mb-2">
-            Current Directory
+            <Show when={note()} fallback="Current Directory">
+              {(noteData) => noteData().title}
+            </Show>
           </h3>
         </Button>
         <ul class="menu bg-base-200 rounded-box w-full">
