@@ -7,6 +7,7 @@ import ToggleLeft from "lucide-solid/icons/toggle-left";
 import { JSXElement, VoidComponent } from "solid-js";
 import { SidebarTabs } from "~/components/layout/sidebar/SidebarContent";
 import { UserDropdown } from "~/components/UserDrowDown";
+import { Logo } from "~/components/Logo";
 import { getUser } from "~/lib/auth";
 import {
   BottomDock,
@@ -62,8 +63,9 @@ const NavbarContent = () => (
         <SidebarToggle />
       </div>
       <A href="/" class="btn btn-ghost text-xl">
-        <div class=" p-1 rounded-lg ">
-          <img src="/logo.png" class="max-h-[2rem]" />
+        <div class="flex items-center gap-2">
+          <Logo class="h-8 w-8" />
+          <span>Lilium</span>
         </div>
       </A>
     </div>
@@ -108,3 +110,4 @@ const DockContent = () => (
     </ToggleButton>
   </div>
 );
+
