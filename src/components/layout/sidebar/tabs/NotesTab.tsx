@@ -1,5 +1,6 @@
 import { AccessorWithLatest } from "@solidjs/router";
 import ChevronRight from "lucide-solid/icons/chevron-right";
+import ChevronUp from "lucide-solid/icons/chevron-up";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
 import { Accessor, For, Show, createMemo } from "solid-js";
@@ -18,7 +19,7 @@ import { useNoteSiblings } from "~/lib/hooks/useNoteSiblings";
 export default function NotesTab() {
   const { note, noteId } = useCurrentNote();
   const { children } = useCurrentNoteChildren();
-  const { handleItemClick } = useNoteNavigation();
+  const { handleItemClick, navigateToNote, navigateToRoot } = useNoteNavigation();
 
   const siblings = useNoteSiblings(
     noteId,
@@ -30,10 +31,29 @@ export default function NotesTab() {
     isCurrentNoteFolder() ? (children() ?? []) : (siblings() ?? []),
   );
 
+  // Handle up directory navigation
+  const handleUpDirectory = () => {
+    const currentNote = note();
+    if (currentNote?.parent_id) {
+      navigateToNote(currentNote.parent_id);
+    } else {
+      navigateToRoot();
+    }
+  };
+
+  // Show up button when we have a parent or when we're in a note
+  const showUpButton = createMemo(() => {
+    const currentNote = note();
+    return currentNote !== null; // Show button if we're viewing any note
+  });
+
   return (
     <div class="space-y-4">
       <div>
         <ul class="menu bg-base-200 rounded-box w-full">
+          <Show when={showUpButton()}>
+            <UpDirectoryButton onClick={handleUpDirectory} />
+          </Show>
           <Show
             when={displayItems().length > 0}
             fallback={
@@ -73,6 +93,15 @@ const MenuItem = (props: {
       <Show when={props.item.is_folder}>
         <ChevronRight size={14} class="text-base-content/40" />
       </Show>
+    </a>
+  </li>
+);
+
+const UpDirectoryButton = (props: { onClick: () => void }) => (
+  <li>
+    <a onClick={props.onClick} class="text-base-content/70 hover:text-base-content">
+      <ChevronUp size={16} />
+      <span class="flex-1">Up Directory</span>
     </a>
   </li>
 );
