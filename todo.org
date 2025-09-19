@@ -67,3 +67,5 @@ This will conflict with our need to preserve the `?sidebar=` searchParam (which 
 *** TODO Folders
 *** TODO Notes
 ** TODO Transitions
+** TODO Sidebar needs to focus the note from the url
+** TODO Sidebar transition is wrong.
