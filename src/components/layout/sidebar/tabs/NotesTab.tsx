@@ -27,6 +27,98 @@ import { Badge } from "~/solid-daisy-components/components/Badge";
 import { Input } from "~/solid-daisy-components/components/Input";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 
+// Hook for navigation keybindings
+function useNavigationKeybindings(
+  tabRef: () => HTMLElement,
+  displayItems: Accessor<NavigationItem[]>,
+  focusedItemIndex: Accessor<number>,
+  setFocusedItemIndex: (index: number) => void,
+  focusedItem: Accessor<NavigationItem | null>,
+  handleUpDirectory: () => void,
+  handleItemClickWithDirection: (item: NavigationItem) => void,
+  handleCreateNote: () => void,
+  startEditingFocusedItem: () => void,
+) {
+  // Navigation keybindings
+  useKeybinding(
+    { key: "ArrowDown" },
+    () => {
+      const items = displayItems();
+      const currentIndex = focusedItemIndex();
+      const nextIndex = currentIndex + 1;
+      if (nextIndex < items.length) {
+        setFocusedItemIndex(nextIndex);
+      }
+    },
+    { ref: tabRef },
+  );
+
+  useKeybinding(
+    { key: "ArrowUp" },
+    () => {
+      const currentIndex = focusedItemIndex();
+      const nextIndex = currentIndex - 1;
+      if (nextIndex >= 0) {
+        setFocusedItemIndex(nextIndex);
+      }
+    },
+    { ref: tabRef },
+  );
+
+  useKeybinding(
+    { key: "ArrowLeft" },
+    () => {
+      // Go up a directory
+      handleUpDirectory();
+    },
+    { ref: tabRef },
+  );
+
+  useKeybinding(
+    { key: "ArrowRight" },
+    () => {
+      const focused = focusedItem();
+      if (focused?.is_folder) {
+        // Navigate into the folder
+        handleItemClickWithDirection(focused);
+      }
+    },
+    { ref: tabRef },
+  );
+
+  // Enter key to select current item
+  useKeybinding(
+    { key: "Enter" },
+    () => {
+      const focused = focusedItem();
+      if (focused) {
+        handleItemClickWithDirection(focused);
+      }
+    },
+    { ref: tabRef },
+  );
+
+  // Create new note keybinding
+  useKeybinding(
+    { key: "n" },
+    () => {
+      console.log("Creating new note...");
+      handleCreateNote();
+    },
+    { ref: tabRef },
+  );
+
+  // Rename focused item keybinding
+  useKeybinding(
+    { key: "F2" },
+    () => {
+      console.log("Starting rename...");
+      startEditingFocusedItem();
+    },
+    { ref: tabRef },
+  );
+}
+
 // Hook for note renaming functionality
 function useNoteRenaming(
   tabRef: () => HTMLElement | undefined,
@@ -312,83 +404,17 @@ export default function NotesTab() {
     }
   };
 
-  // Navigation keybindings
-  useKeybinding(
-    { key: "ArrowDown" },
-    () => {
-      const items = displayItems();
-      const currentIndex = focusedItemIndex();
-      const nextIndex = currentIndex + 1;
-      if (nextIndex < items.length) {
-        setFocusedItemIndex(nextIndex);
-      }
-    },
-    { ref: () => tabRef },
-  );
-
-  useKeybinding(
-    { key: "ArrowUp" },
-    () => {
-      const currentIndex = focusedItemIndex();
-      const nextIndex = currentIndex - 1;
-      if (nextIndex >= 0) {
-        setFocusedItemIndex(nextIndex);
-      }
-    },
-    { ref: () => tabRef },
-  );
-
-  useKeybinding(
-    { key: "ArrowLeft" },
-    () => {
-      // Go up a directory
-      handleUpDirectory();
-    },
-    { ref: () => tabRef },
-  );
-
-  useKeybinding(
-    { key: "ArrowRight" },
-    () => {
-      const focused = focusedItem();
-      if (focused?.is_folder) {
-        // Navigate into the folder
-        handleItemClickWithDirection(focused);
-      }
-    },
-    { ref: () => tabRef },
-  );
-
-  // Enter key to select current item
-  useKeybinding(
-    { key: "Enter" },
-    () => {
-      const focused = focusedItem();
-      if (focused) {
-        handleItemClickWithDirection(focused);
-      }
-    },
-    { ref: () => tabRef },
-  );
-
-  // Create new note keybinding
-  useKeybinding(
-    { key: "n" },
-    () => {
-      console.log("Creating new note...");
-      handleCreateNote();
-    },
-    { ref: () => tabRef },
-  );
-
-  // Rename focused item keybinding
-  useKeybinding(
-    { key: "F2" },
-    () => {
-      console.log("Starting rename...");
-      startEditingFocusedItem();
-    },
-    { ref: () => tabRef },
+  // Use navigation keybindings hook
+  useNavigationKeybindings(
+    () => tabRef,
+    displayItems,
+    focusedItemIndex,
+    setFocusedItemIndex,
+    focusedItem,
+    handleUpDirectory,
+    handleItemClickWithDirection,
+    handleCreateNote,
+    startEditingFocusedItem,
   );
 
   return (
