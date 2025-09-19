@@ -8,10 +8,20 @@ import MessageCircleIcon from "lucide-solid/icons/message-circle";
 import NotebookPen from "lucide-solid/icons/notebook-pen";
 import Settings from "lucide-solid/icons/settings";
 
+import {
+  ArrowLeft,
+  ArrowRight,
+  MessageSquare,
+  Notebook,
+  Search,
+  Sparkles,
+} from "lucide-solid";
 import ToggleLeft from "lucide-solid/icons/toggle-left";
-import { For, JSXElement, VoidComponent, createSignal, Show } from "solid-js";
+import { createSignal, For, JSXElement, Show, VoidComponent } from "solid-js";
 import { UserDropdown } from "~/components/UserDrowDown";
 import { getUser } from "~/lib/auth";
+import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
+import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
 import {
   BottomDock,
   CheckboxId,
@@ -24,16 +34,9 @@ import {
   SidebarContent,
   ToggleButton,
 } from "~/solid-daisy-components/components/Layouts/ResponsiveDrawer";
+import { Radio } from "~/solid-daisy-components/components/Radio";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
-import {
-  LucideProps,
-  Notebook,
-  Search,
-  ArrowLeft,
-  ArrowRight,
-  Sparkles,
-  MessageSquare,
-} from "lucide-solid";
+import { Toggle } from "~/solid-daisy-components/components/Toggle";
 
 // Route Guard
 export const route = {
@@ -231,12 +234,76 @@ const DockContent = () => (
   </div>
 );
 
-const SidebarSearchContent = () => (
-  <div class="p-4">
-    <input
-      type="text"
-      placeholder="Search..."
-      class="input input-bordered w-full"
-    />
-  </div>
-);
+const SidebarSearchContent = () => {
+  const [searchAllNotes, setSearchAllNotes] = createSignal(true);
+  const [useSemanticSearch, setUseSemanticSearch] = createSignal(false);
+  const [pathDisplay, setPathDisplay] = createSignal(0); // 0: Absolute, 1: Relative, 2: Title
+
+  const pathDisplayOptions = [
+    { id: 0, label: "Absolute" },
+    { id: 1, label: "Relative" },
+    { id: 2, label: "Title" },
+  ];
+
+  return (
+    <div class="p-4 space-y-4">
+      <input
+        type="text"
+        placeholder="Search..."
+        class="input input-bordered w-full"
+      />
+
+      <Collapsible class="p-0" title="Settings">
+        <Fieldset class="fieldset bg-base-200 border-base-300 rounded-box border p-4 space-y-3">
+          <Fieldset.Legend class="fieldset-legend">
+            Search Options
+          </Fieldset.Legend>
+
+          <div class="form-control flex flex-col">
+            <label class="label cursor-pointer flex flex-col items-start">
+              <span class="label-text text-sm">Children Only</span>
+              <Toggle
+                size="sm"
+                checked={searchAllNotes()}
+                onChange={(e) => setSearchAllNotes(e.currentTarget.checked)}
+              />
+            </label>
+          </div>
+
+          <div class="form-control flex flex-col">
+            <label class="label cursor-pointer flex flex-col items-start">
+              <span class="label-text text-sm">Semantic search</span>
+              <Toggle
+                size="sm"
+                color="primary"
+                checked={useSemanticSearch()}
+                onChange={(e) => setUseSemanticSearch(e.currentTarget.checked)}
+              />
+            </label>
+          </div>
+        </Fieldset>
+
+        <Fieldset class="fieldset bg-base-200 border-base-300 rounded-box border p-4 space-y-3">
+          <Fieldset.Legend class="fieldset-legend">
+            Path Display
+          </Fieldset.Legend>
+          <For each={pathDisplayOptions}>
+            {(option) => (
+              <div class="form-control">
+                <label class="label cursor-pointer justify-start gap-2">
+                  <Radio
+                    name="path-display"
+                    size="sm"
+                    checked={pathDisplay() === option.id}
+                    onChange={() => setPathDisplay(option.id)}
+                  />
+                  <span class="label-text text-sm">{option.label}</span>
+                </label>
+              </div>
+            )}
+          </For>
+        </Fieldset>
+      </Collapsible>
+    </div>
+  );
+};
