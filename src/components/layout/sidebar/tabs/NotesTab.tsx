@@ -1,97 +1,75 @@
+import ChevronRight from "lucide-solid/icons/chevron-right";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
-import ChevronRight from "lucide-solid/icons/chevron-right";
-import { Show, For } from "solid-js";
+import { Accessor, For, Show, createMemo } from "solid-js";
+import { useCurrentNoteChildren } from "~/lib/hooks/useCurrentDirectory";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
-import { useCurrentDirectory } from "~/lib/hooks/useCurrentDirectory";
-import { useNoteParents } from "~/lib/hooks/useNoteParents";
-import { useNoteNavigation } from "~/lib/hooks/useNoteNavigation";
+import {
+  useNoteNavigation,
+  type NavigationItem,
+} from "~/lib/hooks/useNoteNavigation";
+import { useNoteSiblings } from "~/lib/hooks/useNoteSiblings";
+
+// TODO add up directory button
+// TODO add breadcrumbs to Navbar
 
 export default function NotesTab() {
-  const { noteId } = useCurrentNote();
-  const { currentDir, dirId, children, isInFolder } = useCurrentDirectory();
-  const { handleItemClick, navigateToRoot } = useNoteNavigation();
-  
-  // Get parents of the current directory (not the current note)
-  const parents = useNoteParents(dirId);
+  const { note, noteId } = useCurrentNote();
+  const { children } = useCurrentNoteChildren();
+  const { handleItemClick } = useNoteNavigation();
+
+  // Get parent ID for siblings
+  const parentId = createMemo(() => note()?.parent_id);
+
+  // Get siblings of the current note
+  const siblings = useNoteSiblings(noteId, parentId);
+
+  // Check if current note is a folder (has children)
+  const isCurrentNoteFolder = createMemo(() => {
+    const childrenData = children();
+    return childrenData && childrenData.length > 0;
+  });
+
+  // Get the title for the section
+  const sectionTitle = createMemo(() => {
+    const currentNote = note();
+    if (!currentNote) return "Root Directory";
+    return isCurrentNoteFolder()
+      ? `Contents of "${currentNote.title}"`
+      : `Siblings of "${currentNote.title}"`;
+  });
+
+  // Get items to display - children if folder, siblings if note
+  const displayItems = createMemo(() => {
+    return isCurrentNoteFolder() ? children() || [] : siblings() || [];
+  });
+
+  // Check if item is currently active - make it reactive
+  const isItemActive = createMemo(() => (itemId: string) => noteId() === itemId);
+
   return (
     <div class="space-y-4">
-      {/* Breadcrumb Navigation */}
-      <div class="bg-base-200 rounded-box p-3">
-        <div class="text-xs text-base-content/60 mb-2">Current Path</div>
-        <div class="flex items-center gap-1 text-sm">
-          <button
-            class="btn btn-ghost btn-xs"
-            onClick={navigateToRoot}
-          >
-            <Folder size={14} />
-            Root
-          </button>
-          
-          <Show when={parents() && parents()!.length > 0}>
-            <For each={parents()}>
-              {(parent) => (
-                <>
-                  <ChevronRight size={12} class="text-base-content/40" />
-                  <button
-                    class="btn btn-ghost btn-xs"
-                    onClick={() => handleItemClick(parent)}
-                  >
-                    <Folder size={14} />
-                    {parent.title}
-                  </button>
-                </>
-              )}
-            </For>
-          </Show>
-          
-          <Show when={currentDir()}>
-            {(dir) => (
-              <>
-                <ChevronRight size={12} class="text-base-content/40" />
-                <span class="text-primary font-medium">
-                  <Folder size={14} class="inline mr-1" />
-                  {dir().title}
-                </span>
-              </>
-            )}
-          </Show>
-        </div>
-      </div>
-
-      {/* Current Directory Contents */}
       <div>
-        <div class="text-sm font-medium text-base-content/70 mb-3">
-          <Show when={currentDir()} fallback="Root Directory">
-            {(dir) => dir().title}
-          </Show>
-        </div>
-        
         <ul class="menu bg-base-200 rounded-box w-full">
-          <Show when={children() && children()!.length > 0} fallback={
-            <li class="text-center text-base-content/50 py-4">
-              No items in this directory
-            </li>
-          }>
-            <For each={children()}>
-              {(child) => (
-                <li>
-                  <a
-                    class={`${noteId === child.id ? "active" : ""}`}
-                    onClick={() => handleItemClick(child)}
-                  >
-                    <Show 
-                      when={child.is_folder} 
-                      fallback={<FileText size={16} />}
-                    >
-                      <Folder size={16} />
-                    </Show>
-                    <span class="flex-1">{child.title}</span>
-                    <Show when={child.is_folder}>
-                      <ChevronRight size={14} class="text-base-content/40" />
-                    </Show>
-                  </a>
-                </li>
+          <Show
+            when={displayItems().length > 0}
+            fallback={
+              <li class="text-center text-base-content/50 py-4">
+                <span class="pointer-events-none">
+                  <Show when={note()} fallback="No notes found">
+                    {isCurrentNoteFolder() ? "No child notes" : "No siblings"}
+                  </Show>
+                </span>
+              </li>
+            }
+          >
+            <For each={displayItems()}>
+              {(item: NavigationItem) => (
+                <MenuItem
+                  item={item}
+                  isActive={() => isItemActive()(item.id)}
+                  handleItemClick={handleItemClick}
+                />
               )}
             </For>
           </Show>
@@ -100,3 +78,26 @@ export default function NotesTab() {
     </div>
   );
 }
+
+const MenuItem = (props: {
+  item: NavigationItem;
+  isActive: Accessor<boolean>;
+  handleItemClick: (item: NavigationItem) => void;
+}) => {
+  return (
+    <li>
+      <a
+        class={props.isActive() ? "menu-active" : ""}
+        onClick={() => props.handleItemClick(props.item)}
+      >
+        <Show when={props.item.is_folder} fallback={<FileText size={16} />}>
+          <Folder size={16} />
+        </Show>
+        <span class="flex-1">{props.item.title}</span>
+        <Show when={props.item.is_folder}>
+          <ChevronRight size={14} class="text-base-content/40" />
+        </Show>
+      </a>
+    </li>
+  );
+};
