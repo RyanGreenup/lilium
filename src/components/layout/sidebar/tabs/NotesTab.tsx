@@ -830,6 +830,7 @@ export const SlideTransition = (props: {
       }
 
       setShowContent(false);
+      // TODO Remove all setTimeout -- anti-pattern
       setTimeout(() => {
         setPrevContentId(currentId);
         setShowContent(true);
