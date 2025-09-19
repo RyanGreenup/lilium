@@ -1,7 +1,7 @@
 /**
- * General application database module using SQLite
+ * Notes application database module using SQLite
  *
- * This module provides non-security related data storage functions.
+ * This module provides data storage functions for notes, tags, and related entities.
  * Uses random IDs for security and follows best practices.
  */
 
@@ -12,397 +12,498 @@ import { randomBytes } from "crypto";
 import { requireUser } from "./auth";
 import { redirect } from "@solidjs/router";
 
-// Initialize SQLite database for general app data
-const db = new Database("./.data/app.sqlite");
+// Initialize SQLite database for notes app
+const db = new Database("./.data/notes.sqlite");
 
-// Create chores table
+// Create notes table
 db.exec(`
-  CREATE TABLE IF NOT EXISTS chores (
+  CREATE TABLE IF NOT EXISTS notes (
     id TEXT PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    duration_hours INTEGER NOT NULL DEFAULT 24,
+    title TEXT NOT NULL,
+    abstract TEXT,
+    content TEXT NOT NULL,
+    syntax TEXT NOT NULL DEFAULT 'markdown',
+    parent_id TEXT,
+    user_id TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_id) REFERENCES notes(id) ON DELETE SET NULL
   )
 `);
 
-// Create chore completions table
+// Create tags table
 db.exec(`
-  CREATE TABLE IF NOT EXISTS chore_completions (
+  CREATE TABLE IF NOT EXISTS tags (
     id TEXT PRIMARY KEY,
-    chore_id TEXT NOT NULL,
-    completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    notes TEXT,
-    FOREIGN KEY (chore_id) REFERENCES chores(id) ON DELETE CASCADE
+    title TEXT NOT NULL,
+    parent_id TEXT,
+    user_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_id) REFERENCES tags(id) ON DELETE SET NULL,
+    UNIQUE(title, user_id)
   )
 `);
 
-export interface Chore {
+// Create note_tags junction table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS note_tags (
+    id TEXT PRIMARY KEY,
+    note_id TEXT NOT NULL,
+    tag_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE,
+    UNIQUE(note_id, tag_id)
+  )
+`);
+
+// Create indexes for better query performance
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);
+  CREATE INDEX IF NOT EXISTS idx_notes_parent_id ON notes(parent_id);
+  CREATE INDEX IF NOT EXISTS idx_notes_syntax ON notes(syntax);
+  CREATE INDEX IF NOT EXISTS idx_notes_updated_at ON notes(updated_at);
+  CREATE INDEX IF NOT EXISTS idx_tags_user_id ON tags(user_id);
+  CREATE INDEX IF NOT EXISTS idx_tags_parent_id ON tags(parent_id);
+  CREATE INDEX IF NOT EXISTS idx_note_tags_note_id ON note_tags(note_id);
+  CREATE INDEX IF NOT EXISTS idx_note_tags_tag_id ON note_tags(tag_id);
+`);
+
+export interface Note {
   id: string;
-  name: string;
-  duration_hours: number;
+  title: string;
+  abstract?: string;
+  content: string;
+  syntax: string;
+  parent_id?: string;
+  user_id: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface ChoreCompletion {
+export interface Tag {
   id: string;
-  chore_id: string;
-  completed_at: string;
-  notes?: string;
+  title: string;
+  parent_id?: string;
+  user_id: string;
+  created_at: string;
 }
 
-export interface ChoreWithStatus extends Chore {
-  last_completed?: string;
-  is_overdue: boolean;
-  last_completion_notes?: string;
+export interface NoteTag {
+  id: string;
+  note_id: string;
+  tag_id: string;
+  created_at: string;
 }
 
-// User authentication is now handled within each function
+export interface NoteWithTags extends Note {
+  tags: Tag[];
+}
 
 ////////////////////////////////////////////////////////////////////////////////
-// Chore Management ////////////////////////////////////////////////////////////
+// Note Management /////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Create a new chore
+ * Create a new note
  */
-export async function createChore(
-  name: string,
-  duration_hours: number = 24,
-): Promise<Chore> {
+export async function createNote(
+  title: string,
+  content: string,
+  syntax: string = "markdown",
+  abstract?: string,
+  parent_id?: string,
+): Promise<Note> {
   const user = await requireUser();
   if (!user.id) {
     throw redirect("/login");
   }
+  
   const id = randomBytes(16).toString("hex");
-  const stmt = db.prepare(
-    "INSERT INTO chores (id, name, duration_hours) VALUES (?, ?, ?)",
-  );
-  stmt.run(id, name, duration_hours);
-
-  return getChoreById(id);
+  const stmt = db.prepare(`
+    INSERT INTO notes (id, title, abstract, content, syntax, parent_id, user_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  
+  stmt.run(id, title, abstract, content, syntax, parent_id, user.id);
+  return getNoteById(id);
 }
 
 /**
- * Get chore by ID
+ * Get note by ID
  */
-export async function getChoreById(id: string): Promise<Chore> {
-  const stmt = db.prepare("SELECT * FROM chores WHERE id = ?");
-  const chore = stmt.get(id) as Chore;
-  if (!chore) throw new Error("Chore not found");
-  return chore;
-}
-
-/**
- * Get all chores with their completion status
- */
-export async function getChoresWithStatus(): Promise<ChoreWithStatus[]> {
+export async function getNoteById(id: string): Promise<Note> {
   const user = await requireUser();
   if (!user.id) {
     throw redirect("/login");
   }
-  const stmt = db.prepare(`
-    SELECT
-      c.*,
-      cc.completed_at as last_completed,
-      cc.notes as last_completion_notes
-    FROM chores c
-    LEFT JOIN chore_completions cc ON c.id = cc.chore_id
-    LEFT JOIN chore_completions cc2 ON c.id = cc2.chore_id AND cc.completed_at < cc2.completed_at
-    WHERE cc2.id IS NULL
-    ORDER BY c.name
-  `);
-
-  const chores = stmt.all() as (Chore & {
-    last_completed?: string;
-    last_completion_notes?: string;
-  })[];
-
-  return chores.map((chore) => ({
-    ...chore,
-    is_overdue: isChoreOverdue(chore.last_completed, chore.duration_hours),
-  }));
+  
+  const stmt = db.prepare("SELECT * FROM notes WHERE id = ? AND user_id = ?");
+  const note = stmt.get(id, user.id) as Note;
+  if (!note) throw new Error("Note not found");
+  return note;
 }
 
 /**
- * Get only overdue chores with their completion status
+ * Get all notes for the current user
  */
-export async function getOverdueChores(): Promise<ChoreWithStatus[]> {
-  const allChores = await getChoresWithStatus();
-  return allChores.filter((chore) => chore.is_overdue);
-}
-
-/**
- * Update chore duration
- */
-export async function updateChoreDuration(
-  id: string,
-  duration_hours: number,
-): Promise<void> {
-  const stmt = db.prepare(
-    "UPDATE chores SET duration_hours = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-  );
-  const result = stmt.run(duration_hours, id);
-  if (result.changes === 0) throw new Error("Chore not found");
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Chore Completions ///////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * Mark chore as completed
- */
-export async function completeChore(
-  chore_id: string,
-  notes?: string,
-): Promise<ChoreCompletion> {
-  const id = randomBytes(16).toString("hex");
-  const stmt = db.prepare(
-    "INSERT INTO chore_completions (id, chore_id, notes) VALUES (?, ?, ?)",
-  );
-  stmt.run(id, chore_id, notes);
-
-  const getStmt = db.prepare("SELECT * FROM chore_completions WHERE id = ?");
-  return getStmt.get(id) as ChoreCompletion;
-}
-
-/**
- * Remove last completion (undo)
- */
-export async function undoLastCompletion(chore_id: string): Promise<void> {
-  const stmt = db.prepare(`
-    DELETE FROM chore_completions
-    WHERE id = (
-      SELECT id FROM chore_completions
-      WHERE chore_id = ?
-      ORDER BY completed_at DESC
-      LIMIT 1
-    )
-  `);
-  const result = stmt.run(chore_id);
-  if (result.changes === 0) throw new Error("No completion to undo");
-}
-
-/**
- * Get completion history for a chore
- */
-export async function getChoreCompletions(
-  chore_id: string,
-  limit: number = 10,
-): Promise<ChoreCompletion[]> {
-  const stmt = db.prepare(
-    "SELECT * FROM chore_completions WHERE chore_id = ? ORDER BY completed_at DESC LIMIT ?",
-  );
-  return stmt.all(chore_id, limit) as ChoreCompletion[];
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Utility Functions ///////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * Check if chore is overdue based on last completion and duration
- */
-function isChoreOverdue(
-  last_completed?: string,
-  duration_hours: number = 24,
-): boolean {
-  if (!last_completed) return true;
-
-  // SQLite CURRENT_TIMESTAMP stores UTC time as 'YYYY-MM-DD HH:MM:SS'
-  // We need to explicitly treat it as UTC to avoid timezone issues
-  const lastCompletedTime = new Date(last_completed + 'Z').getTime();
-  const durationMs = duration_hours * 60 * 60 * 1000;
-  const now = Date.now();
-
-  return now - lastCompletedTime > durationMs;
-}
-
-/**
- * Seed database with sample chores if empty
- */
-export async function seedChoresIfEmpty(): Promise<void> {
+export async function getNotes(): Promise<Note[]> {
   const user = await requireUser();
   if (!user.id) {
     throw redirect("/login");
   }
-  const stmt = db.prepare("SELECT COUNT(*) as count FROM chores");
-  const result = stmt.get() as { count: number };
-
-  if (result.count === 0) {
-    const sampleChores = [
-      { name: "Take Out Trash", duration_hours: 12 },
-      { name: "Start Washing Machine", duration_hours: 4 },
-      { name: "Load Dryer", duration_hours: 4 },
-      { name: "Fold Clothes", duration_hours: 4 },
-      { name: "Clean Kitchen", duration_hours: 5 },
-      { name: "Water Plants", duration_hours: 48 },
-      { name: "Load Dishwasher", duration_hours: 6 },
-      { name: "Empty Dishes", duration_hours: 6 },
-      { name: "Change Zel's Grass", duration_hours: 24 },
-      { name: "Change Zel's Toilet", duration_hours: 24 * 3 },
-      { name: "Vacuum", duration_hours: 24 },
-      { name: "Mop", duration_hours: 48 },
-      { name: "Clean Toilet", duration_hours: 24 },
-      { name: "Clean Oven", duration_hours: 72 },
-      { name: "Update NAS", duration_hours: 72 },
-      { name: "Clean Windows", duration_hours: 24 },
-      { name: "Walk the dog", duration_hours: 12 },
-      { name: "Wash the dog", duration_hours: 24 * 3},
-      { name: "Dog Flea Tablet", duration_hours: 24 * 30},
-      { name: "Medication", duration_hours: 24},
-      { name: "Change The Sheets", duration_hours: 24 * 3},
-      { name: "Wash Couch Cushions", duration_hours: 24 * 7 * 2},
-      { name: "Clean Dishwasher Filter", duration_hours: 24 * 2},
-      { name: "Clean Washing Machine Filter", duration_hours: 24 * 7},
-      { name: "Grocery Shopping", duration_hours: 24 * 2},
-      { name: "Dust Surfaces and TV Unit", duration_hours: 24 * 2},
-      { name: "Meal Prep", duration_hours: 24 * 2},
-      { name: "Clean Out Fridge", duration_hours: 24 * 7},
-      { name: "Polish Boots", duration_hours: 24 * 7},
-      { name: "Update Computers", duration_hours: 24 * 2},
-    ];
-
-    for (const chore of sampleChores) {
-      await createChore(chore.name, chore.duration_hours);
-    }
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Report Analytics ////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-export interface ChoreStats {
-  name: string;
-  total_completions: number;
-  days_since_last_completion: number;
-  average_days_between: number;
-  is_overdue: boolean;
-  completion_rate: number; // percentage based on expected frequency
-}
-
-export interface CompletionTrend {
-  date: string;
-  completions: number;
+  
+  const stmt = db.prepare(`
+    SELECT * FROM notes 
+    WHERE user_id = ? 
+    ORDER BY updated_at DESC
+  `);
+  
+  return stmt.all(user.id) as Note[];
 }
 
 /**
- * Get comprehensive statistics for all chores
+ * Get notes with their tags
  */
-export async function getChoreStatistics(): Promise<ChoreStats[]> {
+export async function getNotesWithTags(): Promise<NoteWithTags[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
   const stmt = db.prepare(`
-    SELECT
-      c.name,
-      c.duration_hours,
-      c.id,
-      COUNT(cc.id) as total_completions,
-      MAX(cc.completed_at) as last_completed,
-      MIN(cc.completed_at) as first_completed
-    FROM chores c
-    LEFT JOIN chore_completions cc ON c.id = cc.chore_id
-    GROUP BY c.id, c.name, c.duration_hours
-    ORDER BY c.name
+    SELECT 
+      n.*,
+      json_group_array(
+        CASE WHEN t.id IS NOT NULL 
+        THEN json_object('id', t.id, 'title', t.title, 'parent_id', t.parent_id, 'user_id', t.user_id, 'created_at', t.created_at)
+        ELSE NULL END
+      ) as tags_json
+    FROM notes n
+    LEFT JOIN note_tags nt ON n.id = nt.note_id
+    LEFT JOIN tags t ON nt.tag_id = t.id
+    WHERE n.user_id = ?
+    GROUP BY n.id
+    ORDER BY n.updated_at DESC
   `);
-
-  const results = stmt.all() as Array<{
-    name: string;
-    duration_hours: number;
-    id: string;
-    total_completions: number;
-    last_completed?: string;
-    first_completed?: string;
-  }>;
-
-  return results.map((row) => {
-    const now = Date.now();
-    const lastCompleted = row.last_completed
-      ? new Date(row.last_completed + 'Z').getTime()
-      : null;
-    const firstCompleted = row.first_completed
-      ? new Date(row.first_completed + 'Z').getTime()
-      : null;
-
-    const days_since_last = lastCompleted
-      ? Math.floor((now - lastCompleted) / (1000 * 60 * 60 * 24))
-      : 999;
-
-    const total_days =
-      firstCompleted && lastCompleted && row.total_completions > 1
-        ? Math.floor((lastCompleted - firstCompleted) / (1000 * 60 * 60 * 24))
-        : 0;
-
-    const average_days_between =
-      total_days > 0 && row.total_completions > 1
-        ? total_days / (row.total_completions - 1)
-        : row.duration_hours / 24;
-
-    const expected_frequency_days = row.duration_hours / 24;
-    const completion_rate =
-      average_days_between > 0
-        ? Math.min(100, (expected_frequency_days / average_days_between) * 100)
-        : 0;
-
-    return {
-      name: row.name,
-      total_completions: row.total_completions,
-      days_since_last_completion: days_since_last,
-      average_days_between: Math.round(average_days_between * 10) / 10,
-      is_overdue: isChoreOverdue(row.last_completed, row.duration_hours),
-      completion_rate: Math.round(completion_rate),
-    };
+  
+  const results = stmt.all(user.id) as (Note & { tags_json: string })[];
+  
+  return results.map(row => {
+    const tags = JSON.parse(row.tags_json).filter((tag: any) => tag !== null);
+    const { tags_json, ...note } = row;
+    return { ...note, tags };
   });
 }
 
 /**
- * Get completion trends over the last 30 days
+ * Update note content and metadata
  */
-export async function getCompletionTrends(): Promise<CompletionTrend[]> {
+export async function updateNote(
+  id: string,
+  updates: Partial<Pick<Note, "title" | "abstract" | "content" | "syntax" | "parent_id">>,
+): Promise<Note> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const setPairs = Object.keys(updates).map(key => `${key} = ?`).join(", ");
+  const values = Object.values(updates);
+  
   const stmt = db.prepare(`
-    SELECT
-      DATE(completed_at) as date,
-      COUNT(*) as completions
-    FROM chore_completions
-    WHERE completed_at >= datetime('now', '-30 days')
-    GROUP BY DATE(completed_at)
-    ORDER BY date
+    UPDATE notes 
+    SET ${setPairs}, updated_at = CURRENT_TIMESTAMP 
+    WHERE id = ? AND user_id = ?
   `);
-
-  return stmt.all() as CompletionTrend[];
+  
+  const result = stmt.run(...values, id, user.id);
+  if (result.changes === 0) throw new Error("Note not found");
+  
+  return getNoteById(id);
 }
+
+/**
+ * Delete a note
+ */
+export async function deleteNote(id: string): Promise<void> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const stmt = db.prepare("DELETE FROM notes WHERE id = ? AND user_id = ?");
+  const result = stmt.run(id, user.id);
+  if (result.changes === 0) throw new Error("Note not found");
+}
+
+/**
+ * Get child notes (notes with parent_id = id)
+ */
+export async function getChildNotes(parent_id: string): Promise<Note[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const stmt = db.prepare(`
+    SELECT * FROM notes 
+    WHERE parent_id = ? AND user_id = ? 
+    ORDER BY title
+  `);
+  
+  return stmt.all(parent_id, user.id) as Note[];
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Tag Management //////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Create a new tag
+ */
+export async function createTag(
+  title: string,
+  parent_id?: string,
+): Promise<Tag> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const id = randomBytes(16).toString("hex");
+  const stmt = db.prepare(`
+    INSERT INTO tags (id, title, parent_id, user_id)
+    VALUES (?, ?, ?, ?)
+  `);
+  
+  try {
+    stmt.run(id, title, parent_id, user.id);
+    return getTagById(id);
+  } catch (error: any) {
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      throw new Error("Tag with this title already exists");
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get tag by ID
+ */
+export async function getTagById(id: string): Promise<Tag> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const stmt = db.prepare("SELECT * FROM tags WHERE id = ? AND user_id = ?");
+  const tag = stmt.get(id, user.id) as Tag;
+  if (!tag) throw new Error("Tag not found");
+  return tag;
+}
+
+/**
+ * Get all tags for the current user
+ */
+export async function getTags(): Promise<Tag[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const stmt = db.prepare(`
+    SELECT * FROM tags 
+    WHERE user_id = ? 
+    ORDER BY title
+  `);
+  
+  return stmt.all(user.id) as Tag[];
+}
+
+/**
+ * Delete a tag
+ */
+export async function deleteTag(id: string): Promise<void> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const stmt = db.prepare("DELETE FROM tags WHERE id = ? AND user_id = ?");
+  const result = stmt.run(id, user.id);
+  if (result.changes === 0) throw new Error("Tag not found");
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Note-Tag Relationships /////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Add a tag to a note
+ */
+export async function addTagToNote(note_id: string, tag_id: string): Promise<void> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  // Verify both note and tag belong to the user
+  await getNoteById(note_id);
+  await getTagById(tag_id);
+  
+  const id = randomBytes(16).toString("hex");
+  const stmt = db.prepare(`
+    INSERT INTO note_tags (id, note_id, tag_id)
+    VALUES (?, ?, ?)
+  `);
+  
+  try {
+    stmt.run(id, note_id, tag_id);
+  } catch (error: any) {
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      // Tag already associated with note, ignore
+      return;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Remove a tag from a note
+ */
+export async function removeTagFromNote(note_id: string, tag_id: string): Promise<void> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const stmt = db.prepare("DELETE FROM note_tags WHERE note_id = ? AND tag_id = ?");
+  stmt.run(note_id, tag_id);
+}
+
+/**
+ * Get notes by tag
+ */
+export async function getNotesByTag(tag_id: string): Promise<Note[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  await getTagById(tag_id); // Verify tag exists and belongs to user
+  
+  const stmt = db.prepare(`
+    SELECT n.* FROM notes n
+    INNER JOIN note_tags nt ON n.id = nt.note_id
+    WHERE nt.tag_id = ? AND n.user_id = ?
+    ORDER BY n.updated_at DESC
+  `);
+  
+  return stmt.all(tag_id, user.id) as Note[];
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Search and Filtering ////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Search notes by title and content
+ */
+export async function searchNotes(query: string): Promise<Note[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const stmt = db.prepare(`
+    SELECT * FROM notes 
+    WHERE user_id = ? AND (
+      title LIKE ? OR 
+      content LIKE ? OR 
+      abstract LIKE ?
+    )
+    ORDER BY updated_at DESC
+  `);
+  
+  const searchTerm = `%${query}%`;
+  return stmt.all(user.id, searchTerm, searchTerm, searchTerm) as Note[];
+}
+
+/**
+ * Get notes by syntax type
+ */
+export async function getNotesBySyntax(syntax: string): Promise<Note[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const stmt = db.prepare(`
+    SELECT * FROM notes 
+    WHERE user_id = ? AND syntax = ?
+    ORDER BY updated_at DESC
+  `);
+  
+  return stmt.all(user.id, syntax) as Note[];
+}
+
+/**
+ * Get recently modified notes
+ */
+export async function getRecentNotes(limit: number = 10): Promise<Note[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const stmt = db.prepare(`
+    SELECT * FROM notes 
+    WHERE user_id = ? 
+    ORDER BY updated_at DESC 
+    LIMIT ?
+  `);
+  
+  return stmt.all(user.id, limit) as Note[];
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Statistics //////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Get summary statistics
  */
-export async function getSummaryStats() {
-  const totalChoresStmt = db.prepare("SELECT COUNT(*) as count FROM chores");
-  const overdueStmt = db.prepare(`
-    SELECT COUNT(*) as count FROM (
-      SELECT c.*, cc.completed_at as last_completed
-      FROM chores c
-      LEFT JOIN chore_completions cc ON c.id = cc.chore_id
-      LEFT JOIN chore_completions cc2 ON c.id = cc2.chore_id AND cc.completed_at < cc2.completed_at
-      WHERE cc2.id IS NULL
-    ) WHERE last_completed IS NULL OR
-    (julianday('now') - julianday(last_completed)) * 24 > duration_hours
+export async function getNotesStats() {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const totalNotesStmt = db.prepare("SELECT COUNT(*) as count FROM notes WHERE user_id = ?");
+  const totalTagsStmt = db.prepare("SELECT COUNT(*) as count FROM tags WHERE user_id = ?");
+  const recentNotesStmt = db.prepare(`
+    SELECT COUNT(*) as count 
+    FROM notes 
+    WHERE user_id = ? AND updated_at >= datetime('now', '-7 days')
   `);
-
-  const completionsThisWeekStmt = db.prepare(`
-    SELECT COUNT(*) as count
-    FROM chore_completions
-    WHERE completed_at >= datetime('now', '-7 days')
+  const syntaxStatsStmt = db.prepare(`
+    SELECT syntax, COUNT(*) as count 
+    FROM notes 
+    WHERE user_id = ? 
+    GROUP BY syntax 
+    ORDER BY count DESC
   `);
-
-  const total = totalChoresStmt.get() as { count: number };
-  const overdue = overdueStmt.get() as { count: number };
-  const thisWeek = completionsThisWeekStmt.get() as { count: number };
-
+  
+  const totalNotes = totalNotesStmt.get(user.id) as { count: number };
+  const totalTags = totalTagsStmt.get(user.id) as { count: number };
+  const recentNotes = recentNotesStmt.get(user.id) as { count: number };
+  const syntaxStats = syntaxStatsStmt.all(user.id) as { syntax: string; count: number }[];
+  
   return {
-    total_chores: total.count,
-    overdue_chores: overdue.count,
-    completions_this_week: thisWeek.count,
-    on_time_chores: total.count - overdue.count,
+    total_notes: totalNotes.count,
+    total_tags: totalTags.count,
+    recent_notes: recentNotes.count,
+    syntax_breakdown: syntaxStats,
   };
 }
