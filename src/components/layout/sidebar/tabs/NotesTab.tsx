@@ -1,4 +1,4 @@
-import { AccessorWithLatest } from "@solidjs/router";
+import { AccessorWithLatest, revalidate, query } from "@solidjs/router";
 import { Focus } from "lucide-solid";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import FileText from "lucide-solid/icons/file-text";
@@ -24,14 +24,101 @@ import {
 } from "~/lib/hooks/useNoteNavigation";
 import { useNoteSiblings } from "~/lib/hooks/useNoteSiblings";
 import { Badge } from "~/solid-daisy-components/components/Badge";
+import { Input } from "~/solid-daisy-components/components/Input";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 
-// Server function to create a new note
-const createNewNote = async (title: string, content: string, parentId?: string) => {
+// Hook for note renaming functionality
+function useNoteRenaming(
+  tabRef: () => HTMLElement | undefined, 
+  focusedItem: Accessor<NavigationItem | null>,
+  displayItems: Accessor<NavigationItem[]>,
+  setFocusedItemIndex: (index: number) => void
+) {
+  const [editingItemId, setEditingItemId] = createSignal<string | null>(null);
+  const [justRenamedItemId, setJustRenamedItemId] = createSignal<string | null>(null);
+
+  // Track when a rename completes and refocus the item
+  createEffect(() => {
+    const renamedId = justRenamedItemId();
+    const items = displayItems();
+    
+    if (renamedId && items.length > 0) {
+      const newIndex = items.findIndex(item => item.id === renamedId);
+      
+      if (newIndex !== -1) {
+        // Set focus to the renamed item's new position
+        setFocusedItemIndex(newIndex);
+        
+        // Restore focus to the tab container
+        const ref = tabRef();
+        if (ref) {
+          ref.focus();
+        }
+      }
+      
+      // Clear the renamed item tracking
+      setJustRenamedItemId(null);
+    }
+  });
+
+  // Handle renaming a note
+  const handleRenameNote = async (noteId: string, newTitle: string) => {
+    try {
+      await updateNoteTitle(noteId, newTitle);
+      setEditingItemId(null);
+      
+      // Invalidate relevant caches to show the updated title
+      revalidate([updateNoteTitle.key, "children-with-folder-status", "note-by-id"]);
+      
+      // Track that this item was just renamed for refocusing
+      setJustRenamedItemId(noteId);
+    } catch (error) {
+      console.error("Failed to rename note:", error);
+      alert("Failed to rename note. Please try again.");
+    }
+  };
+
+  // Start editing mode for focused item
+  const startEditingFocusedItem = () => {
+    const focused = focusedItem();
+    if (focused) {
+      setEditingItemId(focused.id);
+    }
+  };
+
+  // Cancel editing and restore focus
+  const cancelEditing = () => {
+    setEditingItemId(null);
+    // Restore focus to the tab container
+    setTimeout(() => {
+      const ref = tabRef();
+      if (ref) {
+        ref.focus();
+      }
+    }, 0);
+  };
+
+  return {
+    editingItemId,
+    handleRenameNote,
+    startEditingFocusedItem,
+    cancelEditing,
+  };
+}
+
+// Query function to create a new note
+const createNewNote = query(async (title: string, content: string, parentId?: string) => {
   "use server";
   const { createNote } = await import("~/lib/db");
   return await createNote(title, content, "markdown", undefined, parentId);
-};
+}, "create-note");
+
+// Query function to update note title
+const updateNoteTitle = query(async (noteId: string, newTitle: string) => {
+  "use server";
+  const { updateNote } = await import("~/lib/db");
+  return await updateNote(noteId, { title: newTitle });
+}, "update-note-title");
 
 /**
  * Generates a unique identifier for sidebar content based on what's actually displayed.
@@ -162,6 +249,14 @@ export default function NotesTab() {
     return index >= 0 && index < items.length ? items[index] : null;
   });
 
+  // Use renaming hook
+  const {
+    editingItemId,
+    handleRenameNote,
+    startEditingFocusedItem,
+    cancelEditing,
+  } = useNoteRenaming(() => tabRef, focusedItem, displayItems, setFocusedItemIndex);
+
   // Auto-focus the tab when it mounts
   useAutoFocus(() => tabRef);
 
@@ -180,6 +275,9 @@ export default function NotesTab() {
       }
 
       const newNote = await createNewNote("New Note", "", parentId);
+      
+      // Invalidate relevant caches to show the new note
+      revalidate([createNewNote.key, "children-with-folder-status", "note-by-id"]);
       
       // Navigate to the newly created note
       navigateToNote(newNote.id);
@@ -258,6 +356,16 @@ export default function NotesTab() {
     { ref: () => tabRef },
   );
 
+  // Rename focused item keybinding
+  useKeybinding(
+    { key: "F2" },
+    () => {
+      console.log("Starting rename...");
+      startEditingFocusedItem();
+    },
+    { ref: () => tabRef },
+  );
+
   return (
     <div
       ref={tabRef}
@@ -290,7 +398,10 @@ export default function NotesTab() {
                       item={item}
                       isActive={noteId() === item.id}
                       isFocused={focusedItemIndex() === index()}
+                      isEditing={editingItemId() === item.id}
                       handleItemClick={handleItemClickWithDirection}
+                      handleRename={handleRenameNote}
+                      onCancelEdit={cancelEditing}
                     />
                   )}
                 </For>
@@ -307,8 +418,13 @@ const MenuItem = (props: {
   item: NavigationItem;
   isActive: boolean;
   isFocused: boolean;
+  isEditing: boolean;
   handleItemClick: (item: NavigationItem) => void;
+  handleRename: (id: string, newTitle: string) => void;
+  onCancelEdit: () => void;
 }) => {
+  let inputRef: HTMLInputElement | undefined;
+
   const classList = () => {
     const classes = [];
     if (props.isActive) classes.push("menu-active");
@@ -316,17 +432,53 @@ const MenuItem = (props: {
     return classes.join(" ");
   };
 
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      props.onCancelEdit();
+    } else if (e.key === "Enter") {
+      const input = e.target as HTMLInputElement;
+      props.handleRename(props.item.id, input.value);
+    }
+  };
+
+  const handleBlur = (e: FocusEvent) => {
+    const input = e.target as HTMLInputElement;
+    props.handleRename(props.item.id, input.value);
+  };
+
+  // Focus the input when editing starts
+  createEffect(() => {
+    if (props.isEditing && inputRef) {
+      inputRef.focus();
+      inputRef.select(); // Select all text for easy replacement
+    }
+  });
+
   return (
     <li>
       <a
         class={classList()}
-        onClick={() => props.handleItemClick(props.item)}
+        onClick={() => !props.isEditing && props.handleItemClick(props.item)}
       >
         <Show when={props.item.is_folder} fallback={<FileText size={16} />}>
           <Folder size={16} />
         </Show>
-        <span class="flex-1">{props.item.title}</span>
-        <Show when={props.item.is_folder}>
+        
+        <Show
+          when={props.isEditing}
+          fallback={<span class="flex-1">{props.item.title}</span>}
+        >
+          <Input
+            ref={inputRef}
+            value={props.item.title}
+            size="sm"
+            class="flex-1 min-w-0"
+            onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
+          />
+        </Show>
+        
+        <Show when={props.item.is_folder && !props.isEditing}>
           <ChevronRight size={14} class="text-base-content/40" />
         </Show>
       </a>

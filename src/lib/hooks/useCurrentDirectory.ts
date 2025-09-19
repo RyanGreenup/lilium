@@ -1,12 +1,12 @@
-import { createAsync } from "@solidjs/router";
+import { createAsync, query } from "@solidjs/router";
 import { useCurrentNote } from "./useCurrentNote";
 
-// Server function to get children with folder status
-const getChildrenWithFolderStatus = async (parentId?: string) => {
+// Query function to get children with folder status
+const getChildrenWithFolderStatus = query(async (parentId?: string) => {
   "use server";
   const { getChildNotesWithFolderStatus } = await import("~/lib/db");
   return await getChildNotesWithFolderStatus(parentId);
-};
+}, "children-with-folder-status");
 
 /**
  * Hook to get the children of the current note
@@ -16,14 +16,7 @@ export function useCurrentNoteChildren() {
   const { noteId } = useCurrentNote();
 
   // Get children of the current note
-  const children = createAsync(async () => {
-    try {
-      return await getChildrenWithFolderStatus(noteId());
-    } catch (error) {
-      console.error("Failed to fetch children:", error);
-      return [];
-    }
-  });
+  const children = createAsync(() => getChildrenWithFolderStatus(noteId()));
 
   return {
     children,

@@ -1,27 +1,22 @@
-import { createAsync } from "@solidjs/router";
+import { createAsync, query } from "@solidjs/router";
 import { Accessor } from "solid-js";
 
-// Server function to get children with folder status
-const getChildrenWithFolderStatus = async (parentId?: string) => {
+// Query function to get children with folder status (reuse the same one)
+const getChildrenWithFolderStatus = query(async (parentId?: string) => {
   "use server";
   const { getChildNotesWithFolderStatus } = await import("~/lib/db");
   return await getChildNotesWithFolderStatus(parentId);
-};
+}, "children-with-folder-status");
 
 /**
  * Hook to get siblings of a note (notes with the same parent)
  */
 export function useNoteSiblings(noteId: Accessor<string | undefined>, parentId: Accessor<string | undefined>) {
-  const siblings = createAsync(async () => {
+  const siblings = createAsync(() => {
     const currentNoteId = noteId();
-    if (!currentNoteId) return [];
-    try {
-      const parentIdValue = parentId();
-      return await getChildrenWithFolderStatus(parentIdValue);
-    } catch (error) {
-      console.error("Failed to fetch siblings:", error);
-      return [];
-    }
+    if (!currentNoteId) return Promise.resolve([]);
+    const parentIdValue = parentId();
+    return getChildrenWithFolderStatus(parentIdValue);
   });
 
   return siblings;
