@@ -32,10 +32,13 @@ function useNoteRenaming(
   tabRef: () => HTMLElement | undefined,
   focusedItem: Accessor<NavigationItem | null>,
   displayItems: Accessor<NavigationItem[]>,
-  setFocusedItemIndex: (index: number) => void
+  setFocusedItemIndex: (index: number) => void,
 ) {
   const [editingItemId, setEditingItemId] = createSignal<string | null>(null);
-  const [renamedItemInfo, setRenamedItemInfo] = createSignal<{id: string, newTitle: string} | null>(null);
+  const [renamedItemInfo, setRenamedItemInfo] = createSignal<{
+    id: string;
+    newTitle: string;
+  } | null>(null);
 
   // Track when a rename completes and refocus the item by looking for the updated title
   createEffect(() => {
@@ -44,11 +47,11 @@ function useNoteRenaming(
 
     if (renamed && items.length > 0) {
       // Find the item with the renamed ID and check if its title has been updated
-      const renamedItem = items.find(item => item.id === renamed.id);
+      const renamedItem = items.find((item) => item.id === renamed.id);
 
       if (renamedItem && renamedItem.title === renamed.newTitle) {
         // The title has been updated, find its new position
-        const newIndex = items.findIndex(item => item.id === renamed.id);
+        const newIndex = items.findIndex((item) => item.id === renamed.id);
 
         if (newIndex !== -1) {
           // Set focus to the renamed item's new position
@@ -74,7 +77,11 @@ function useNoteRenaming(
       setEditingItemId(null);
 
       // Invalidate relevant caches to show the updated title
-      revalidate([updateNoteTitle.key, "children-with-folder-status", "note-by-id"]);
+      revalidate([
+        updateNoteTitle.key,
+        "children-with-folder-status",
+        "note-by-id",
+      ]);
 
       // Track that this item was just renamed for refocusing
       setRenamedItemInfo({ id: noteId, newTitle });
@@ -113,11 +120,14 @@ function useNoteRenaming(
 }
 
 // Query function to create a new note
-const createNewNote = query(async (title: string, content: string, parentId?: string) => {
-  "use server";
-  const { createNote } = await import("~/lib/db");
-  return await createNote(title, content, "markdown", undefined, parentId);
-}, "create-note");
+const createNewNote = query(
+  async (title: string, content: string, parentId?: string) => {
+    "use server";
+    const { createNote } = await import("~/lib/db");
+    return await createNote(title, content, "markdown", undefined, parentId);
+  },
+  "create-note",
+);
 
 // Query function to update note title
 const updateNoteTitle = query(async (noteId: string, newTitle: string) => {
@@ -261,7 +271,12 @@ export default function NotesTab() {
     handleRenameNote,
     startEditingFocusedItem,
     cancelEditing,
-  } = useNoteRenaming(() => tabRef, focusedItem, displayItems, setFocusedItemIndex);
+  } = useNoteRenaming(
+    () => tabRef,
+    focusedItem,
+    displayItems,
+    setFocusedItemIndex,
+  );
 
   // Auto-focus the tab when it mounts
   useAutoFocus(() => tabRef);
@@ -283,7 +298,11 @@ export default function NotesTab() {
       const newNote = await createNewNote("New Note", "", parentId);
 
       // Invalidate relevant caches to show the new note
-      revalidate([createNewNote.key, "children-with-folder-status", "note-by-id"]);
+      revalidate([
+        createNewNote.key,
+        "children-with-folder-status",
+        "note-by-id",
+      ]);
 
       // Navigate to the newly created note
       navigateToNote(newNote.id);
@@ -304,7 +323,7 @@ export default function NotesTab() {
         setFocusedItemIndex(nextIndex);
       }
     },
-    { ref: () => tabRef }
+    { ref: () => tabRef },
   );
 
   useKeybinding(
@@ -316,7 +335,7 @@ export default function NotesTab() {
         setFocusedItemIndex(nextIndex);
       }
     },
-    { ref: () => tabRef }
+    { ref: () => tabRef },
   );
 
   useKeybinding(
@@ -325,7 +344,7 @@ export default function NotesTab() {
       // Go up a directory
       handleUpDirectory();
     },
-    { ref: () => tabRef }
+    { ref: () => tabRef },
   );
 
   useKeybinding(
@@ -337,7 +356,7 @@ export default function NotesTab() {
         handleItemClickWithDirection(focused);
       }
     },
-    { ref: () => tabRef }
+    { ref: () => tabRef },
   );
 
   // Enter key to select current item
@@ -349,7 +368,7 @@ export default function NotesTab() {
         handleItemClickWithDirection(focused);
       }
     },
-    { ref: () => tabRef }
+    { ref: () => tabRef },
   );
 
   // Create new note keybinding
