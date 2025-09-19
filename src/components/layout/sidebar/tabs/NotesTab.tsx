@@ -19,7 +19,8 @@ import { useNoteSiblings } from "~/lib/hooks/useNoteSiblings";
 export default function NotesTab() {
   const { note, noteId } = useCurrentNote();
   const { children } = useCurrentNoteChildren();
-  const { handleItemClick, navigateToNote, navigateToRoot } = useNoteNavigation();
+  const { handleItemClick, navigateToNote, navigateToRoot } =
+    useNoteNavigation();
 
   const siblings = useNoteSiblings(
     noteId,
@@ -99,7 +100,10 @@ const MenuItem = (props: {
 
 const UpDirectoryButton = (props: { onClick: () => void }) => (
   <li>
-    <a onClick={props.onClick} class="text-base-content/70 hover:text-base-content">
+    <a
+      onClick={props.onClick}
+      class="text-base-content/70 hover:text-base-content"
+    >
       <ChevronUp size={16} />
       <span class="flex-1">Up Directory</span>
     </a>
