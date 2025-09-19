@@ -254,8 +254,8 @@ const SidebarSearchContent = () => {
       />
 
       <Collapsible class="p-0" title="Settings">
-        <Fieldset class="fieldset bg-base-200 border-base-300 rounded-box border p-4 space-y-3">
-          <Fieldset.Legend class="fieldset-legend">
+        <Fieldset class="bg-base-200 border-base-300 rounded-box border p-4 space-y-3">
+          <Fieldset.Legend>
             Search Options
           </Fieldset.Legend>
 
@@ -283,8 +283,8 @@ const SidebarSearchContent = () => {
           </div>
         </Fieldset>
 
-        <Fieldset class="fieldset bg-base-200 border-base-300 rounded-box border p-4 space-y-3">
-          <Fieldset.Legend class="fieldset-legend">
+        <Fieldset class="bg-base-200 border-base-300 rounded-box border p-4 space-y-3">
+          <Fieldset.Legend>
             Path Display
           </Fieldset.Legend>
           <For each={pathDisplayOptions}>
