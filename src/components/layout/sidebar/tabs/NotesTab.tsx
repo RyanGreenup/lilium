@@ -40,7 +40,6 @@ function getSidebarContentId(
   }
 }
 
-// TODO add up directory button
 // TODO add breadcrumbs to Navbar
 
 export default function NotesTab() {
