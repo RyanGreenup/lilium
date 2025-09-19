@@ -1,11 +1,30 @@
-import { A, RouteDefinition } from "@solidjs/router";
+import { A, RouteDefinition, createAsync, query } from "@solidjs/router";
 import Clock from "lucide-solid/icons/clock";
 
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
 
-import { For, createSignal } from "solid-js";
+import { For, Suspense, Show } from "solid-js";
 import { getUser } from "~/lib/auth";
+
+// Server functions
+const getStats = async () => {
+  "use server";
+  const { getNotesStats } = await import("~/lib/db");
+  return await getNotesStats();
+};
+
+const getRecentNotesData = async () => {
+  "use server";
+  const { getRecentNotes } = await import("~/lib/db");
+  return await getRecentNotes(4);
+};
+
+const getChildCounts = async () => {
+  "use server";
+  const { getNoteChildCounts } = await import("~/lib/db");
+  return await getNoteChildCounts();
+};
 import { Badge } from "~/solid-daisy-components/components/Badge";
 import { Card } from "~/solid-daisy-components/components/Card";
 import {
@@ -16,74 +35,24 @@ import {
   Stats,
 } from "~/solid-daisy-components/components/Stat";
 
+const getStatsQuery = query(getStats, "stats");
+const getRecentNotesQuery = query(getRecentNotesData, "recent-notes");
+const getChildCountsQuery = query(getChildCounts, "child-counts");
+
 export const route = {
   preload() {
     getUser();
+    getStatsQuery();
+    getRecentNotesQuery();
+    getChildCountsQuery();
   },
 } satisfies RouteDefinition;
 
-interface Note {
-  id: string;
-  title: string;
-  abstract: string;
-  lastModified: string;
-  path: string;
-  syntax: string;
-}
-
-interface Stats {
-  totalNotes: number;
-  recentlyModified: number;
-  folders: number;
-  searchQueries: number;
-}
 
 export default function Home() {
-  const [stats] = createSignal<Stats>({
-    totalNotes: 247,
-    recentlyModified: 12,
-    folders: 15,
-    searchQueries: 34,
-  });
-
-  const [recentNotes] = createSignal<Note[]>([
-    {
-      id: "1",
-      title: "Machine Learning Pipeline Design",
-      abstract:
-        "Comprehensive guide to building robust machine learning pipelines including data preprocessing, feature engineering, and model deployment strategies.",
-      lastModified: "2024-01-15T14:30:00Z",
-      path: "/notes/computer-science/ai/ml-pipeline.md",
-      syntax: "markdown",
-    },
-    {
-      id: "2",
-      title: "Statistical Hypothesis Testing",
-      abstract:
-        "Methods for testing statistical hypotheses including t-tests, ANOVA, and non-parametric tests. Covers p-values and effect sizes.",
-      lastModified: "2024-01-14T09:15:00Z",
-      path: "/notes/mathematics/statistics/hypothesis-testing.md",
-      syntax: "markdown",
-    },
-    {
-      id: "3",
-      title: "Python Data Analysis Tools",
-      abstract:
-        "Pandas, NumPy, and Matplotlib for data manipulation and visualization. Includes best practices for exploratory data analysis.",
-      lastModified: "2024-01-13T16:45:00Z",
-      path: "/notes/programming/python/data-analysis.md",
-      syntax: "markdown",
-    },
-    {
-      id: "4",
-      title: "Quantum Computing Basics",
-      abstract:
-        "Introduction to quantum computing principles including qubits, superposition, entanglement, and quantum gates.",
-      lastModified: "2024-01-12T11:20:00Z",
-      path: "/notes/physics/quantum/basics.org",
-      syntax: "org",
-    },
-  ]);
+  const stats = createAsync(() => getStatsQuery());
+  const recentNotes = createAsync(() => getRecentNotesQuery());
+  const childCounts = createAsync(() => getChildCountsQuery());
 
   const formatDate = (isoString: string) => {
     return new Date(isoString).toLocaleDateString();
@@ -96,35 +65,48 @@ export default function Home() {
     });
   };
 
+  const isFolder = (noteId: string) => {
+    const counts = childCounts();
+    if (!counts) return false;
+    const noteCount = counts.find(c => c.id === noteId);
+    return noteCount ? noteCount.child_count > 0 : false;
+  };
+
   return (
     <div class="space-y-8 overflow-x-auto">
       {/* Statistics Cards */}
       <div class="flex justify-center">
-        <Stats class="shadow">
-        <Stat place="center">
-          <StatFigure class="text-primary">
-            <FileText class="w-8 h-8" />
-          </StatFigure>
-          <StatValue>{stats().totalNotes}</StatValue>
-          <StatDesc>Total Notes</StatDesc>
-        </Stat>
+        <Suspense fallback={<div class="loading loading-spinner loading-lg"></div>}>
+          <Show when={stats()}>
+            {(statsData) => (
+              <Stats class="shadow">
+                <Stat place="center">
+                  <StatFigure class="text-primary">
+                    <FileText class="w-8 h-8" />
+                  </StatFigure>
+                  <StatValue>{statsData().total_notes}</StatValue>
+                  <StatDesc>Total Notes</StatDesc>
+                </Stat>
 
-        <Stat place="center">
-          <StatFigure class="text-secondary">
-            <Clock class="w-8 h-8" />
-          </StatFigure>
-          <StatValue>{stats().recentlyModified}</StatValue>
-          <StatDesc>Recently Modified</StatDesc>
-        </Stat>
+                <Stat place="center">
+                  <StatFigure class="text-secondary">
+                    <Clock class="w-8 h-8" />
+                  </StatFigure>
+                  <StatValue>{statsData().recent_notes}</StatValue>
+                  <StatDesc>Recently Modified</StatDesc>
+                </Stat>
 
-        <Stat place="center">
-          <StatFigure class="text-accent">
-            <Folder class="w-8 h-8" />
-          </StatFigure>
-          <StatValue>{stats().folders}</StatValue>
-          <StatDesc>Folders</StatDesc>
-        </Stat>
-        </Stats>
+                <Stat place="center">
+                  <StatFigure class="text-accent">
+                    <Folder class="w-8 h-8" />
+                  </StatFigure>
+                  <StatValue>{statsData().folders}</StatValue>
+                  <StatDesc>Folders</StatDesc>
+                </Stat>
+              </Stats>
+            )}
+          </Show>
+        </Suspense>
       </div>
 
       {/* Recent Notes */}
@@ -133,37 +115,50 @@ export default function Home() {
           <Clock class="w-6 h-6 mr-3" />
           Recent Notes
         </h2>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <For each={recentNotes()}>
-            {(note) => (
-              <Card class="hover:shadow-lg transition-shadow cursor-pointer shadow-lg">
-                <Card.Body>
-                  <div class="flex justify-between items-start mb-2">
-                    <h3 class="card-title text-lg ">{note.title}</h3>
-                    <Badge variant="outline" size="sm">
-                      {note.syntax}
-                    </Badge>
-                  </div>
-                  <p class="text-base-content/70 text-sm line-clamp-3 mb-4">
-                    {note.abstract}
-                  </p>
-                  <div class="flex justify-between items-center text-xs text-base-content/60 gap-8">
-                    <span class="font-mono">{note.path}</span>
-                    <div class="text-right">
-                      <div>{formatDate(note.lastModified)}</div>
-                      <div>{formatTime(note.lastModified)}</div>
-                    </div>
-                  </div>
-                  <Card.Actions class="justify-end mt-4">
-                    <A class="btn btn-primary btn-sm" href={`/note/${note.id}`}>
-                      Open
-                    </A>
-                  </Card.Actions>
-                </Card.Body>
-              </Card>
+        <Suspense fallback={<div class="loading loading-spinner loading-lg"></div>}>
+          <Show when={recentNotes()}>
+            {(notes) => (
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <For each={notes()}>
+                  {(note) => (
+                    <Card class="hover:shadow-lg transition-shadow cursor-pointer shadow-lg">
+                      <Card.Body>
+                        <div class="flex justify-between items-start mb-2">
+                          <div class="flex items-center gap-2">
+                            <Show when={isFolder(note.id)} fallback={<FileText class="w-4 h-4 text-base-content/60" />}>
+                              <Folder class="w-4 h-4 text-base-content/60" />
+                            </Show>
+                            <h3 class="card-title text-lg">{note.title}</h3>
+                          </div>
+                          <Badge variant="outline" size="sm">
+                            {note.syntax}
+                          </Badge>
+                        </div>
+                        <Show when={note.abstract}>
+                          <p class="text-base-content/70 text-sm line-clamp-3 mb-4">
+                            {note.abstract}
+                          </p>
+                        </Show>
+                        <div class="flex justify-between items-center text-xs text-base-content/60 gap-8">
+                          <span class="font-mono text-xs truncate">/notes/{note.id}</span>
+                          <div class="text-right">
+                            <div>{formatDate(note.updated_at)}</div>
+                            <div>{formatTime(note.updated_at)}</div>
+                          </div>
+                        </div>
+                        <Card.Actions class="justify-end mt-4">
+                          <A class="btn btn-primary btn-sm" href={`/note/${note.id}`}>
+                            Open
+                          </A>
+                        </Card.Actions>
+                      </Card.Body>
+                    </Card>
+                  )}
+                </For>
+              </div>
             )}
-          </For>
-        </div>
+          </Show>
+        </Suspense>
       </div>
     </div>
   );

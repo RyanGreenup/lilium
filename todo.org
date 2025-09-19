@@ -30,16 +30,6 @@ Then we can write jsx as a note and transclude it as a widget!
 *** TODO Hide the dock on Mobile
 ** Schema
 *** Tables
-**** Shares
-Later, we'll need the server to filter what is permitted and implement things like share all children, share only item etc.
-**** Tags
-***** Tags
-- id
-- title
-- parent_id
-***** NoteTags
-- tag_id
-- note_id
 **** Notes
 - id
 - title
@@ -48,6 +38,14 @@ Later, we'll need the server to filter what is permitted and implement things li
 - syntax / syntax id (avoiding joins is simpler, just use ext as id)
 - parent_id
 - user_id
+**** Tags
+***** Tags
+- id
+- title
+- parent_id
+***** NoteTags
+- tag_id
+- note_id
 *** Views
 **** Notes With Number of Children
 **** All Notes under a Tag
@@ -59,3 +57,7 @@ Later, we'll need the server to filter what is permitted and implement things li
 Better LLM and in Place Docs
 *** TODO Remove index exports
 Minimizes need for deps in consuming libraries
+* On the Fly
+** TODO WAL on the DB
+** TODO Dummy Data From Python
+** TODO Create New Notes

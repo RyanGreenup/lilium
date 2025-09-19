@@ -57,6 +57,24 @@ db.exec(`
   )
 `);
 
+// Create view for note hierarchy statistics
+db.exec(`
+  CREATE VIEW IF NOT EXISTS note_child_counts AS
+  SELECT 
+    n.id,
+    n.user_id,
+    COALESCE(child_counts.child_count, 0) as child_count
+  FROM notes n
+  LEFT JOIN (
+    SELECT 
+      parent_id,
+      COUNT(*) as child_count
+    FROM notes 
+    WHERE parent_id IS NOT NULL
+    GROUP BY parent_id
+  ) child_counts ON n.id = child_counts.parent_id;
+`);
+
 // Create indexes for better query performance
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);
@@ -98,6 +116,12 @@ export interface NoteTag {
 
 export interface NoteWithTags extends Note {
   tags: Tag[];
+}
+
+export interface NoteChildCount {
+  id: string;
+  user_id: string;
+  child_count: number;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -238,7 +262,7 @@ export async function deleteNote(id: string): Promise<void> {
 }
 
 /**
- * Get child notes (notes with parent_id = id)
+ * Get child notes (notes with parent_id = id) (NOTE that a note entry with children is a folder)
  */
 export async function getChildNotes(parent_id: string): Promise<Note[]> {
   const user = await requireUser();
@@ -253,6 +277,44 @@ export async function getChildNotes(parent_id: string): Promise<Note[]> {
   `);
   
   return stmt.all(parent_id, user.id) as Note[];
+}
+
+/**
+ * Get note child counts for all notes
+ */
+export async function getNoteChildCounts(): Promise<NoteChildCount[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const stmt = db.prepare(`
+    SELECT id, user_id, child_count 
+    FROM note_child_counts 
+    WHERE user_id = ?
+    ORDER BY child_count DESC, id
+  `);
+  
+  return stmt.all(user.id) as NoteChildCount[];
+}
+
+/**
+ * Get child count for a specific note
+ */
+export async function getNoteChildCount(note_id: string): Promise<number> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const stmt = db.prepare(`
+    SELECT child_count 
+    FROM note_child_counts 
+    WHERE id = ? AND user_id = ?
+  `);
+  
+  const result = stmt.get(note_id, user.id) as { child_count: number } | undefined;
+  return result?.child_count ?? 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -487,6 +549,11 @@ export async function getNotesStats() {
     FROM notes 
     WHERE user_id = ? AND updated_at >= datetime('now', '-7 days')
   `);
+  const foldersStmt = db.prepare(`
+    SELECT COUNT(*) as count 
+    FROM note_child_counts 
+    WHERE user_id = ? AND child_count > 0
+  `);
   const syntaxStatsStmt = db.prepare(`
     SELECT syntax, COUNT(*) as count 
     FROM notes 
@@ -498,12 +565,14 @@ export async function getNotesStats() {
   const totalNotes = totalNotesStmt.get(user.id) as { count: number };
   const totalTags = totalTagsStmt.get(user.id) as { count: number };
   const recentNotes = recentNotesStmt.get(user.id) as { count: number };
+  const folders = foldersStmt.get(user.id) as { count: number };
   const syntaxStats = syntaxStatsStmt.all(user.id) as { syntax: string; count: number }[];
   
   return {
     total_notes: totalNotes.count,
     total_tags: totalTags.count,
     recent_notes: recentNotes.count,
+    folders: folders.count,
     syntax_breakdown: syntaxStats,
   };
 }
