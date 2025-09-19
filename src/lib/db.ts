@@ -229,39 +229,6 @@ export async function getNotesWithTags(): Promise<NoteWithTags[]> {
 
 
 
-/**
- * Get the parent hierarchy of a note (from root to current note)
- */
-export async function getNoteParents(note_id: string): Promise<Note[]> {
-  const user = await requireUser();
-  if (!user.id) {
-    throw redirect("/login");
-  }
-
-  // Recursive CTE to get the parent chain
-  const stmt = db.prepare(`
-    WITH RECURSIVE parent_chain AS (
-      -- Start with the current note
-      SELECT id, title, parent_id, user_id, 0 as level
-      FROM notes
-      WHERE id = ? AND user_id = ?
-
-      UNION ALL
-
-      -- Recursively get parents
-      SELECT n.id, n.title, n.parent_id, n.user_id, pc.level + 1 as level
-      FROM notes n
-      INNER JOIN parent_chain pc ON n.id = pc.parent_id
-      WHERE n.user_id = ?
-    )
-    SELECT id, title, parent_id, user_id
-    FROM parent_chain
-    WHERE level > 0  -- Exclude the current note itself
-    ORDER BY level DESC  -- Root first, then descendants
-  `);
-
-  return stmt.all(note_id, user.id, user.id) as Note[];
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Tag Management //////////////////////////////////////////////////////////////
