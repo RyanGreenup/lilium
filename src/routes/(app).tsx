@@ -3,22 +3,9 @@ import { A, RouteDefinition } from "@solidjs/router";
 import Menu from "lucide-solid/icons/menu";
 import Settings from "lucide-solid/icons/settings";
 
-import {
-  ArrowLeft,
-  ArrowRight,
-  MessageSquare,
-  Notebook,
-  Search,
-  Sparkles,
-} from "lucide-solid";
 import ToggleLeft from "lucide-solid/icons/toggle-left";
-import { createSignal, For, JSXElement, Show, VoidComponent } from "solid-js";
-import BacklinksTab from "~/components/layout/sidebar/tabs/BacklinksTab";
-import DiscussionTab from "~/components/layout/sidebar/tabs/DiscussionTab";
-import ForwardLinks from "~/components/layout/sidebar/tabs/ForwardLinksTab";
-import NotesTab from "~/components/layout/sidebar/tabs/NotesTab";
-import RelatedTab from "~/components/layout/sidebar/tabs/RelatedTab";
-import { SidebarSearchContent } from "~/components/layout/sidebar/tabs/SearchTab";
+import { JSXElement, VoidComponent } from "solid-js";
+import { SidebarTabs } from "~/components/layout/sidebar/SidebarContent";
 import { UserDropdown } from "~/components/UserDrowDown";
 import { getUser } from "~/lib/auth";
 import {
@@ -51,7 +38,7 @@ export default function MainLayout(props: { children: JSXElement }) {
       <MainWrapper>
         <Sidebar class="bg-base-200">
           <SidebarContent class="p-4">
-            <SidebarItems />
+            <SidebarTabs />
           </SidebarContent>
         </Sidebar>
         <MainContent class="bg-base-100 p-4">{props.children}</MainContent>
@@ -67,61 +54,6 @@ export default function MainLayout(props: { children: JSXElement }) {
   );
 }
 
-const SidebarItems: VoidComponent = () => {
-  const [activeTab, setActiveTab] = createSignal(0);
-
-  const tabs = [
-    { id: 0, label: "Notes", icon: <Notebook class="w-4 h-4" /> },
-    { id: 1, label: "Search", icon: <Search class="w-4 h-4" /> },
-    { id: 2, label: "Backlinks", icon: <ArrowLeft class="w-4 h-4" /> },
-    { id: 3, label: "Forward", icon: <ArrowRight class="w-4 h-4" /> },
-    { id: 4, label: "Related", icon: <Sparkles class="w-4 h-4" /> },
-    { id: 5, label: "Discussion", icon: <MessageSquare class="w-4 h-4" /> },
-  ];
-
-  return (
-    <>
-      <Tabs style="lift">
-        <For each={tabs}>
-          {(tab) => (
-            <Tabs.Tab
-              active={activeTab() === tab.id}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.icon}
-            </Tabs.Tab>
-          )}
-        </For>
-      </Tabs>
-
-      <div class="mt-4">
-        <Show when={activeTab() === 0}>
-          <NotesTab />
-        </Show>
-
-        <Show when={activeTab() === 1}>
-          <SidebarSearchContent />
-        </Show>
-
-        <Show when={activeTab() === 2}>
-          <BacklinksTab />
-        </Show>
-
-        <Show when={activeTab() === 3}>
-          <ForwardLinks />
-        </Show>
-
-        <Show when={activeTab() === 4}>
-          <RelatedTab />
-        </Show>
-
-        <Show when={activeTab() === 5}>
-          <DiscussionTab />
-        </Show>
-      </div>
-    </>
-  );
-};
 
 const NavbarContent = () => (
   <>
