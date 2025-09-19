@@ -3,7 +3,15 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
 import FolderUp from "lucide-solid/icons/folder-up";
-import { Accessor, For, Show, createMemo, createSignal, createEffect, JSX } from "solid-js";
+import {
+  Accessor,
+  For,
+  Show,
+  createMemo,
+  createSignal,
+  createEffect,
+  JSX,
+} from "solid-js";
 import { Transition } from "solid-transition-group";
 import { Note } from "~/lib/db";
 import { useCurrentNoteChildren } from "~/lib/hooks/useCurrentDirectory";
@@ -13,6 +21,24 @@ import {
   type NavigationItem,
 } from "~/lib/hooks/useNoteNavigation";
 import { useNoteSiblings } from "~/lib/hooks/useNoteSiblings";
+
+/**
+ * Generates a unique identifier for sidebar content based on what's actually displayed.
+ * This ensures animations only trigger when the displayed items actually change.
+ */
+function getSidebarContentId(
+  currentNote: Note | null | undefined,
+  isFolder: boolean,
+): string {
+  if (isFolder) {
+    // For folders, the content is the children of this note
+    return `children-of-${currentNote?.id || "root"}`;
+  } else {
+    // For notes, the content is the siblings (children of the parent)
+    // Use the parent ID since that's what determines the displayed items
+    return `children-of-${currentNote?.parent_id || "root"}`;
+  }
+}
 
 // TODO add up directory button
 // TODO add breadcrumbs to Navbar
@@ -71,30 +97,20 @@ export default function NotesTab() {
 
   // Track when content should be shown for transition
   const [showContent, setShowContent] = createSignal(true);
-  
+
   // Create a unique identifier based on what's actually displayed in the sidebar
-  const currentContentId = createMemo(() => {
-    const currentNote = note();
-    const folder = isCurrentNoteFolder();
-    
-    if (folder) {
-      // For folders, the content is the children of this note
-      return `children-of-${currentNote?.id || 'root'}`;
-    } else {
-      // For notes, the content is the siblings (children of the parent)
-      // Use the parent ID since that's what determines the displayed items
-      return `children-of-${currentNote?.parent_id || 'root'}`;
-    }
-  });
+  const currentContentId = createMemo(() =>
+    getSidebarContentId(note(), isCurrentNoteFolder()),
+  );
 
   // Track previous content id to detect changes
   const [prevContentId, setPrevContentId] = createSignal(currentContentId());
-  
+
   // Handle content change with animation
   createEffect(() => {
     const currentId = currentContentId();
     const prevId = prevContentId();
-    
+
     if (currentId !== prevId) {
       setShowContent(false);
       setTimeout(() => {
@@ -111,11 +127,8 @@ export default function NotesTab() {
           <Show when={showUpButton()}>
             <UpDirectoryButton onClick={handleUpDirectory} />
           </Show>
-          
-          <SlideTransition 
-            isGoingDeeper={isGoingDeeper} 
-            show={showContent}
-          >
+
+          <SlideTransition isGoingDeeper={isGoingDeeper} show={showContent}>
             <div>
               <Show
                 when={displayItems().length > 0}
@@ -182,36 +195,42 @@ const SlideTransition = (props: {
   <Transition
     onEnter={(el, done) => {
       const direction = props.isGoingDeeper() ? 1 : -1; // 1 = slide from right, -1 = slide from left
-      const a = el.animate([
-        { 
-          transform: `translateX(${direction * 100}%)`,
-          opacity: 0 
+      const a = el.animate(
+        [
+          {
+            transform: `translateX(${direction * 100}%)`,
+            opacity: 0,
+          },
+          {
+            transform: "translateX(0%)",
+            opacity: 1,
+          },
+        ],
+        {
+          duration: 300,
+          easing: "cubic-bezier(0.4, 0, 0.2, 1)",
         },
-        { 
-          transform: 'translateX(0%)',
-          opacity: 1 
-        }
-      ], {
-        duration: 300,
-        easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
-      });
+      );
       a.finished.then(done);
     }}
     onExit={(el, done) => {
       const direction = props.isGoingDeeper() ? -1 : 1; // Opposite direction for exit
-      const a = el.animate([
-        { 
-          transform: 'translateX(0%)',
-          opacity: 1 
+      const a = el.animate(
+        [
+          {
+            transform: "translateX(0%)",
+            opacity: 1,
+          },
+          {
+            transform: `translateX(${direction * 100}%)`,
+            opacity: 0,
+          },
+        ],
+        {
+          duration: 300,
+          easing: "cubic-bezier(0.4, 0, 0.2, 1)",
         },
-        { 
-          transform: `translateX(${direction * 100}%)`,
-          opacity: 0 
-        }
-      ], {
-        duration: 300,
-        easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
-      });
+      );
       a.finished.then(done);
     }}
   >
