@@ -1,8 +1,7 @@
+import FileText from "lucide-solid/icons/file-text";
+import Folder from "lucide-solid/icons/folder";
 import { children, JSXElement, splitProps } from "solid-js";
 import { Button } from "~/solid-daisy-components/components/Button";
-import  FileText  from "lucide-solid/icons/file-text";
-import Folder from "lucide-solid/icons/folder";
-
 
 interface MenuItemProps {
   icon?: JSXElement;
@@ -35,30 +34,38 @@ export default function NotesTab() {
   return (
     <div class="space-y-4">
       {/* Hierarchical Context */}
-      <ul class="menu  rounded-box w-full text-sm">
-        <li class="menu-title text-xs">Path</li>
-        <MenuItem
-          icon={<Folder size={16} />}
-          size="sm"
-          submenu={
-            <MenuItem
-              icon={<Folder size={16} />}
-              size="sm"
-              submenu={
-                <MenuItem icon={<Folder size={16} />} size="sm">
-                  wikijs
-                </MenuItem>
-              }
-            >
-              notetaking
-            </MenuItem>
-          }
-        >
-          / (root)
-        </MenuItem>
+      <ul class="menu bg-base-200 rounded-box w-56 shadow-sm w-full">
+        <li>
+          <details open>
+            <summary>
+              <li class="menu-title text-xs">Path</li>
+            </summary>
+            <ul>
+              <MenuItem
+                icon={<Folder size={16} />}
+                size="sm"
+                submenu={
+                  <MenuItem
+                    icon={<Folder size={16} />}
+                    size="sm"
+                    submenu={
+                      <MenuItem icon={<Folder size={16} />} size="sm">
+                        wikijs
+                      </MenuItem>
+                    }
+                  >
+                    notetaking
+                  </MenuItem>
+                }
+              >
+                / (root)
+              </MenuItem>
+            </ul>
+          </details>
+        </li>
       </ul>
 
-      <div class="divider"></div>
+      {/*<div class="divider"></div>*/}
 
       {/* Current Directory */}
       <div>
@@ -74,8 +81,12 @@ export default function NotesTab() {
         </Button>
         <ul class="menu bg-base-200 rounded-box w-full">
           <MenuItem icon={<Folder size={16} />}>tools</MenuItem>
-          <MenuItem icon={<FileText size={16} />}>Custom CSS for Heirarçhy in...</MenuItem>
-          <MenuItem icon={<FileText size={16} />}>Directories and Wikiïs</MenuItem>
+          <MenuItem icon={<FileText size={16} />}>
+            Custom CSS for Heirarçhy in...
+          </MenuItem>
+          <MenuItem icon={<FileText size={16} />}>
+            Directories and Wikiïs
+          </MenuItem>
           <MenuItem icon={<FileText size={16} />}>Wikijs</MenuItem>
         </ul>
       </div>
