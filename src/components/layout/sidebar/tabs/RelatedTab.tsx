@@ -1,7 +1,56 @@
+import { ContentList, ContentItemData } from "../shared/ContentItem";
+
 export default function RelatedTab() {
+  const relatedContent: ContentItemData[] = [
+    {
+      id: "1",
+      title: "Mathematical Foundations of Machine Learning",
+      abstract:
+        "Essential mathematical concepts for understanding machine learning algorithms including calculus, linear algebra, and probability theory.",
+      path: "/notes/mathematics/ml-foundations.md",
+    },
+    {
+      id: "2",
+      title: "Algorithm Complexity Analysis",
+      abstract:
+        "Big O notation, time and space complexity analysis for algorithms. Includes asymptotic analysis and practical performance considerations.",
+      path: "/notes/computer-science/complexity-analysis.md",
+    },
+    {
+      id: "3",
+      title: "Scientific Computing with Python",
+      abstract:
+        "NumPy, SciPy, and Matplotlib for scientific computing applications. Covers numerical methods and data visualization techniques.",
+      path: "/notes/programming/scientific-computing.md",
+    },
+    {
+      id: "4",
+      title: "Experimental Design Principles",
+      abstract:
+        "Statistical principles for designing experiments including control groups, randomization, and bias reduction strategies.",
+      path: "/notes/research/experimental-design.md",
+    },
+    {
+      id: "5",
+      title: "Information Theory Basics",
+      abstract:
+        "Entropy, mutual information, and compression theory. Applications in machine learning and data analysis.",
+      path: "/notes/mathematics/information-theory.md",
+    },
+    {
+      id: "6",
+      title: "Version Control for Research",
+      abstract:
+        "Git workflows for managing research projects, data versioning, and collaborative scientific computing environments.",
+      path: "/notes/tools/version-control-research.md",
+    },
+  ];
+
   return (
-    <div class="p-4 text-center text-base-content/60">
-      Related content will appear here
-    </div>
+    <ContentList
+      items={relatedContent}
+      showPath={true}
+      emptyMessage="No related content found"
+    />
   );
 }
