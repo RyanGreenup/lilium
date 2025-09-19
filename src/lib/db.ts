@@ -223,36 +223,6 @@ export async function getNotesWithTags(): Promise<NoteWithTags[]> {
   });
 }
 
-/**
- * Update note content and metadata
- */
-export async function updateNote(
-  id: string,
-  updates: Partial<
-    Pick<Note, "title" | "abstract" | "content" | "syntax" | "parent_id">
-  >,
-): Promise<Note> {
-  const user = await requireUser();
-  if (!user.id) {
-    throw redirect("/login");
-  }
-
-  const setPairs = Object.keys(updates)
-    .map((key) => `${key} = ?`)
-    .join(", ");
-  const values = Object.values(updates);
-
-  const stmt = db.prepare(`
-    UPDATE notes
-    SET ${setPairs}, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ? AND user_id = ?
-  `);
-
-  const result = stmt.run(...values, id, user.id);
-  if (result.changes === 0) throw new Error("Note not found");
-
-  return getNoteById(id);
-}
 
 /**
  * Move a note to a new parent (for cut/paste operations)
@@ -289,7 +259,11 @@ export async function moveNote(
   const result = stmt.run(newParentId, id, user.id);
   if (result.changes === 0) throw new Error("Note not found");
 
-  return getNoteById(id);
+  const movedNote = await getNoteById(id);
+  if (!movedNote) {
+    throw new Error("Note not found after move");
+  }
+  return movedNote;
 }
 
 /**
