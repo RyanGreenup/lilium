@@ -1,5 +1,6 @@
 import { JSXElement, For, createSignal } from "solid-js";
 import { tv } from "tailwind-variants";
+import { useNavigate } from "@solidjs/router";
 import { Breadcrumbs } from "~/solid-daisy-components/components/Breadcrumbs";
 import NoteBreadcrumbs, {
   NoteBreadcrumbsById,
@@ -62,6 +63,7 @@ const parsePathToBreadcrumbs = (path: string) => {
 };
 
 export const ContentItem = (props: ContentItemProps) => {
+  const navigate = useNavigate();
   const breadcrumbs = () =>
     props.showPath && props.item.path
       ? parsePathToBreadcrumbs(props.item.path)
@@ -96,7 +98,7 @@ export const ContentItem = (props: ContentItemProps) => {
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!crumb.isLast) {
-                            console.log(`Navigate to: ${crumb.fullPath}`);
+                            navigate(`/note${crumb.fullPath}`);
                           }
                         }}
                       >
