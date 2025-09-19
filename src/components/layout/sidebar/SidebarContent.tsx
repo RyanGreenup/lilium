@@ -66,6 +66,23 @@ export const SidebarTabs = () => {
   useKeybinding({ key: "6", alt: true }, () => handleTabChange(5));
   useKeybinding({ key: "7", alt: true }, () => handleTabChange(6));
 
+  // Global keybindings for tab navigation (Alt + h/l)
+  useKeybinding({ key: "h", alt: true }, () => {
+    const currentTab = activeTab();
+    const prevTab = currentTab - 1;
+    if (prevTab >= 0) {
+      handleTabChange(prevTab);
+    }
+  });
+
+  useKeybinding({ key: "l", alt: true }, () => {
+    const currentTab = activeTab();
+    const nextTab = currentTab + 1;
+    if (nextTab < tabs.length) {
+      handleTabChange(nextTab);
+    }
+  });
+
   return (
     <>
       <Tabs style="lift">
