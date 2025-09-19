@@ -67,8 +67,7 @@ def engineer_features(df):
     path: "/notes/computer-science/ai/ml-pipeline.md"
   });
 
-  const [isEditing, setIsEditing] = createSignal(true);
-  const [previewMode, setPreviewMode] = createSignal(false);
+  const [isEditing, setIsEditing] = createSignal(false); // Start in preview mode
   const [unsavedChanges, setUnsavedChanges] = createSignal(false);
 
   const syntaxOptions = [
@@ -125,14 +124,14 @@ def engineer_features(df):
               ))}
             </select>
 
-            {/* Preview Toggle */}
+            {/* Edit Toggle */}
             <div class="form-control">
               <label class="label cursor-pointer gap-2 py-1">
-                <Eye class="w-4 h-4" />
+                <Edit3 class="w-4 h-4" />
                 <Toggle
                   size="sm"
-                  checked={previewMode()}
-                  onChange={(e) => setPreviewMode(e.currentTarget.checked)}
+                  checked={isEditing()}
+                  onChange={(e) => setIsEditing(e.currentTarget.checked)}
                 />
               </label>
             </div>
@@ -160,7 +159,7 @@ def engineer_features(df):
 
       {/* Content Area */}
       <div class="flex-1 flex">
-        <Show when={!previewMode()} fallback={
+        <Show when={isEditing()} fallback={
           <div class="flex-1 p-6 overflow-auto">
             <div class="prose prose-sm max-w-none">
               {/* Preview content would be rendered here based on syntax */}
