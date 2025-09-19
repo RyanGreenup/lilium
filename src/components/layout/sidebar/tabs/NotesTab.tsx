@@ -31,6 +31,7 @@ import { Badge } from "~/solid-daisy-components/components/Badge";
 import { Input } from "~/solid-daisy-components/components/Input";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import { createNewNote } from "~/lib/db/notes/create";
+import { updateNoteTitle } from "~/lib/db/notes/update";
 
 // Hook for navigation keybindings
 function useNavigationKeybindings(
@@ -293,12 +294,6 @@ function useNoteRenaming(
   };
 }
 
-// Query function to update note title
-const updateNoteTitle = query(async (noteId: string, newTitle: string) => {
-  "use server";
-  const { updateNote } = await import("~/lib/db");
-  return await updateNote(noteId, { title: newTitle });
-}, "update-note-title");
 
 // Query function to move a note
 const moveNote = query(async (noteId: string, newParentId?: string) => {
