@@ -45,6 +45,7 @@ function useNavigationKeybindings(
   startEditingFocusedItem: () => void,
   handleCutNote: () => void,
   handleClearCut: () => void,
+  handlePasteNote: () => void,
 ) {
   // Navigation keybindings
   useKeybinding(
@@ -154,12 +155,12 @@ function useNavigationKeybindings(
     { ref: tabRef },
   );
 
-  // Paste keybinding (placeholder - will implement paste logic later)
+  // Paste keybinding
   useKeybinding(
     { key: "v", ctrl: true },
     () => {
-      console.log("Paste not yet implemented");
-      // TODO: Implement paste functionality
+      console.log("Pasting note...");
+      handlePasteNote();
     },
     { ref: tabRef },
   );
@@ -296,6 +297,13 @@ const updateNoteTitle = query(async (noteId: string, newTitle: string) => {
   const { updateNote } = await import("~/lib/db");
   return await updateNote(noteId, { title: newTitle });
 }, "update-note-title");
+
+// Query function to move a note
+const moveNote = query(async (noteId: string, newParentId?: string) => {
+  "use server";
+  const { moveNote } = await import("~/lib/db");
+  return await moveNote(noteId, newParentId);
+}, "move-note");
 
 /**
  * Generates a unique identifier for sidebar content based on what's actually displayed.
@@ -499,6 +507,50 @@ export default function NotesTab() {
     }
   };
 
+  // Handle pasting a cut note
+  const handlePasteNote = async () => {
+    const cutId = cutNoteId();
+    if (!cutId) {
+      console.log("No note to paste");
+      return;
+    }
+
+    try {
+      const currentNote = note();
+      let newParentId: string | undefined;
+
+      if (isCurrentNoteFolder()) {
+        // If current note is a folder, paste into it
+        newParentId = currentNote?.id;
+      } else {
+        // If current note is a regular note, paste as sibling (same parent)
+        newParentId = currentNote?.parent_id;
+      }
+
+      console.log(`Pasting note ${cutId} to parent ${newParentId || 'root'}`);
+      
+      await moveNote(cutId, newParentId);
+
+      // Invalidate relevant caches to show the moved note
+      revalidate([
+        moveNote.key,
+        "children-with-folder-status",
+        "note-by-id",
+      ]);
+
+      // Clear the cut state
+      setCutNoteId(null);
+
+      // Track that this note was just moved for refocusing in sidebar
+      setNewlyCreatedNoteId(cutId);
+
+      console.log("Note pasted successfully");
+    } catch (error) {
+      console.error("Failed to paste note:", error);
+      alert(`Failed to paste note: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   // Use navigation keybindings hook
   onMount(() => {
     useNavigationKeybindings(
@@ -515,6 +567,7 @@ export default function NotesTab() {
       startEditingFocusedItem,
       handleCutNote,
       handleClearCut,
+      handlePasteNote,
     );
   });
 

@@ -262,6 +262,41 @@ export async function deleteNote(id: string): Promise<void> {
 }
 
 /**
+ * Move a note to a new parent (for cut/paste operations)
+ */
+export async function moveNote(id: string, newParentId?: string): Promise<Note> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  // Validate that the note exists and belongs to the user
+  const note = await getNoteById(id);
+  
+  // If newParentId is provided, validate that the parent exists and belongs to the user
+  if (newParentId) {
+    await getNoteById(newParentId);
+    
+    // Prevent moving a note to itself or its descendants to avoid circular references
+    const parents = await getNoteParents(newParentId);
+    if (parents.some(parent => parent.id === id)) {
+      throw new Error("Cannot move note to its own descendant");
+    }
+  }
+  
+  const stmt = db.prepare(`
+    UPDATE notes 
+    SET parent_id = ?, updated_at = CURRENT_TIMESTAMP 
+    WHERE id = ? AND user_id = ?
+  `);
+  
+  const result = stmt.run(newParentId, id, user.id);
+  if (result.changes === 0) throw new Error("Note not found");
+  
+  return getNoteById(id);
+}
+
+/**
  * Get child notes (notes with parent_id = id) (NOTE that a note entry with children is a folder)
  */
 export async function getChildNotes(parent_id: string): Promise<Note[]> {
