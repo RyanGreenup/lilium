@@ -1,11 +1,6 @@
 import { A, RouteDefinition } from "@solidjs/router";
-import BrushCleaning from "lucide-solid/icons/brush-cleaning";
-import Candy from "lucide-solid/icons/candy";
 
-import Camera from "lucide-solid/icons/camera";
 import Menu from "lucide-solid/icons/menu";
-import MessageCircleIcon from "lucide-solid/icons/message-circle";
-import NotebookPen from "lucide-solid/icons/notebook-pen";
 import Settings from "lucide-solid/icons/settings";
 
 import {
@@ -18,6 +13,12 @@ import {
 } from "lucide-solid";
 import ToggleLeft from "lucide-solid/icons/toggle-left";
 import { createSignal, For, JSXElement, Show, VoidComponent } from "solid-js";
+import BacklinksTab from "~/components/layout/sidebar/tabs/BacklinksTab";
+import DiscussionTab from "~/components/layout/sidebar/tabs/DiscussionTab";
+import ForwardLinks from "~/components/layout/sidebar/tabs/ForwardLinksTab";
+import NotesTab from "~/components/layout/sidebar/tabs/NotesTab";
+import RelatedTab from "~/components/layout/sidebar/tabs/RelatedTab";
+import { SidebarSearchContent } from "~/components/layout/sidebar/tabs/SearchTab";
 import { UserDropdown } from "~/components/UserDrowDown";
 import { getUser } from "~/lib/auth";
 import {
@@ -33,9 +34,6 @@ import {
   ToggleButton,
 } from "~/solid-daisy-components/components/Layouts/ResponsiveDrawer";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
-import { SidebarSearchContent } from "~/components/layout/sidebar/tabs/SearchTab";
-import BacklinksTab from "~/components/layout/sidebar/tabs/BacklinksTab";
-import ForwardLinks from "~/components/layout/sidebar/tabs/ForwardLinksTab";
 
 // Route Guard
 export const route = {
@@ -98,53 +96,7 @@ const SidebarItems: VoidComponent = () => {
 
       <div class="mt-4">
         <Show when={activeTab() === 0}>
-          <div class="menu">
-            <div class="menu-title">Navigation</div>
-            <For
-              each={[
-                {
-                  name: "Chores",
-                  icon: <BrushCleaning class="w-4 h-4" />,
-                  link: "tools/chores/",
-                },
-                {
-                  name: "Consumption",
-                  icon: <Candy class="w-4 h-4" />,
-                  link: "tools/consumption/",
-                },
-              ]}
-            >
-              {(item) => (
-                <li>
-                  <A href={`/${item.link}`} class="flex items-center gap-2">
-                    <span>{item.icon}</span>
-                    {item.name}
-                  </A>
-                </li>
-              )}
-            </For>
-          </div>
-
-          <div class="divider"></div>
-
-          <div class="menu">
-            <div class="menu-title">Tools</div>
-            <li>
-              <a href="https://dokuwiki.vidar">
-                <NotebookPen class="w-4 h-4" /> Wiki
-              </a>
-            </li>
-            <li>
-              <a href="https://photon.vidar">
-                <MessageCircleIcon class="w-4 h-4" /> Forum
-              </a>
-            </li>
-            <li>
-              <a href="https://immich.vidar">
-                <Camera class="w-4 h-4" /> Gallery
-              </a>
-            </li>
-          </div>
+          <NotesTab />
         </Show>
 
         <Show when={activeTab() === 1}>
@@ -156,19 +108,15 @@ const SidebarItems: VoidComponent = () => {
         </Show>
 
         <Show when={activeTab() === 3}>
-        <ForwardLinks/>
+          <ForwardLinks />
         </Show>
 
         <Show when={activeTab() === 4}>
-          <div class="p-4 text-center text-base-content/60">
-            Related content will appear here
-          </div>
+          <RelatedTab />
         </Show>
 
         <Show when={activeTab() === 5}>
-          <div class="p-4 text-center text-base-content/60">
-            Discussion will appear here
-          </div>
+          <DiscussionTab />
         </Show>
       </div>
     </>
