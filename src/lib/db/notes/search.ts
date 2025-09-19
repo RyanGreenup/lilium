@@ -12,23 +12,29 @@ import type { Note } from "../types";
 /**
  * Search notes using FTS5 full-text search
  */
-export async function searchNotes(searchQuery: string): Promise<Note[]> {
+export async function searchNotes(searchQuery: string, parentId?: string): Promise<Note[]> {
   const user = await requireUser();
   if (!user.id) {
     throw redirect("/login");
   }
 
-  // Use FTS5 for better search performance and features
-  const stmt = db.prepare(`
+  let sql = `
     SELECT n.* FROM notes n
     INNER JOIN notes_fts fts ON n.id = fts.id
     WHERE notes_fts MATCH ? AND fts.user_id = ?
-    ORDER BY bm25(notes_fts), n.updated_at DESC
-  `);
+  `;
+  
+  const params: any[] = [searchQuery.trim().replace(/['"]/g, '""'), user.id];
+  
+  if (parentId) {
+    sql += ` AND n.parent_id = ?`;
+    params.push(parentId);
+  }
+  
+  sql += ` ORDER BY bm25(notes_fts), n.updated_at DESC`;
 
-  // Escape and prepare the search query for FTS5
-  const ftsQuery = searchQuery.trim().replace(/['"]/g, '""');
-  return stmt.all(ftsQuery, user.id) as Note[];
+  const stmt = db.prepare(sql);
+  return stmt.all(...params) as Note[];
 }
 
 /**
@@ -153,9 +159,9 @@ export async function searchNotesAdvanced(options: {
 /**
  * Query function to search notes (for client-side use)
  */
-export const searchNotesQuery = query(async (searchQuery: string) => {
+export const searchNotesQuery = query(async (searchQuery: string, parentId?: string) => {
   "use server";
-  return await searchNotes(searchQuery);
+  return await searchNotes(searchQuery, parentId);
 }, "search-notes");
 
 /**
