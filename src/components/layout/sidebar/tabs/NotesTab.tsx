@@ -31,7 +31,7 @@ export default function NotesTab() {
   return (
     <div class="space-y-4">
       {/* Hierarchical Context */}
-      <ul class="menu bg-base-300 rounded-box w-full text-sm">
+      <ul class="menu  rounded-box w-full text-sm">
         <li class="menu-title text-xs">Path</li>
         <MenuItem
           icon="📁"
@@ -53,6 +53,8 @@ export default function NotesTab() {
           / (root)
         </MenuItem>
       </ul>
+
+      <div class="divider"></div>
 
       {/* Current Directory */}
       <div>
