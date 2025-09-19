@@ -9,7 +9,7 @@ import {
   Suspense,
   onCleanup,
 } from "solid-js";
-import { createAsync } from "@solidjs/router";
+import { createAsync, useSearchParams } from "@solidjs/router";
 import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
 import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
 import { Radio } from "~/solid-daisy-components/components/Radio";
@@ -24,13 +24,15 @@ import {
 import type { Note } from "~/lib/db/types";
 
 export const SidebarSearchContent = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const [useFtsSearch, setUseFtsSearch] = createSignal(true);
   const [syntaxFilter, setSyntaxFilter] = createSignal<string>("");
   const [hasAbstractFilter, setHasAbstractFilter] = createSignal<
     boolean | undefined
   >(undefined);
   const [pathDisplay, setPathDisplay] = createSignal(0); // 0: Absolute, 1: Relative, 2: Title
-  const [searchTerm, setSearchTerm] = createSignal("");
+  const [searchTerm, setSearchTerm] = createSignal(searchParams.q || "");
 
   const pathDisplayOptions = [
     { id: 0, label: "Absolute" },
@@ -56,7 +58,22 @@ export const SidebarSearchContent = () => {
   const [searchQuery, setSearchQuery] = createSignal("");
   const [searchResults, setSearchResults] = createSignal<Note[]>([]);
 
-  // Debounced search effect
+  // Update URL params (debounced) - separate from search execution
+  createEffect(() => {
+    const term = searchTerm();
+    
+    const timeoutId = setTimeout(() => {
+      if (term && term.length >= 2) {
+        setSearchParams({ q: term }, { replace: true });
+      } else if (searchParams.q) {
+        setSearchParams({ q: undefined }, { replace: true });
+      }
+    }, 500); // Longer delay for URL updates
+
+    onCleanup(() => clearTimeout(timeoutId));
+  });
+
+  // Debounced search execution
   createEffect(() => {
     const term = searchTerm();
     
@@ -86,6 +103,14 @@ export const SidebarSearchContent = () => {
     } catch (error) {
       console.error("Search error:", error);
       setSearchResults([]);
+    }
+  });
+
+  // Handle URL search param changes (when user navigates with URL)
+  createEffect(() => {
+    const urlQuery = searchParams.q;
+    if (urlQuery && urlQuery !== searchTerm()) {
+      setSearchTerm(urlQuery);
     }
   });
 
