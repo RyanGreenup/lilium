@@ -46,6 +46,7 @@ function useNavigationKeybindings(
   handleCutNote: () => void,
   handleClearCut: () => void,
   handlePasteNote: () => void,
+  handleDeleteNote: () => void,
 ) {
   // Navigation keybindings
   useKeybinding(
@@ -161,6 +162,16 @@ function useNavigationKeybindings(
     () => {
       console.log("Pasting note...");
       handlePasteNote();
+    },
+    { ref: tabRef },
+  );
+
+  // Delete keybinding
+  useKeybinding(
+    { key: "Delete" },
+    () => {
+      console.log("Deleting note...");
+      handleDeleteNote();
     },
     { ref: tabRef },
   );
@@ -304,6 +315,13 @@ const moveNote = query(async (noteId: string, newParentId?: string) => {
   const { moveNote } = await import("~/lib/db");
   return await moveNote(noteId, newParentId);
 }, "move-note");
+
+// Query function to delete a note
+const deleteNote = query(async (noteId: string) => {
+  "use server";
+  const { deleteNote } = await import("~/lib/db");
+  return await deleteNote(noteId);
+}, "delete-note");
 
 /**
  * Generates a unique identifier for sidebar content based on what's actually displayed.
@@ -551,6 +569,70 @@ export default function NotesTab() {
     }
   };
 
+  // Handle deleting a note
+  const handleDeleteNote = async () => {
+    const focused = focusedItem();
+    if (!focused) {
+      console.log("No note to delete");
+      return;
+    }
+
+    // Check if note has children (is a folder)
+    const isFolder = focused.is_folder;
+    const confirmMessage = isFolder 
+      ? `Are you sure you want to delete the folder "${focused.title}" and all its contents? This cannot be undone.`
+      : `Are you sure you want to delete the note "${focused.title}"? This cannot be undone.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      console.log(`Deleting note: ${focused.title} (${focused.id})`);
+      
+      // Store current focus index for repositioning after deletion
+      const currentIndex = focusedItemIndex();
+      const items = displayItems();
+      
+      await deleteNote(focused.id);
+
+      // Invalidate relevant caches to show the updated list
+      revalidate([
+        deleteNote.key,
+        "children-with-folder-status",
+        "note-by-id",
+      ]);
+
+      // Clear cut state if the deleted note was cut
+      if (cutNoteId() === focused.id) {
+        setCutNoteId(null);
+      }
+
+      // Focus management after deletion
+      setTimeout(() => {
+        const newItems = displayItems();
+        if (newItems.length > 0) {
+          // If we deleted the last item, focus the new last item
+          if (currentIndex >= newItems.length) {
+            setFocusedItemIndex(newItems.length - 1);
+          }
+          // Otherwise, focus the item now at the same index (next item moved up)
+          else {
+            setFocusedItemIndex(currentIndex);
+          }
+        } else {
+          // No items left, reset focus
+          setFocusedItemIndex(-1);
+        }
+      }, 100); // Small delay to ensure revalidation completes
+
+      console.log("Note deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete note:", error);
+      alert(`Failed to delete note: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   // Use navigation keybindings hook
   onMount(() => {
     useNavigationKeybindings(
@@ -568,6 +650,7 @@ export default function NotesTab() {
       handleCutNote,
       handleClearCut,
       handlePasteNote,
+      handleDeleteNote,
     );
   });
 

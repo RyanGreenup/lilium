@@ -27,7 +27,7 @@ db.exec(`
     user_id TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (parent_id) REFERENCES notes(id) ON DELETE SET NULL
+    FOREIGN KEY (parent_id) REFERENCES notes(id) ON DELETE CASCADE
   )
 `);
 
