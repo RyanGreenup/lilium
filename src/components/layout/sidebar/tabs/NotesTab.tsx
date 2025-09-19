@@ -58,7 +58,7 @@ export default function NotesTab() {
                   </MenuItem>
                 }
               >
-                / (root)
+                / {/* (root)*/}
               </MenuItem>
             </ul>
           </details>
