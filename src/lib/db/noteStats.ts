@@ -4,6 +4,7 @@
 
 "use server";
 
+import { query } from "@solidjs/router";
 import { redirect } from "@solidjs/router";
 import { requireUser } from "../auth";
 import { db } from "./index";
@@ -58,4 +59,12 @@ export async function getNotesStats() {
     syntax_breakdown: syntaxStats,
   };
 }
+
+/**
+ * Query function to get note statistics (for client-side use)
+ */
+export const getNotesStatsQuery = query(async () => {
+  "use server";
+  return await getNotesStats();
+}, "notes-stats");
 

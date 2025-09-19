@@ -7,13 +7,7 @@ import Folder from "lucide-solid/icons/folder";
 import { For, Suspense, Show } from "solid-js";
 import { getUser } from "~/lib/auth";
 import { getNoteChildCountsQuery } from "~/lib/db/notes/read";
-
-// Server functions
-const getStats = async () => {
-  "use server";
-  const { getNotesStats } = await import("~/lib/db/noteStats");
-  return await getNotesStats();
-};
+import { getNotesStatsQuery } from "~/lib/db/noteStats";
 
 const getRecentNotesData = async () => {
   "use server";
@@ -31,13 +25,12 @@ import {
   Stats,
 } from "~/solid-daisy-components/components/Stat";
 
-const getStatsQuery = query(getStats, "stats");
 const getRecentNotesQuery = query(getRecentNotesData, "recent-notes");
 
 export const route = {
   preload() {
     getUser();
-    getStatsQuery();
+    getNotesStatsQuery();
     getRecentNotesQuery();
     getNoteChildCountsQuery();
   },
@@ -45,7 +38,7 @@ export const route = {
 
 
 export default function Home() {
-  const stats = createAsync(() => getStatsQuery());
+  const stats = createAsync(() => getNotesStatsQuery());
   const recentNotes = createAsync(() => getRecentNotesQuery());
   const childCounts = createAsync(() => getNoteChildCountsQuery());
 
