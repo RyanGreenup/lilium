@@ -21,40 +21,28 @@ export const SidebarTabs = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tabs = [
-    { id: 0, label: "Notes", icon: <Notebook class="w-4 h-4" /> },
-    { id: 1, label: "Search", icon: <Search class="w-4 h-4" /> },
-    { id: 2, label: "Backlinks", icon: <ArrowLeft class="w-4 h-4" /> },
-    { id: 3, label: "Forward", icon: <ArrowRight class="w-4 h-4" /> },
-    { id: 4, label: "Related", icon: <Sparkles class="w-4 h-4" /> },
-    { id: 5, label: "Discussion", icon: <MessageSquare class="w-4 h-4" /> },
+    { id: 0, label: "Notes", key: "notes", icon: <Notebook class="w-4 h-4" /> },
+    { id: 1, label: "Search", key: "search", icon: <Search class="w-4 h-4" /> },
+    { id: 2, label: "Backlinks", key: "backlinks", icon: <ArrowLeft class="w-4 h-4" /> },
+    { id: 3, label: "Forward", key: "forward", icon: <ArrowRight class="w-4 h-4" /> },
+    { id: 4, label: "Related", key: "related", icon: <Sparkles class="w-4 h-4" /> },
+    { id: 5, label: "Discussion", key: "discussion", icon: <MessageSquare class="w-4 h-4" /> },
   ];
 
   onMount(() => {
     if (searchParams.sidebar) {
-      switch (searchParams.sidebar) {
-        case "notes":
-          setActiveTab(0);
-          break;
-        case "search":
-          setActiveTab(1);
-          break;
-        case "backlinks":
-          setActiveTab(2);
-          break;
-        case "forward":
-          setActiveTab(3);
-          break;
-        case "related":
-          setActiveTab(4);
-          break;
-        case "discussion":
-          setActiveTab(5);
-          break;
-        default:
-          setActiveTab(0);
-      }
+      const tab = tabs.find(t => t.key === searchParams.sidebar);
+      setActiveTab(tab?.id ?? 0);
     }
   });
+
+  const handleTabChange = (tabId: number) => {
+    setActiveTab(tabId);
+    const tab = tabs.find(t => t.id === tabId);
+    if (tab) {
+      setSearchParams({ sidebar: tab.key });
+    }
+  };
 
   return (
     <>
@@ -63,7 +51,7 @@ export const SidebarTabs = () => {
           {(tab) => (
             <Tabs.Tab
               active={activeTab() === tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
             >
               {tab.icon}
             </Tabs.Tab>

@@ -1,4 +1,5 @@
-import { createSignal, For, JSXElement } from "solid-js";
+import { createSignal, For, JSXElement, onMount, createEffect } from "solid-js";
+import { useSearchParams } from "@solidjs/router";
 import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
 import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
 import { Radio } from "~/solid-daisy-components/components/Radio";
@@ -6,6 +7,7 @@ import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { ContentList, ContentItemData } from "../shared/ContentItem";
 
 export const SidebarSearchContent = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchAllNotes, setSearchAllNotes] = createSignal(true);
   const [useSemanticSearch, setUseSemanticSearch] = createSignal(false);
   const [pathDisplay, setPathDisplay] = createSignal(0); // 0: Absolute, 1: Relative, 2: Title
@@ -41,6 +43,28 @@ export const SidebarSearchContent = () => {
     },
   ];
 
+  // Initialize search term from URL parameters
+  onMount(() => {
+    if (searchParams.q) {
+      setSearchTerm(searchParams.q);
+    }
+  });
+
+  // Update URL when search term changes
+  createEffect(() => {
+    const term = searchTerm();
+    if (term && term.length > 0) {
+      setSearchParams({ q: term });
+    } else {
+      setSearchParams({ q: undefined });
+    }
+  });
+
+  const handleSearchInput = (e: Event) => {
+    const target = e.currentTarget as HTMLInputElement;
+    setSearchTerm(target.value);
+  };
+
   return (
     <div class="space-y-4">
       <div class="p-4 space-y-4">
@@ -49,7 +73,7 @@ export const SidebarSearchContent = () => {
           placeholder="Search..."
           class="input input-bordered w-full"
           value={searchTerm()}
-          onInput={(e) => setSearchTerm(e.currentTarget.value)}
+          onInput={handleSearchInput}
         />
 
         <Collapsible class="p-0" title="Settings">
