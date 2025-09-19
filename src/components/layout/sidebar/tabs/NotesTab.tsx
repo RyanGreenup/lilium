@@ -26,6 +26,13 @@ import { useNoteSiblings } from "~/lib/hooks/useNoteSiblings";
 import { Badge } from "~/solid-daisy-components/components/Badge";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 
+// Server function to create a new note
+const createNewNote = async (title: string, content: string, parentId?: string) => {
+  "use server";
+  const { createNote } = await import("~/lib/db");
+  return await createNote(title, content, "markdown", undefined, parentId);
+};
+
 /**
  * Generates a unique identifier for sidebar content based on what's actually displayed.
  * This ensures animations only trigger when the displayed items actually change.
@@ -137,7 +144,7 @@ export default function NotesTab() {
   createEffect(() => {
     const items = displayItems();
     const currentFocus = focusedItemIndex();
-    
+
     // If no item is focused and we have items, focus the first one
     if (currentFocus === -1 && items.length > 0) {
       setFocusedItemIndex(0);
@@ -157,6 +164,30 @@ export default function NotesTab() {
 
   // Auto-focus the tab when it mounts
   useAutoFocus(() => tabRef);
+
+  // Handle creating a new note
+  const handleCreateNote = async () => {
+    try {
+      const currentNote = note();
+      let parentId: string | undefined;
+      
+      if (isCurrentNoteFolder()) {
+        // If current note is a folder, create note inside it
+        parentId = currentNote?.id;
+      } else {
+        // If current note is a regular note, create sibling (same parent)
+        parentId = currentNote?.parent_id;
+      }
+
+      const newNote = await createNewNote("New Note", "", parentId);
+      
+      // Navigate to the newly created note
+      navigateToNote(newNote.id);
+    } catch (error) {
+      console.error("Failed to create note:", error);
+      alert("Failed to create note. Please try again.");
+    }
+  };
 
   // Navigation keybindings
   useKeybinding(
@@ -217,11 +248,12 @@ export default function NotesTab() {
     { ref: () => tabRef }
   );
 
+  // Create new note keybinding
   useKeybinding(
     { key: "n" },
     () => {
-      console.log("N triggered!");
-      alert("N keybinding triggered! (placeholder)");
+      console.log("Creating new note...");
+      handleCreateNote();
     },
     { ref: () => tabRef },
   );
@@ -314,7 +346,7 @@ const UpDirectoryButton = (props: { onClick: () => void }) => (
   </li>
 );
 
-const SlideTransition = (props: {
+export const SlideTransition = (props: {
   children: JSX.Element;
   isGoingDeeper: Accessor<boolean>;
   show: Accessor<boolean>;
