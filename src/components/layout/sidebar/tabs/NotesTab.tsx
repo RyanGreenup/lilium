@@ -44,12 +44,15 @@ export default function NotesTab() {
 
   // Show up button only when there's actually a parent to navigate to
   const showUpButton = createMemo(() => {
-    const currentNote = note();
-    if (!currentNote) return false;
-
+    /*
+    // const currentNote = note();
+    // if (!currentNote) return false;
     // Always show if current note has a parent - we can navigate up to it
-    return currentNote.parent_id !== undefined;
+    // return currentNote.parent_id !== undefined;
+    */
     // NOTE we should probably check for the grandparent of a note and the parent of a folder
+    // We'll just return true now so it doesn't keep disappearing, it's a bit tricky
+    return true;
   });
 
   return (
