@@ -19,6 +19,8 @@ Use a function to render markdown in between JSX. Much Simpler
 This will be shown during search
 ** TODO Will Folders be Subpages or Folders?
 - [ ] How to handle an index page?
+  - Having title as index could have dupes
+  - Just extract the folder content as the index page
 ** TODO Homepage will be an index page in the database written in JSX
 That way I can do as I like but just edit the thing to do it all at runtime.
 ** TODO transclusion

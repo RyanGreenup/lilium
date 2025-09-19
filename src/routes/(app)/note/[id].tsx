@@ -3,6 +3,7 @@ import { createSignal, createEffect, Show } from "solid-js";
 import { Save, Eye, Edit3, FileText, Settings } from "lucide-solid";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
+import { Select } from "~/solid-daisy-components/components/Select";
 
 interface Note {
   id: string;
@@ -96,64 +97,67 @@ def engineer_features(df):
   return (
     <div class="h-full flex flex-col">
       {/* Header */}
-      <div class="p-4 border-b border-base-300 bg-base-200">
-        {/* Title Row */}
-        <div class="flex items-center gap-3 mb-3 sm:mb-0">
-          <FileText class="w-5 h-5 text-base-content/70 flex-shrink-0" />
-          <input
-            type="text"
-            value={note().title}
-            onInput={(e) => updateNote("title", e.currentTarget.value)}
-            class="input input-ghost text-lg font-semibold flex-1 p-0 h-auto border-none focus:outline-none min-w-0"
-            placeholder="Note title..."
-          />
+      <div class="border-b border-base-300 bg-base-200">
+        {/* Title Section */}
+        <div class="px-4 pt-4 pb-3">
+          <div class="flex items-center gap-3">
+            <FileText class="w-5 h-5 text-base-content/70 flex-shrink-0" />
+            <input
+              type="text"
+              value={note().title}
+              onInput={(e) => updateNote("title", e.currentTarget.value)}
+              class="input input-ghost text-lg font-semibold flex-1 p-0 h-auto border-none focus:outline-none min-w-0 bg-transparent"
+              placeholder="Note title..."
+            />
+          </div>
         </div>
         
-        {/* Controls Row - Responsive */}
-        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-2 sm:justify-end">
-          {/* Mobile: Full width controls, Desktop: Right aligned */}
-          <div class="flex items-center gap-2 w-full sm:w-auto">
-            {/* Syntax Selector */}
-            <select
+        {/* Controls Bar */}
+        <div class="px-4 pb-3 flex items-center justify-between">
+          {/* Left: Subtle syntax selector */}
+          <div class="flex items-center">
+            <Select
               value={note().syntax}
               onChange={(e) => updateNote("syntax", e.currentTarget.value)}
-              class="select select-sm select-bordered flex-1 sm:flex-initial"
+              size="xs"
+              class="text-xs text-base-content/50 border-none hover:bg-base-300/50 focus:bg-base-300/50 w-auto min-w-0 h-6"
             >
               {syntaxOptions.map(option => (
                 <option value={option.value}>{option.label}</option>
               ))}
-            </select>
+            </Select>
+          </div>
 
+          {/* Right: Primary actions */}
+          <div class="flex items-center gap-2">
             {/* Edit Toggle */}
-            <div class="form-control">
-              <label class="label cursor-pointer gap-2 py-1">
-                <Edit3 class="w-4 h-4" />
-                <Toggle
-                  size="sm"
-                  checked={isEditing()}
-                  onChange={(e) => setIsEditing(e.currentTarget.checked)}
-                />
-              </label>
+            <div class="flex items-center gap-1 px-2 py-1 rounded hover:bg-base-300/50 transition-colors">
+              <Edit3 class="w-3.5 h-3.5 text-base-content/60" />
+              <Toggle
+                size="sm"
+                checked={isEditing()}
+                onChange={(e) => setIsEditing(e.currentTarget.checked)}
+              />
             </div>
 
             {/* Save Button */}
             <button
               onClick={saveNote}
-              class={`btn btn-sm ${unsavedChanges() ? 'btn-primary' : 'btn-ghost'} whitespace-nowrap`}
+              class={`btn btn-sm ${unsavedChanges() ? 'btn-primary' : 'btn-ghost'} gap-1 h-8 min-h-8`}
               disabled={!unsavedChanges()}
             >
-              <Save class="w-4 h-4" />
-              <span class="hidden sm:inline ml-1">{unsavedChanges() ? 'Save' : 'Saved'}</span>
+              <Save class="w-3.5 h-3.5" />
+              <span class="text-xs">{unsavedChanges() ? 'Save' : 'Saved'}</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Metadata */}
-      <div class="px-4 py-2 bg-base-100 border-b border-base-300 text-sm text-base-content/60">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
-          <span class="font-mono text-xs sm:text-sm truncate">{note().path}</span>
-          <span class="text-xs sm:text-sm whitespace-nowrap">Last modified: {formatDate(note().lastModified)}</span>
+      <div class="px-4 py-2 bg-base-100 border-b border-base-300">
+        <div class="flex items-center justify-between text-xs text-base-content/60">
+          <span class="font-mono truncate mr-4">{note().path}</span>
+          <span class="whitespace-nowrap text-xs">Modified {formatDate(note().lastModified)}</span>
         </div>
       </div>
 
@@ -183,20 +187,22 @@ def engineer_features(df):
 
       {/* Status Bar */}
       <div class="px-4 py-2 bg-base-200 border-t border-base-300 text-xs text-base-content/60">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span>Lines: {note().content.split('\n').length}</span>
-            <span>Characters: {note().content.length}</span>
-            <span>Words: {note().content.split(/\s+/).filter(w => w.length > 0).length}</span>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <span>{note().content.split('\n').length}L</span>
+            <span>{note().content.length}C</span>
+            <span>{note().content.split(/\s+/).filter(w => w.length > 0).length}W</span>
           </div>
-          <div class="flex items-center gap-3 text-xs">
-            <span>Syntax: {syntaxOptions.find(opt => opt.value === note().syntax)?.label}</span>
+          <div class="flex items-center gap-3">
             {unsavedChanges() && (
               <span class="text-warning flex items-center gap-1">
-                <span class="w-2 h-2 bg-warning rounded-full"></span>
-                Unsaved changes
+                <span class="w-1.5 h-1.5 bg-warning rounded-full"></span>
+                <span class="hidden sm:inline">Unsaved</span>
               </span>
             )}
+            <span class="text-base-content/40">
+              {syntaxOptions.find(opt => opt.value === note().syntax)?.label}
+            </span>
           </div>
         </div>
       </div>
