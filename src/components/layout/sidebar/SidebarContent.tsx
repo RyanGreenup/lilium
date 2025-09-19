@@ -2,6 +2,7 @@ import { useSearchParams } from "@solidjs/router";
 import {
   ArrowLeft,
   ArrowRight,
+  Clock,
   MessageSquare,
   Notebook,
   Search,
@@ -13,6 +14,7 @@ import BacklinksTab from "./tabs/BacklinksTab";
 import DiscussionTab from "./tabs/DiscussionTab";
 import ForwardLinks from "./tabs/ForwardLinksTab";
 import NotesTab from "./tabs/NotesTab";
+import RecentNotesTab from "./tabs/RecentNotesTab";
 import RelatedTab from "./tabs/RelatedTab";
 import { SidebarSearchContent } from "./tabs/SearchTab";
 
@@ -22,11 +24,12 @@ export const SidebarTabs = () => {
 
   const tabs = [
     { id: 0, label: "Notes", key: "notes", icon: <Notebook class="w-4 h-4" /> },
-    { id: 1, label: "Search", key: "search", icon: <Search class="w-4 h-4" /> },
-    { id: 2, label: "Backlinks", key: "backlinks", icon: <ArrowLeft class="w-4 h-4" /> },
-    { id: 3, label: "Forward", key: "forward", icon: <ArrowRight class="w-4 h-4" /> },
-    { id: 4, label: "Related", key: "related", icon: <Sparkles class="w-4 h-4" /> },
-    { id: 5, label: "Discussion", key: "discussion", icon: <MessageSquare class="w-4 h-4" /> },
+    { id: 1, label: "Recent", key: "recent", icon: <Clock class="w-4 h-4" /> },
+    { id: 2, label: "Search", key: "search", icon: <Search class="w-4 h-4" /> },
+    { id: 3, label: "Backlinks", key: "backlinks", icon: <ArrowLeft class="w-4 h-4" /> },
+    { id: 4, label: "Forward", key: "forward", icon: <ArrowRight class="w-4 h-4" /> },
+    { id: 5, label: "Related", key: "related", icon: <Sparkles class="w-4 h-4" /> },
+    { id: 6, label: "Discussion", key: "discussion", icon: <MessageSquare class="w-4 h-4" /> },
   ];
 
   onMount(() => {
@@ -65,22 +68,26 @@ export const SidebarTabs = () => {
         </Show>
 
         <Show when={activeTab() === 1}>
-          <SidebarSearchContent />
+          <RecentNotesTab />
         </Show>
 
         <Show when={activeTab() === 2}>
-          <BacklinksTab />
+          <SidebarSearchContent />
         </Show>
 
         <Show when={activeTab() === 3}>
-          <ForwardLinks />
+          <BacklinksTab />
         </Show>
 
         <Show when={activeTab() === 4}>
-          <RelatedTab />
+          <ForwardLinks />
         </Show>
 
         <Show when={activeTab() === 5}>
+          <RelatedTab />
+        </Show>
+
+        <Show when={activeTab() === 6}>
           <DiscussionTab />
         </Show>
       </div>

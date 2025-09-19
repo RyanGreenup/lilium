@@ -1,5 +1,9 @@
 import { A, RouteDefinition } from "@solidjs/router";
-import { Clock, FileText, Folder, Plus, Search } from "lucide-solid";
+import Clock from "lucide-solid/icons/clock";
+
+import FileText from "lucide-solid/icons/file-text";
+import Folder from "lucide-solid/icons/folder";
+
 import { For, createSignal } from "solid-js";
 import { getUser } from "~/lib/auth";
 import { Badge } from "~/solid-daisy-components/components/Badge";
@@ -80,30 +84,6 @@ export default function Home() {
       syntax: "org",
     },
   ]);
-
-  const quickActions = [
-    {
-      title: "New Note",
-      description: "Create a new note",
-      icon: <Plus class="w-5 h-5" />,
-      href: "/note/new",
-      color: "btn-primary",
-    },
-    {
-      title: "Search Notes",
-      description: "Find existing notes",
-      icon: <Search class="w-5 h-5" />,
-      href: "/?sidebar=search",
-      color: "btn-secondary",
-    },
-    {
-      title: "Browse Folders",
-      description: "Explore note structure",
-      icon: <Folder class="w-5 h-5" />,
-      href: "/?sidebar=notes",
-      color: "btn-accent",
-    },
-  ];
 
   const formatDate = (isoString: string) => {
     return new Date(isoString).toLocaleDateString();
