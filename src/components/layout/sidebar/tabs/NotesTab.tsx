@@ -123,9 +123,29 @@ export default function NotesTab() {
       setTimeout(() => {
         setPrevContentId(currentId);
         setShowContent(true);
-        // Reset focus when content changes
-        setFocusedItemIndex(-1);
+        // Focus first item when content changes
+        const items = displayItems();
+        if (items.length > 0) {
+          setFocusedItemIndex(0);
+        } else {
+          setFocusedItemIndex(-1);
+        }
       }, 0);
+    }
+  });
+
+  // Auto-focus first item when display items change (but content ID stays same)
+  createEffect(() => {
+    const items = displayItems();
+    const currentFocus = focusedItemIndex();
+    
+    // If no item is focused and we have items, focus the first one
+    if (currentFocus === -1 && items.length > 0) {
+      setFocusedItemIndex(0);
+    }
+    // If focused index is beyond available items, reset to first or -1
+    else if (currentFocus >= items.length) {
+      setFocusedItemIndex(items.length > 0 ? 0 : -1);
     }
   });
 
