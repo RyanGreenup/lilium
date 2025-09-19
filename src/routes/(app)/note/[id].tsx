@@ -1,5 +1,5 @@
 import { useParams } from "@solidjs/router";
-import { createSignal, createEffect, Show } from "solid-js";
+import { createSignal, createEffect, Show, Suspense } from "solid-js";
 import { Save, Eye, FileText, ChevronUp, NotebookPen } from "lucide-solid";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
@@ -7,6 +7,7 @@ import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
 import { Select } from "~/solid-daisy-components/components/Select";
 import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
 import { Textarea } from "~/solid-daisy-components/components/Textarea";
+import NoteBreadcrumbs from "~/components/NoteBreadcrumbs";
 
 interface Note {
   id: string;
@@ -105,6 +106,13 @@ def engineer_features(df):
     <div class="h-full flex flex-col">
       {/* Header */}
       <div class="border-b border-base-300 bg-base-200">
+        {/* Breadcrumbs */}
+        <div class="px-4 pt-3 pb-2 border-b border-base-300/50">
+          <Suspense fallback={<div class="text-sm text-base-content/60">Loading...</div>}>
+            <NoteBreadcrumbs />
+          </Suspense>
+        </div>
+        
         {/* Title Section */}
         <div class="px-4 pt-4 pb-3">
           <div class="flex items-start gap-3">

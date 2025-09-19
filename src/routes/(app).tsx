@@ -4,12 +4,11 @@ import Menu from "lucide-solid/icons/menu";
 import Settings from "lucide-solid/icons/settings";
 
 import ToggleLeft from "lucide-solid/icons/toggle-left";
-import { JSXElement, VoidComponent, Suspense } from "solid-js";
+import { JSXElement } from "solid-js";
 import { SidebarTabs } from "~/components/layout/sidebar/SidebarContent";
-import { UserDropdown } from "~/components/UserDrowDown";
 import { Logo } from "~/components/Logo";
+import { UserDropdown } from "~/components/UserDrowDown";
 import { getUser } from "~/lib/auth";
-import NoteBreadcrumbs from "~/components/NoteBreadcrumbs";
 import {
   BottomDock,
   CheckboxId,
@@ -22,7 +21,7 @@ import {
   SidebarContent,
   ToggleButton,
 } from "~/solid-daisy-components/components/Layouts/ResponsiveDrawer";
-import { Tabs } from "~/solid-daisy-components/components/Tabs";
+import { Loading } from "~/solid-daisy-components/components/Loading";
 
 // Route Guard
 export const route = {
@@ -56,7 +55,6 @@ export default function MainLayout(props: { children: JSXElement }) {
   );
 }
 
-
 const NavbarContent = () => (
   <>
     <div class="navbar-start">
@@ -71,11 +69,6 @@ const NavbarContent = () => (
       </A>
     </div>
 
-    <div class="navbar-center flex-1 px-4">
-      <Suspense fallback={<div class="text-sm text-base-content/60">Loading...</div>}>
-        <NoteBreadcrumbs />
-      </Suspense>
-    </div>
 
     {/*This would be used if the right drawer was included*/}
     <div class="navbar-end">
@@ -117,4 +110,3 @@ const DockContent = () => (
     </ToggleButton>
   </div>
 );
-
