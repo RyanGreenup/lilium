@@ -14,13 +14,15 @@ import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding"
 import BacklinksTab from "./tabs/BacklinksTab";
 import DiscussionTab from "./tabs/DiscussionTab";
 import ForwardLinks from "./tabs/ForwardLinksTab";
-import NotesTab from "./tabs/NotesTab";
+import NotesTab, { SlideTransition } from "./tabs/NotesTab";
 import RecentNotesTab from "./tabs/RecentNotesTab";
 import RelatedTab from "./tabs/RelatedTab";
 import { SidebarSearchContent } from "./tabs/SearchTab";
 
 export const SidebarTabs = () => {
   const [activeTab, setActiveTab] = createSignal(0);
+  const [isGoingDeeper, setIsGoingDeeper] = createSignal(true);
+  const [showContent, setShowContent] = createSignal(true);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tabs = [
@@ -41,11 +43,18 @@ export const SidebarTabs = () => {
   });
 
   const handleTabChange = (tabId: number) => {
-    setActiveTab(tabId);
-    const tab = tabs.find(t => t.id === tabId);
-    if (tab) {
-      setSearchParams({ sidebar: tab.key });
-    }
+    const currentTab = activeTab();
+    setIsGoingDeeper(tabId > currentTab);
+    
+    setShowContent(false);
+    setTimeout(() => {
+      setActiveTab(tabId);
+      const tab = tabs.find(t => t.id === tabId);
+      if (tab) {
+        setSearchParams({ sidebar: tab.key });
+      }
+      setShowContent(true);
+    }, 0);
   };
 
   // Global keybindings for tab switching (Alt + 1-7)
@@ -72,34 +81,38 @@ export const SidebarTabs = () => {
         </For>
       </Tabs>
 
-      <div class="mt-4">
-        <Show when={activeTab() === 0}>
-          <NotesTab />
-        </Show>
+      <div class="mt-4 relative overflow-hidden">
+        <SlideTransition isGoingDeeper={isGoingDeeper} show={showContent}>
+          <div>
+            <Show when={activeTab() === 0}>
+              <NotesTab />
+            </Show>
 
-        <Show when={activeTab() === 1}>
-          <RecentNotesTab />
-        </Show>
+            <Show when={activeTab() === 1}>
+              <RecentNotesTab />
+            </Show>
 
-        <Show when={activeTab() === 2}>
-          <SidebarSearchContent />
-        </Show>
+            <Show when={activeTab() === 2}>
+              <SidebarSearchContent />
+            </Show>
 
-        <Show when={activeTab() === 3}>
-          <BacklinksTab />
-        </Show>
+            <Show when={activeTab() === 3}>
+              <BacklinksTab />
+            </Show>
 
-        <Show when={activeTab() === 4}>
-          <ForwardLinks />
-        </Show>
+            <Show when={activeTab() === 4}>
+              <ForwardLinks />
+            </Show>
 
-        <Show when={activeTab() === 5}>
-          <RelatedTab />
-        </Show>
+            <Show when={activeTab() === 5}>
+              <RelatedTab />
+            </Show>
 
-        <Show when={activeTab() === 6}>
-          <DiscussionTab />
-        </Show>
+            <Show when={activeTab() === 6}>
+              <DiscussionTab />
+            </Show>
+          </div>
+        </SlideTransition>
       </div>
     </>
   );
