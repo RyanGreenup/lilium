@@ -11,7 +11,7 @@ import { getNoteChildCountsQuery } from "~/lib/db/notes/read";
 // Server functions
 const getStats = async () => {
   "use server";
-  const { getNotesStats } = await import("~/lib/db");
+  const { getNotesStats } = await import("~/lib/db/noteStats");
   return await getNotesStats();
 };
 
