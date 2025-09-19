@@ -120,7 +120,7 @@ function useNavigationKeybindings(
   );
 }
 
-// Hook for note renaming functionality
+// Hook for note renaming and creation functionality
 function useNoteRenaming(
   tabRef: () => HTMLElement | undefined,
   focusedItem: Accessor<NavigationItem | null>,
@@ -132,33 +132,53 @@ function useNoteRenaming(
     id: string;
     newTitle: string;
   } | null>(null);
+  const [newlyCreatedNoteId, setNewlyCreatedNoteId] = createSignal<string | null>(null);
 
-  // Track when a rename completes and refocus the item by looking for the updated title
+  // Track when a rename completes or new note appears and refocus the item
   createEffect(() => {
     const renamed = renamedItemInfo();
+    const newNoteId = newlyCreatedNoteId();
     const items = displayItems();
 
-    if (renamed && items.length > 0) {
-      // Find the item with the renamed ID and check if its title has been updated
-      const renamedItem = items.find((item) => item.id === renamed.id);
+    if (items.length > 0) {
+      // Handle renamed item refocusing
+      if (renamed) {
+        const renamedItem = items.find((item) => item.id === renamed.id);
 
-      if (renamedItem && renamedItem.title === renamed.newTitle) {
-        // The title has been updated, find its new position
-        const newIndex = items.findIndex((item) => item.id === renamed.id);
+        if (renamedItem && renamedItem.title === renamed.newTitle) {
+          const newIndex = items.findIndex((item) => item.id === renamed.id);
 
-        if (newIndex !== -1) {
-          // Set focus to the renamed item's new position
-          setFocusedItemIndex(newIndex);
+          if (newIndex !== -1) {
+            setFocusedItemIndex(newIndex);
 
-          // Restore focus to the tab container
-          const ref = tabRef();
-          if (ref) {
-            ref.focus();
+            const ref = tabRef();
+            if (ref) {
+              ref.focus();
+            }
           }
-        }
 
-        // Clear the renamed item tracking
-        setRenamedItemInfo(null);
+          setRenamedItemInfo(null);
+        }
+      }
+
+      // Handle newly created note refocusing
+      if (newNoteId) {
+        const newNoteItem = items.find((item) => item.id === newNoteId);
+
+        if (newNoteItem) {
+          const newIndex = items.findIndex((item) => item.id === newNoteId);
+
+          if (newIndex !== -1) {
+            setFocusedItemIndex(newIndex);
+
+            const ref = tabRef();
+            if (ref) {
+              ref.focus();
+            }
+          }
+
+          setNewlyCreatedNoteId(null);
+        }
       }
     }
   });
@@ -209,6 +229,7 @@ function useNoteRenaming(
     handleRenameNote,
     startEditingFocusedItem,
     cancelEditing,
+    setNewlyCreatedNoteId,
   };
 }
 
@@ -338,6 +359,7 @@ export default function NotesTab() {
     handleRenameNote,
     startEditingFocusedItem,
     cancelEditing,
+    setNewlyCreatedNoteId,
   } = useNoteRenaming(
     () => tabRef,
     focusedItem,
@@ -370,6 +392,9 @@ export default function NotesTab() {
         "children-with-folder-status",
         "note-by-id",
       ]);
+
+      // Track that this note was just created for refocusing in sidebar
+      setNewlyCreatedNoteId(newNote.id);
 
       // Navigate to the newly created note
       navigateToNote(newNote.id);
@@ -413,7 +438,10 @@ export default function NotesTab() {
             <UpDirectoryButton onClick={handleUpDirectory} />
           </Show>
 
-          <SlideTransition isGoingDeeper={isGoingDeeper} contentId={currentContentId()}>
+          <SlideTransition
+            isGoingDeeper={isGoingDeeper}
+            contentId={currentContentId()}
+          >
             <div>
               <Show
                 when={displayItems().length > 0}
