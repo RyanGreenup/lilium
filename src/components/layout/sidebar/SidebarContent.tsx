@@ -10,6 +10,7 @@ import {
 } from "lucide-solid";
 import { createSignal, For, onMount, Show } from "solid-js";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
+import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import BacklinksTab from "./tabs/BacklinksTab";
 import DiscussionTab from "./tabs/DiscussionTab";
 import ForwardLinks from "./tabs/ForwardLinksTab";
@@ -46,6 +47,15 @@ export const SidebarTabs = () => {
       setSearchParams({ sidebar: tab.key });
     }
   };
+
+  // Global keybindings for tab switching (Alt + 1-7)
+  useKeybinding({ key: "1", alt: true }, () => handleTabChange(0));
+  useKeybinding({ key: "2", alt: true }, () => handleTabChange(1));
+  useKeybinding({ key: "3", alt: true }, () => handleTabChange(2));
+  useKeybinding({ key: "4", alt: true }, () => handleTabChange(3));
+  useKeybinding({ key: "5", alt: true }, () => handleTabChange(4));
+  useKeybinding({ key: "6", alt: true }, () => handleTabChange(5));
+  useKeybinding({ key: "7", alt: true }, () => handleTabChange(6));
 
   return (
     <>

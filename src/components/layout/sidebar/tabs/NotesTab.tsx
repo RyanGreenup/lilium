@@ -1,19 +1,21 @@
 import { AccessorWithLatest } from "@solidjs/router";
+import { Focus } from "lucide-solid";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
 import FolderUp from "lucide-solid/icons/folder-up";
 import {
   Accessor,
-  For,
-  Show,
+  createEffect,
   createMemo,
   createSignal,
-  createEffect,
+  For,
   JSX,
+  Show,
 } from "solid-js";
 import { Transition } from "solid-transition-group";
 import { Note } from "~/lib/db";
+import { useAutoFocus } from "~/lib/hooks/useAutoFocus";
 import { useCurrentNoteChildren } from "~/lib/hooks/useCurrentDirectory";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import {
@@ -21,6 +23,8 @@ import {
   type NavigationItem,
 } from "~/lib/hooks/useNoteNavigation";
 import { useNoteSiblings } from "~/lib/hooks/useNoteSiblings";
+import { Badge } from "~/solid-daisy-components/components/Badge";
+import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 
 /**
  * Generates a unique identifier for sidebar content based on what's actually displayed.
@@ -40,13 +44,14 @@ function getSidebarContentId(
   }
 }
 
-// TODO add breadcrumbs to Navbar
-
 export default function NotesTab() {
   const { note, noteId } = useCurrentNote();
   const { children } = useCurrentNoteChildren();
   const { handleItemClick, navigateToNote, navigateToRoot } =
     useNoteNavigation();
+
+  // Create a ref for the tab container to make it focusable
+  let tabRef: HTMLDivElement | undefined;
 
   // Track navigation direction for slide animation
   const [isGoingDeeper, setIsGoingDeeper] = createSignal(true);
@@ -119,9 +124,31 @@ export default function NotesTab() {
     }
   });
 
+  // Auto-focus the tab when it mounts
+  useAutoFocus(() => tabRef);
+
+  useKeybinding(
+    { key: "n" },
+    () => {
+      console.log("N triggered!");
+      alert("N keybinding triggered! (placeholder)");
+    },
+    { ref: () => tabRef },
+  );
+
   return (
-    <div class="space-y-4">
+    <div
+      ref={tabRef}
+      tabIndex={0}
+      class="space-y-4 outline-none focus:outline-none group"
+    >
       <div>
+        {/*TODO Down the line we'll have to use context provider for keybindings to focus elements*/}
+        <div class="hidden group-focus:block">
+          <Badge color="primary" class="w-full" size="xs" variant="soft">
+            <Focus size={12} class="mr-1" />
+          </Badge>
+        </div>
         <ul class="menu bg-base-200 rounded-box w-full relative overflow-hidden">
           <Show when={showUpButton()}>
             <UpDirectoryButton onClick={handleUpDirectory} />
