@@ -1,4 +1,5 @@
 import { children, JSXElement, splitProps } from "solid-js";
+import { Button } from "~/solid-daisy-components/components/Button";
 
 interface MenuItemProps {
   icon?: string;
@@ -55,9 +56,16 @@ export default function NotesTab() {
 
       {/* Current Directory */}
       <div>
-        <h3 class="text-sm font-medium text-base-content/70 mb-2">
-          Current Directory
-        </h3>
+        <Button
+          variant="ghost"
+          onclick={() => {
+            alert("I'll Redirect to the index page note in the future");
+          }}
+        >
+          <h3 class="text-sm font-medium text-base-content/70 mb-2">
+            Current Directory
+          </h3>
+        </Button>
         <ul class="menu bg-base-200 rounded-box w-full">
           <MenuItem icon="📁">tools</MenuItem>
           <MenuItem icon="📄">Custom CSS for Heirarçhy in...</MenuItem>
