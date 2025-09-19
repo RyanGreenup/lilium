@@ -97,59 +97,64 @@ def engineer_features(df):
   return (
     <div class="h-full flex flex-col">
       {/* Header */}
-      <div class="flex items-center justify-between p-4 border-b border-base-300 bg-base-200">
-        <div class="flex items-center gap-4 flex-1">
-          <FileText class="w-5 h-5 text-base-content/70" />
+      <div class="p-4 border-b border-base-300 bg-base-200">
+        {/* Title Row */}
+        <div class="flex items-center gap-3 mb-3 sm:mb-0">
+          <FileText class="w-5 h-5 text-base-content/70 flex-shrink-0" />
           <input
             type="text"
             value={note().title}
             onInput={(e) => updateNote("title", e.currentTarget.value)}
-            class="input input-ghost text-lg font-semibold flex-1 p-0 h-auto border-none focus:outline-none"
+            class="input input-ghost text-lg font-semibold flex-1 p-0 h-auto border-none focus:outline-none min-w-0"
             placeholder="Note title..."
           />
         </div>
         
-        <div class="flex items-center gap-2">
-          {/* Syntax Selector */}
-          <select
-            value={note().syntax}
-            onChange={(e) => updateNote("syntax", e.currentTarget.value)}
-            class="select select-sm select-bordered"
-          >
-            {syntaxOptions.map(option => (
-              <option value={option.value}>{option.label}</option>
-            ))}
-          </select>
+        {/* Controls Row - Responsive */}
+        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-2 sm:justify-end">
+          {/* Mobile: Full width controls, Desktop: Right aligned */}
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            {/* Syntax Selector */}
+            <select
+              value={note().syntax}
+              onChange={(e) => updateNote("syntax", e.currentTarget.value)}
+              class="select select-sm select-bordered flex-1 sm:flex-initial"
+            >
+              {syntaxOptions.map(option => (
+                <option value={option.value}>{option.label}</option>
+              ))}
+            </select>
 
-          {/* Preview Toggle */}
-          <div class="form-control">
-            <label class="label cursor-pointer gap-2">
-              <Eye class="w-4 h-4" />
-              <Toggle
-                size="sm"
-                checked={previewMode()}
-                onChange={(e) => setPreviewMode(e.currentTarget.checked)}
-              />
-            </label>
+            {/* Preview Toggle */}
+            <div class="form-control">
+              <label class="label cursor-pointer gap-2 py-1">
+                <Eye class="w-4 h-4" />
+                <Toggle
+                  size="sm"
+                  checked={previewMode()}
+                  onChange={(e) => setPreviewMode(e.currentTarget.checked)}
+                />
+              </label>
+            </div>
+
+            {/* Save Button */}
+            <button
+              onClick={saveNote}
+              class={`btn btn-sm ${unsavedChanges() ? 'btn-primary' : 'btn-ghost'} whitespace-nowrap`}
+              disabled={!unsavedChanges()}
+            >
+              <Save class="w-4 h-4" />
+              <span class="hidden sm:inline ml-1">{unsavedChanges() ? 'Save' : 'Saved'}</span>
+            </button>
           </div>
-
-          {/* Save Button */}
-          <button
-            onClick={saveNote}
-            class={`btn btn-sm ${unsavedChanges() ? 'btn-primary' : 'btn-ghost'}`}
-            disabled={!unsavedChanges()}
-          >
-            <Save class="w-4 h-4" />
-            {unsavedChanges() ? 'Save' : 'Saved'}
-          </button>
         </div>
       </div>
 
       {/* Metadata */}
       <div class="px-4 py-2 bg-base-100 border-b border-base-300 text-sm text-base-content/60">
-        <div class="flex items-center justify-between">
-          <span class="font-mono">{note().path}</span>
-          <span>Last modified: {formatDate(note().lastModified)}</span>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
+          <span class="font-mono text-xs sm:text-sm truncate">{note().path}</span>
+          <span class="text-xs sm:text-sm whitespace-nowrap">Last modified: {formatDate(note().lastModified)}</span>
         </div>
       </div>
 
@@ -179,16 +184,19 @@ def engineer_features(df):
 
       {/* Status Bar */}
       <div class="px-4 py-2 bg-base-200 border-t border-base-300 text-xs text-base-content/60">
-        <div class="flex items-center justify-between">
-          <span>
-            Lines: {note().content.split('\n').length} | 
-            Characters: {note().content.length} | 
-            Words: {note().content.split(/\s+/).filter(w => w.length > 0).length}
-          </span>
-          <div class="flex items-center gap-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>Lines: {note().content.split('\n').length}</span>
+            <span>Characters: {note().content.length}</span>
+            <span>Words: {note().content.split(/\s+/).filter(w => w.length > 0).length}</span>
+          </div>
+          <div class="flex items-center gap-3 text-xs">
             <span>Syntax: {syntaxOptions.find(opt => opt.value === note().syntax)?.label}</span>
             {unsavedChanges() && (
-              <span class="text-warning">● Unsaved changes</span>
+              <span class="text-warning flex items-center gap-1">
+                <span class="w-2 h-2 bg-warning rounded-full"></span>
+                Unsaved changes
+              </span>
             )}
           </div>
         </div>
