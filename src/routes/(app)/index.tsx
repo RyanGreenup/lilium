@@ -99,7 +99,8 @@ export default function Home() {
   return (
     <div class="space-y-8 overflow-x-auto">
       {/* Statistics Cards */}
-      <Stats class="shadow">
+      <div class="flex justify-center">
+        <Stats class="shadow">
         <Stat place="center">
           <StatFigure class="text-primary">
             <FileText class="w-8 h-8" />
@@ -123,7 +124,8 @@ export default function Home() {
           <StatValue>{stats().folders}</StatValue>
           <StatDesc>Folders</StatDesc>
         </Stat>
-      </Stats>
+        </Stats>
+      </div>
 
       {/* Recent Notes */}
       <div>
