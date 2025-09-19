@@ -20,34 +20,6 @@ const db = new Database("./.data/notes.sqlite");
 // Note Management /////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-/**
- * Create a new note
- */
-export async function createNote(
-  title: string,
-  content: string,
-  syntax: string = "markdown",
-  abstract?: string,
-  parent_id?: string,
-): Promise<Note> {
-  const user = await requireUser();
-  if (!user.id) {
-    throw redirect("/login");
-  }
-
-  const id = randomBytes(16).toString("hex");
-  const stmt = db.prepare(`
-    INSERT INTO notes (id, title, abstract, content, syntax, parent_id, user_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  stmt.run(id, title, abstract, content, syntax, parent_id, user.id);
-  const createdNote = await getNoteById(id);
-  if (!createdNote) {
-    throw new Error("Failed to create note");
-  }
-  return createdNote;
-}
 
 /**
  * Get note by ID
@@ -63,23 +35,6 @@ export async function getNoteById(id: string): Promise<Note | null> {
   return note || null;
 }
 
-/**
- * Get all notes for the current user
- */
-export async function getNotes(): Promise<Note[]> {
-  const user = await requireUser();
-  if (!user.id) {
-    throw redirect("/login");
-  }
-
-  const stmt = db.prepare(`
-    SELECT * FROM notes
-    WHERE user_id = ?
-    ORDER BY updated_at DESC
-  `);
-
-  return stmt.all(user.id) as Note[];
-}
 
 /**
  * Get notes with their tags
