@@ -3,6 +3,7 @@ import { createSignal, createEffect, Show, Suspense } from "solid-js";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 import { updateNoteQuery } from "~/lib/db/notes/update";
+import { SYNTAX_OPTIONS, type Note } from "~/lib/db/types";
 import { Save, Eye, FileText, ChevronUp, NotebookPen } from "lucide-solid";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
@@ -11,16 +12,6 @@ import { Select } from "~/solid-daisy-components/components/Select";
 import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
 import { Textarea } from "~/solid-daisy-components/components/Textarea";
 import NoteBreadcrumbs from "~/components/NoteBreadcrumbs";
-
-interface Note {
-  id: string;
-  title: string;
-  abstract: string;
-  content: string;
-  syntax: "markdown" | "org" | "html" | "jsx";
-  lastModified: string;
-  path: string;
-}
 
 export default function NoteEditor() {
   const { note, noteId, noteExists, noteLoaded } = useCurrentNote();
@@ -41,13 +32,7 @@ export default function NoteEditor() {
   // Get current note data or fallback to local note
   const currentNote = () => localNote() || note();
 
-  const syntaxOptions = [
-    { value: "markdown", label: "Markdown", extension: ".md" },
-    { value: "org", label: "Org Mode", extension: ".org" },
-    { value: "html", label: "HTML", extension: ".html" },
-    { value: "jsx", label: "JSX", extension: ".jsx" },
-    { value: "ipynb", label: "Jupyter Notebook", extension: ".ipynb" },
-  ];
+  const syntaxOptions = SYNTAX_OPTIONS;
 
   const updateNote = (field: keyof Note, value: any) => {
     setLocalNote((prev) => prev ? ({ ...prev, [field]: value }) : null);

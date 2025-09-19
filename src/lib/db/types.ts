@@ -1,9 +1,25 @@
+export type NoteSyntax = "markdown" | "org" | "html" | "jsx" | "ipynb";
+
+export interface NoteSyntaxOption {
+  value: NoteSyntax;
+  label: string;
+  extension: string;
+}
+
+export const SYNTAX_OPTIONS: NoteSyntaxOption[] = [
+  { value: "markdown", label: "Markdown", extension: ".md" },
+  { value: "org", label: "Org Mode", extension: ".org" },
+  { value: "html", label: "HTML", extension: ".html" },
+  { value: "jsx", label: "JSX", extension: ".jsx" },
+  { value: "ipynb", label: "Jupyter Notebook", extension: ".ipynb" },
+];
+
 export interface Note {
   id: string;
   title: string;
   abstract?: string;
   content: string;
-  syntax: string;
+  syntax: NoteSyntax;
   parent_id?: string;
   user_id: string;
   created_at: string;
