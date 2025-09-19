@@ -17,12 +17,15 @@ export default function NotesTab() {
   const { note, noteId } = useCurrentNote();
   const { children } = useCurrentNoteChildren();
   const { handleItemClick } = useNoteNavigation();
-  
-  const siblings = useNoteSiblings(noteId, createMemo(() => note()?.parent_id));
+
+  const siblings = useNoteSiblings(
+    noteId,
+    createMemo(() => note()?.parent_id),
+  );
 
   const isCurrentNoteFolder = createMemo(() => (children()?.length ?? 0) > 0);
-  const displayItems = createMemo(() => 
-    isCurrentNoteFolder() ? children() ?? [] : siblings() ?? []
+  const displayItems = createMemo(() =>
+    isCurrentNoteFolder() ? (children() ?? []) : (siblings() ?? []),
   );
 
   return (
