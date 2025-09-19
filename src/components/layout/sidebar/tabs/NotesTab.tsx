@@ -4,6 +4,8 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
 import FolderUp from "lucide-solid/icons/folder-up";
+import Scissors from "lucide-solid/icons/scissors";
+import X from "lucide-solid/icons/x";
 import {
   Accessor,
   createEffect,
@@ -24,6 +26,7 @@ import {
   type NavigationItem,
 } from "~/lib/hooks/useNoteNavigation";
 import { useNoteSiblings } from "~/lib/hooks/useNoteSiblings";
+import { Alert } from "~/solid-daisy-components/components/Alert";
 import { Badge } from "~/solid-daisy-components/components/Badge";
 import { Input } from "~/solid-daisy-components/components/Input";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
@@ -40,6 +43,8 @@ function useNavigationKeybindings(
   handleCreateNote: () => void,
   handleCreateChildNote: () => void,
   startEditingFocusedItem: () => void,
+  handleCutNote: () => void,
+  handleClearCut: () => void,
 ) {
   // Navigation keybindings
   useKeybinding(
@@ -126,6 +131,35 @@ function useNavigationKeybindings(
     () => {
       console.log("Starting rename...");
       startEditingFocusedItem();
+    },
+    { ref: tabRef },
+  );
+
+  // Cut focused item keybinding
+  useKeybinding(
+    { key: "x", ctrl: true },
+    () => {
+      console.log("Cutting note...");
+      handleCutNote();
+    },
+    { ref: tabRef },
+  );
+
+  // Clear cut with Escape keybinding
+  useKeybinding(
+    { key: "Escape" },
+    () => {
+      handleClearCut();
+    },
+    { ref: tabRef },
+  );
+
+  // Paste keybinding (placeholder - will implement paste logic later)
+  useKeybinding(
+    { key: "v", ctrl: true },
+    () => {
+      console.log("Paste not yet implemented");
+      // TODO: Implement paste functionality
     },
     { ref: tabRef },
   );
@@ -337,6 +371,9 @@ export default function NotesTab() {
   // Track which item has keyboard focus (for navigation)
   const [focusedItemIndex, setFocusedItemIndex] = createSignal(-1);
 
+  // Track cut note for clipboard operations
+  const [cutNoteId, setCutNoteId] = createSignal<string | null>(null);
+
   // Create a unique identifier based on what's actually displayed in the sidebar
   const currentContentId = createMemo(() =>
     getSidebarContentId(note(), isCurrentNoteFolder()),
@@ -443,6 +480,23 @@ export default function NotesTab() {
     }
   };
 
+  // Handle cutting a note
+  const handleCutNote = () => {
+    const focused = focusedItem();
+    if (focused) {
+      setCutNoteId(focused.id);
+      console.log(`Cut note: ${focused.title} (${focused.id})`);
+    }
+  };
+
+  // Handle clearing the cut state
+  const handleClearCut = () => {
+    if (cutNoteId()) {
+      console.log("Cleared cut note");
+      setCutNoteId(null);
+    }
+  };
+
   // Use navigation keybindings hook
   onMount(() => {
     useNavigationKeybindings(
@@ -457,6 +511,8 @@ export default function NotesTab() {
       handleCreateNote,
       handleCreateChildNote,
       startEditingFocusedItem,
+      handleCutNote,
+      handleClearCut,
     );
   });
 
@@ -473,6 +529,23 @@ export default function NotesTab() {
             <Focus size={12} class="mr-1" />
           </Badge>
         </div>
+
+        {/* Show alert when a note is cut */}
+        <Show when={cutNoteId()}>
+          <Alert color="warning" class="mb-4">
+            <Scissors size={16} class="mr-2" />
+            <span class="flex-1">
+              Note "{displayItems().find(item => item.id === cutNoteId())?.title || 'Unknown'}" is cut
+            </span>
+            <button 
+              onClick={handleClearCut}
+              class="btn btn-xs btn-ghost ml-2"
+              title="Clear cut (Escape)"
+            >
+              <X size={14} />
+            </button>
+          </Alert>
+        </Show>
         <ul class="menu bg-base-200 rounded-box w-full relative overflow-hidden">
           <Show when={showUpButton()}>
             <UpDirectoryButton onClick={handleUpDirectory} />
