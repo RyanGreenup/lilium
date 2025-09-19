@@ -1,5 +1,7 @@
 import { createSignal, For } from "solid-js";
-import { X, Clock, CheckCircle } from "lucide-solid";
+import X from "lucide-solid/icons/x";
+import Clock from "lucide-solid/icons/clock";
+import CheckCircle from "lucide-solid/icons/check-circle";
 
 interface DiscussionMessage {
   id: string;
@@ -87,7 +89,7 @@ export default function DiscussionTab() {
       status: "pending"
     },
     {
-      id: "2", 
+      id: "2",
       content: "Review the algorithm complexity analysis in section 3. The Big O notation explanation might be confusing for beginners.",
       timestamp: new Date("2024-01-14T09:15:00"),
       status: "in_progress"
@@ -126,7 +128,7 @@ export default function DiscussionTab() {
   };
 
   const changeStatus = (id: string, status: DiscussionMessage["status"]) => {
-    setMessages(messages().map(m => 
+    setMessages(messages().map(m =>
       m.id === id ? { ...m, status } : m
     ));
   };
