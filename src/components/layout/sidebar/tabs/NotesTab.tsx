@@ -1,8 +1,8 @@
 import { AccessorWithLatest } from "@solidjs/router";
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import ChevronUp from "lucide-solid/icons/chevron-up";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
+import FolderUp from "lucide-solid/icons/folder-up";
 import { Accessor, For, Show, createMemo } from "solid-js";
 import { Note } from "~/lib/db";
 import { useCurrentNoteChildren } from "~/lib/hooks/useCurrentDirectory";
@@ -42,10 +42,14 @@ export default function NotesTab() {
     }
   };
 
-  // Show up button when we have a parent or when we're in a note
+  // Show up button only when there's actually a parent to navigate to
   const showUpButton = createMemo(() => {
     const currentNote = note();
-    return currentNote !== null; // Show button if we're viewing any note
+    if (!currentNote) return false;
+
+    // Always show if current note has a parent - we can navigate up to it
+    return currentNote.parent_id !== undefined;
+    // NOTE we should probably check for the grandparent of a note and the parent of a folder
   });
 
   return (
@@ -99,13 +103,13 @@ const MenuItem = (props: {
 );
 
 const UpDirectoryButton = (props: { onClick: () => void }) => (
-  <li>
+  <li class="border-b border-base-300 mb-2 pb-2">
     <a
       onClick={props.onClick}
-      class="text-base-content/70 hover:text-base-content"
+      class="text-base-content/80 hover:text-base-content hover:bg-base-300 rounded-lg font-medium transition-colors"
     >
-      <ChevronUp size={16} />
-      <span class="flex-1">Up Directory</span>
+      <FolderUp size={16} class="text-primary" />
+      <span class="flex-1">.. Parent Directory</span>
     </a>
   </li>
 );

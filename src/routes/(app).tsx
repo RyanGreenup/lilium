@@ -65,7 +65,7 @@ const NavbarContent = () => (
       <A href="/" class="btn btn-ghost text-xl">
         <div class="flex items-center gap-2">
           <Logo class="h-8 w-8" />
-          <span>Lilium</span>
+          {/*<span>Lilium</span>*/}
         </div>
       </A>
     </div>
