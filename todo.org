@@ -27,6 +27,7 @@ That way I can do as I like but just edit the thing to do it all at runtime.
 Then we can write jsx as a note and transclude it as a widget!
 * First Steps
 ** Layout
+*** TODO Hide the dock on Mobile
 ** Users
 ** Docker Container
 ** Modify Components Layout
