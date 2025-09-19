@@ -28,3 +28,6 @@ gitignore
 Thumbs.db
 .data/users.sqlite
 .data/notes.sqlite
+.data/notes.sqlite-shm
+.data/notes.sqlite-wal
+.data/app.sqlite

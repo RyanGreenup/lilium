@@ -38,6 +38,7 @@ function useNavigationKeybindings(
   handleUpDirectory: () => void,
   handleItemClickWithDirection: (item: NavigationItem) => void,
   handleCreateNote: () => void,
+  handleCreateChildNote: () => void,
   startEditingFocusedItem: () => void,
 ) {
   // Navigation keybindings
@@ -105,6 +106,16 @@ function useNavigationKeybindings(
     () => {
       console.log("Creating new note...");
       handleCreateNote();
+    },
+    { ref: tabRef },
+  );
+
+  // Create new child note keybinding
+  useKeybinding(
+    { key: "N", shift: true },
+    () => {
+      console.log("Creating new child note...");
+      handleCreateChildNote();
     },
     { ref: tabRef },
   );
@@ -404,6 +415,34 @@ export default function NotesTab() {
     }
   };
 
+  // Handle creating a new child note
+  const handleCreateChildNote = async () => {
+    try {
+      const currentNote = note();
+      
+      // Always create as a child of the current note
+      const parentId = currentNote?.id;
+
+      const newNote = await createNewNote("New Note", "", parentId);
+
+      // Invalidate relevant caches to show the new note
+      revalidate([
+        createNewNote.key,
+        "children-with-folder-status",
+        "note-by-id",
+      ]);
+
+      // Track that this note was just created for refocusing in sidebar
+      setNewlyCreatedNoteId(newNote.id);
+
+      // Navigate to the newly created note
+      navigateToNote(newNote.id);
+    } catch (error) {
+      console.error("Failed to create child note:", error);
+      alert("Failed to create child note. Please try again.");
+    }
+  };
+
   // Use navigation keybindings hook
   onMount(() => {
     useNavigationKeybindings(
@@ -416,6 +455,7 @@ export default function NotesTab() {
       handleUpDirectory,
       handleItemClickWithDirection,
       handleCreateNote,
+      handleCreateChildNote,
       startEditingFocusedItem,
     );
   });
