@@ -102,6 +102,9 @@ export default function NotesTab() {
   // Track when content should be shown for transition
   const [showContent, setShowContent] = createSignal(true);
 
+  // Track which item has keyboard focus (for navigation)
+  const [focusedItemIndex, setFocusedItemIndex] = createSignal(-1);
+
   // Create a unique identifier based on what's actually displayed in the sidebar
   const currentContentId = createMemo(() =>
     getSidebarContentId(note(), isCurrentNoteFolder()),
@@ -120,12 +123,80 @@ export default function NotesTab() {
       setTimeout(() => {
         setPrevContentId(currentId);
         setShowContent(true);
+        // Reset focus when content changes
+        setFocusedItemIndex(-1);
       }, 0);
     }
   });
 
+  // Get the currently focused item
+  const focusedItem = createMemo(() => {
+    const items = displayItems();
+    const index = focusedItemIndex();
+    return index >= 0 && index < items.length ? items[index] : null;
+  });
+
   // Auto-focus the tab when it mounts
   useAutoFocus(() => tabRef);
+
+  // Navigation keybindings
+  useKeybinding(
+    { key: "ArrowDown" },
+    () => {
+      const items = displayItems();
+      const currentIndex = focusedItemIndex();
+      const nextIndex = currentIndex + 1;
+      if (nextIndex < items.length) {
+        setFocusedItemIndex(nextIndex);
+      }
+    },
+    { ref: () => tabRef }
+  );
+
+  useKeybinding(
+    { key: "ArrowUp" },
+    () => {
+      const currentIndex = focusedItemIndex();
+      const nextIndex = currentIndex - 1;
+      if (nextIndex >= 0) {
+        setFocusedItemIndex(nextIndex);
+      }
+    },
+    { ref: () => tabRef }
+  );
+
+  useKeybinding(
+    { key: "ArrowLeft" },
+    () => {
+      // Go up a directory
+      handleUpDirectory();
+    },
+    { ref: () => tabRef }
+  );
+
+  useKeybinding(
+    { key: "ArrowRight" },
+    () => {
+      const focused = focusedItem();
+      if (focused?.is_folder) {
+        // Navigate into the folder
+        handleItemClick(focused);
+      }
+    },
+    { ref: () => tabRef }
+  );
+
+  // Enter key to select current item
+  useKeybinding(
+    { key: "Enter" },
+    () => {
+      const focused = focusedItem();
+      if (focused) {
+        handleItemClick(focused);
+      }
+    },
+    { ref: () => tabRef }
+  );
 
   useKeybinding(
     { key: "n" },
@@ -163,10 +234,11 @@ export default function NotesTab() {
                 }
               >
                 <For each={displayItems()}>
-                  {(item: NavigationItem) => (
+                  {(item: NavigationItem, index) => (
                     <MenuItem
                       item={item}
                       isActive={noteId() === item.id}
+                      isFocused={focusedItemIndex() === index()}
                       handleItemClick={handleItemClickWithDirection}
                     />
                   )}
@@ -183,23 +255,33 @@ export default function NotesTab() {
 const MenuItem = (props: {
   item: NavigationItem;
   isActive: boolean;
+  isFocused: boolean;
   handleItemClick: (item: NavigationItem) => void;
-}) => (
-  <li>
-    <a
-      class={props.isActive ? "menu-active" : ""}
-      onClick={() => props.handleItemClick(props.item)}
-    >
-      <Show when={props.item.is_folder} fallback={<FileText size={16} />}>
-        <Folder size={16} />
-      </Show>
-      <span class="flex-1">{props.item.title}</span>
-      <Show when={props.item.is_folder}>
-        <ChevronRight size={14} class="text-base-content/40" />
-      </Show>
-    </a>
-  </li>
-);
+}) => {
+  const classList = () => {
+    const classes = [];
+    if (props.isActive) classes.push("menu-active");
+    if (props.isFocused) classes.push("ring-2 ring-primary ring-inset");
+    return classes.join(" ");
+  };
+
+  return (
+    <li>
+      <a
+        class={classList()}
+        onClick={() => props.handleItemClick(props.item)}
+      >
+        <Show when={props.item.is_folder} fallback={<FileText size={16} />}>
+          <Folder size={16} />
+        </Show>
+        <span class="flex-1">{props.item.title}</span>
+        <Show when={props.item.is_folder}>
+          <ChevronRight size={14} class="text-base-content/40" />
+        </Show>
+      </a>
+    </li>
+  );
+};
 
 const UpDirectoryButton = (props: { onClick: () => void }) => (
   <li class="border-b border-base-300 mb-2 pb-2">

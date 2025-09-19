@@ -1,18 +1,21 @@
-import { JSXElement, For } from "solid-js";
+import { JSXElement, For, createSignal } from "solid-js";
 import { tv } from "tailwind-variants";
 import { Breadcrumbs } from "~/solid-daisy-components/components/Breadcrumbs";
+import NoteBreadcrumbs, {
+  NoteBreadcrumbsById,
+} from "~/components/NoteBreadcrumbs";
 
 const breadcrumbsVariants = tv({
   base: "text-xs",
   variants: {
     wrap: {
       true: "flex-wrap",
-      false: "overflow-hidden"
-    }
+      false: "overflow-hidden",
+    },
   },
   defaultVariants: {
-    wrap: true
-  }
+    wrap: true,
+  },
 });
 
 const breadcrumbItemVariants = tv({
@@ -20,13 +23,13 @@ const breadcrumbItemVariants = tv({
   variants: {
     isLast: {
       true: "text-base-content/80 font-medium",
-      false: "text-base-content/50 hover:text-base-content/70 cursor-pointer"
+      false: "text-base-content/50 hover:text-base-content/70 cursor-pointer",
     },
     wrap: {
       true: "",
-      false: "truncate"
-    }
-  }
+      false: "truncate",
+    },
+  },
 });
 
 export interface ContentItemData {
@@ -35,6 +38,7 @@ export interface ContentItemData {
   abstract: string;
   path?: string;
   onClick?: () => void;
+  useNoteBreadcrumbs?: boolean;
 }
 
 interface ContentItemProps {
@@ -44,20 +48,24 @@ interface ContentItemProps {
 
 const parsePathToBreadcrumbs = (path: string) => {
   if (!path) return [];
-  
+
   // Remove leading slash and file extension
-  const cleanPath = path.replace(/^\//, '').replace(/\.[^/.]+$/, '');
-  const segments = cleanPath.split('/');
-  
+  const cleanPath = path.replace(/^\//, "").replace(/\.[^/.]+$/, "");
+  const segments = cleanPath.split("/");
+
   return segments.map((segment, index) => ({
-    label: segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' '),
+    label:
+      segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " "),
     isLast: index === segments.length - 1,
-    fullPath: '/' + segments.slice(0, index + 1).join('/')
+    fullPath: "/" + segments.slice(0, index + 1).join("/"),
   }));
 };
 
 export const ContentItem = (props: ContentItemProps) => {
-  const breadcrumbs = () => props.showPath && props.item.path ? parsePathToBreadcrumbs(props.item.path) : [];
+  const breadcrumbs = () =>
+    props.showPath && props.item.path
+      ? parsePathToBreadcrumbs(props.item.path)
+      : [];
 
   return (
     <div
@@ -67,30 +75,39 @@ export const ContentItem = (props: ContentItemProps) => {
       <h4 class="font-medium text-sm text-base-content mb-1 line-clamp-2">
         {props.item.title}
       </h4>
-      {props.showPath && props.item.path && breadcrumbs().length > 0 && (
+      {props.showPath && (
         <div class="mb-2">
-          <Breadcrumbs class={breadcrumbsVariants({ wrap: true })}>
-            <For each={breadcrumbs()}>
-              {(crumb, index) => (
-                <Breadcrumbs.Item>
-                  <span 
-                    class={breadcrumbItemVariants({ 
-                      isLast: crumb.isLast, 
-                      wrap: true 
-                    })}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!crumb.isLast) {
-                        console.log(`Navigate to: ${crumb.fullPath}`);
-                      }
-                    }}
-                  >
-                    {crumb.label}
-                  </span>
-                </Breadcrumbs.Item>
-              )}
-            </For>
-          </Breadcrumbs>
+          {props.item.useNoteBreadcrumbs ? (
+            <div class={breadcrumbsVariants({ wrap: true })}>
+              <NoteBreadcrumbsById noteId={createSignal(props.item.id)[0]} />
+            </div>
+          ) : (
+            props.item.path &&
+            breadcrumbs().length > 0 && (
+              <Breadcrumbs class={breadcrumbsVariants({ wrap: true })}>
+                <For each={breadcrumbs()}>
+                  {(crumb, index) => (
+                    <Breadcrumbs.Item>
+                      <span
+                        class={breadcrumbItemVariants({
+                          isLast: crumb.isLast,
+                          wrap: true,
+                        })}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!crumb.isLast) {
+                            console.log(`Navigate to: ${crumb.fullPath}`);
+                          }
+                        }}
+                      >
+                        {crumb.label}
+                      </span>
+                    </Breadcrumbs.Item>
+                  )}
+                </For>
+              </Breadcrumbs>
+            )
+          )}
         </div>
       )}
       <p class="text-xs text-base-content/70 line-clamp-3">
