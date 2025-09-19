@@ -14,6 +14,15 @@ Use a function to render markdown in between JSX. Much Simpler
 **** HTML
 
 **** Markdown
+** TODO Notes will have Chat / Discussion
+** TODO Notes will have an abstract field
+This will be shown during search
+** TODO Will Folders be Subpages or Folders?
+- [ ] How to handle an index page?
+** TODO Homepage will be an index page in the database written in JSX
+That way I can do as I like but just edit the thing to do it all at runtime.
+** TODO transclusion
+Then we can write jsx as a note and transclude it as a widget!
 * First Steps
 ** Layout
 ** Users
