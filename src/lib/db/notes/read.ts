@@ -64,9 +64,38 @@ export const getChildrenWithFolderStatusQuery = query(async (parentId?: string) 
 }, "children-with-folder-status");
 
 /**
+ * Get child count for a specific note
+ */
+export async function getNoteChildCount(note_id: string): Promise<number> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  const stmt = db.prepare(`
+    SELECT child_count
+    FROM note_child_counts
+    WHERE id = ? AND user_id = ?
+  `);
+
+  const result = stmt.get(note_id, user.id) as
+    | { child_count: number }
+    | undefined;
+  return result?.child_count ?? 0;
+}
+
+/**
  * Query function to get note child counts (for client-side use)
  */
 export const getNoteChildCountsQuery = query(async () => {
   "use server";
   return await getNoteChildCounts();
 }, "child-counts");
+
+/**
+ * Query function to get child count for a specific note (for client-side use)
+ */
+export const getNoteChildCountQuery = query(async (noteId: string) => {
+  "use server";
+  return await getNoteChildCount(noteId);
+}, "note-child-count");

@@ -228,26 +228,6 @@ export async function getNotesWithTags(): Promise<NoteWithTags[]> {
 
 
 
-/**
- * Get child count for a specific note
- */
-export async function getNoteChildCount(note_id: string): Promise<number> {
-  const user = await requireUser();
-  if (!user.id) {
-    throw redirect("/login");
-  }
-
-  const stmt = db.prepare(`
-    SELECT child_count
-    FROM note_child_counts
-    WHERE id = ? AND user_id = ?
-  `);
-
-  const result = stmt.get(note_id, user.id) as
-    | { child_count: number }
-    | undefined;
-  return result?.child_count ?? 0;
-}
 
 /**
  * Get the parent hierarchy of a note (from root to current note)
