@@ -333,7 +333,7 @@ function getSidebarContentId(
 }
 
 export default function NotesTab() {
-  const { note, noteId } = useCurrentNote();
+  const { note, noteId, noteExists, noteLoaded } = useCurrentNote();
   const { children } = useCurrentNoteChildren();
   const { handleItemClick, navigateToNote, navigateToRoot } =
     useNoteNavigation();
@@ -644,6 +644,28 @@ export default function NotesTab() {
       handleDeleteNote,
     );
   });
+
+  // Handle case where note doesn't exist
+  if (noteLoaded() && !noteExists() && noteId()) {
+    return (
+      <div class="">
+        <Alert color="error" class="mb-4">
+          <span class="flex-1 overflow-auto w-full">
+            Note not found: <code>{noteId()}</code>
+          </span>
+        </Alert>
+        <p class="text-base-content/60 mb-4">
+          The note you're looking for doesn't exist or you don't have permission to view it.
+        </p>
+        <button 
+          onClick={() => navigateToRoot()}
+          class="btn btn-primary"
+        >
+          Go to Root
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div

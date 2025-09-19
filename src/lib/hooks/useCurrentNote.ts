@@ -17,11 +17,13 @@ const getNoteById = query(async (noteId: string) => {
 
 /**
  * Hook to get the current note based on route params or search params
- * Returns the note object and the note ID
+ * Returns the note object, the note ID, and a boolean indicating if the note exists
  */
 export function useCurrentNote(): {
   note: AccessorWithLatest<Note | null | undefined>;
   noteId: () => string | undefined;
+  noteExists: () => boolean;
+  noteLoaded: () => boolean;
 } {
   const params = useParams();
   const [searchParams] = useSearchParams();
@@ -38,8 +40,24 @@ export function useCurrentNote(): {
     return id ? getNoteById(id) : Promise.resolve(null);
   });
 
+  // Helper to check if note exists (null means not found, undefined means loading)
+  const noteExists = createMemo(() => {
+    const currentNote = note();
+    const id = noteId();
+    // If we have an ID but note is null (not undefined), it means the note doesn't exist
+    return !id || (currentNote !== undefined && currentNote !== null);
+  });
+
+  // Helper to check if note has finished loading
+  const noteLoaded = createMemo(() => {
+    const id = noteId();
+    return !id || note() !== undefined;
+  });
+
   return {
     note,
     noteId,
+    noteExists,
+    noteLoaded,
   };
 }

@@ -150,22 +150,25 @@ export async function createNote(
   `);
   
   stmt.run(id, title, abstract, content, syntax, parent_id, user.id);
-  return getNoteById(id);
+  const createdNote = await getNoteById(id);
+  if (!createdNote) {
+    throw new Error("Failed to create note");
+  }
+  return createdNote;
 }
 
 /**
  * Get note by ID
  */
-export async function getNoteById(id: string): Promise<Note> {
+export async function getNoteById(id: string): Promise<Note | null> {
   const user = await requireUser();
   if (!user.id) {
     throw redirect("/login");
   }
   
   const stmt = db.prepare("SELECT * FROM notes WHERE id = ? AND user_id = ?");
-  const note = stmt.get(id, user.id) as Note;
-  if (!note) throw new Error("Note not found");
-  return note;
+  const note = stmt.get(id, user.id) as Note | undefined;
+  return note || null;
 }
 
 /**
