@@ -280,7 +280,10 @@ export default function NoteEditor() {
             <div class="flex-1 p-6 overflow-auto">
               <div class="prose prose-sm max-w-none">
                 <Show when={currentNote()?.content} fallback={<div class="text-center text-base-content/60 p-8">No content</div>}>
-                  <MarkdownRenderer content={() => currentNote()?.content || ""} />
+                  <MarkdownRenderer 
+                    content={() => currentNote()?.content || ""} 
+                    syntax={() => currentNote()?.syntax || "markdown"}
+                  />
                 </Show>
               </div>
             </div>

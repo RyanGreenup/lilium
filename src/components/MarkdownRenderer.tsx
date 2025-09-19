@@ -1,4 +1,6 @@
-import { createSignal, createEffect, type Accessor } from "solid-js";
+import { createSignal, createEffect, type Accessor, Suspense, Switch, Match } from "solid-js";
+import { createAsync } from "@solidjs/router";
+import { renderOrgModeQuery } from "~/lib/pandoc";
 
 const renderMarkdownClient = async (markdownContent: string): Promise<string> => {
   if (!markdownContent.trim()) return "No notes";
@@ -12,35 +14,85 @@ const renderMarkdownClient = async (markdownContent: string): Promise<string> =>
   }
 };
 
-export const MarkdownRenderer = (props: { content: Accessor<string> }) => {
-  const [renderedHtml, setRenderedHtml] = createSignal<string>("");
-  const [isLoading, setIsLoading] = createSignal(false);
+export const MarkdownRenderer = (props: { 
+  content: Accessor<string>; 
+  syntax?: Accessor<string>; 
+}) => {
+  const [markdownHtml, setMarkdownHtml] = createSignal<string>("");
+  const [isLoadingMarkdown, setIsLoadingMarkdown] = createSignal(false);
 
+  // Server-side Org mode rendering
+  const orgHtml = createAsync(async () => {
+    const syntax = props.syntax?.() || "markdown";
+    const content = props.content();
+    
+    if (syntax === "org" && content.trim()) {
+      try {
+        const result = await renderOrgModeQuery(content);
+        console.log("Org render result:", result);
+        return result;
+      } catch (error) {
+        console.error("Org rendering failed:", error);
+        return `<pre class="error">Org rendering failed: ${error}</pre>`;
+      }
+    }
+    return "";
+  });
+
+  // Client-side markdown rendering
   createEffect(async () => {
     const content = props.content();
-    setIsLoading(true);
+    const syntax = props.syntax?.() || "markdown";
     
-    try {
-      const html = await renderMarkdownClient(content);
-      setRenderedHtml(html);
-    } catch (error) {
-      console.error("Markdown rendering error:", error);
-      setRenderedHtml(content);
-    } finally {
-      setIsLoading(false);
+    if (syntax === "markdown") {
+      setIsLoadingMarkdown(true);
+      try {
+        const html = await renderMarkdownClient(content);
+        setMarkdownHtml(html);
+      } catch (error) {
+        console.error("Markdown rendering error:", error);
+        setMarkdownHtml(`<pre>${content}</pre>`);
+      } finally {
+        setIsLoadingMarkdown(false);
+      }
     }
   });
 
   return (
     <div class="prose prose-sm max-w-none dark:prose-invert">
-      {isLoading() ? (
-        <div class="flex items-center justify-center p-4">
-          <div class="loading loading-spinner loading-sm"></div>
-          <span class="ml-2 text-sm text-base-content/60">Rendering...</span>
-        </div>
-      ) : (
-        <div innerHTML={renderedHtml()} />
-      )}
+      <Switch>
+        <Match when={props.syntax?.() === "org"}>
+          <Suspense 
+            fallback={
+              <div class="flex items-center justify-center p-4">
+                <div class="loading loading-spinner loading-sm"></div>
+                <span class="ml-2 text-sm text-base-content/60">Rendering Org mode...</span>
+              </div>
+            }
+          >
+            <div innerHTML={orgHtml()} />
+          </Suspense>
+        </Match>
+        
+        <Match when={props.syntax?.() === "markdown"}>
+          {isLoadingMarkdown() ? (
+            <div class="flex items-center justify-center p-4">
+              <div class="loading loading-spinner loading-sm"></div>
+              <span class="ml-2 text-sm text-base-content/60">Rendering Markdown...</span>
+            </div>
+          ) : (
+            <div innerHTML={markdownHtml()} />
+          )}
+        </Match>
+        
+        <Match when={props.syntax?.() === "html"}>
+          <div innerHTML={props.content() || "No content"} />
+        </Match>
+        
+        <Match when={true}>
+          <pre><code>{props.content() || "No content"}</code></pre>
+        </Match>
+      </Switch>
     </div>
   );
 };

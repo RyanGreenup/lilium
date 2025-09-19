@@ -75,3 +75,27 @@ This will conflict with our need to preserve the `?sidebar=` searchParam (which 
 ** TODO Command Palette
 ** TODO Breadcrumbs in the Navbar
 ** TODO Context Menu
+* Exemplar
+Some writing
+
+A list:
+
+- foo
+- bar
+  - baz
+  - bar
+    - baz
+      #+begin_src python results: output
+def add(x: int) -> int:
+    return x + 1
+
+print(add(33))
+      #+end_src
+
+      #+RESULTS:
+      : 33
+
+  - bar
+    - baz
+- bar
+  - baz
