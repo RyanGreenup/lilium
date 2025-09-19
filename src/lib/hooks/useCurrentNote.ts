@@ -1,19 +1,12 @@
 import {
   AccessorWithLatest,
   createAsync,
-  query,
   useParams,
   useSearchParams,
 } from "@solidjs/router";
 import { createMemo } from "solid-js";
 import { Note } from "~/lib/db";
-
-// Query function to get note by ID
-const getNoteById = query(async (noteId: string) => {
-  "use server";
-  const { getNoteById: dbGetNoteById } = await import("~/lib/db");
-  return await dbGetNoteById(noteId);
-}, "note-by-id");
+import { getNoteByIdQuery } from "~/lib/db/notes/read";
 
 /**
  * Hook to get the current note based on route params or search params
@@ -37,7 +30,7 @@ export function useCurrentNote(): {
   // Fetch the note data when we have an ID (reactive to ID changes)
   const note = createAsync(() => {
     const id = noteId();
-    return id ? getNoteById(id) : Promise.resolve(null);
+    return id ? getNoteByIdQuery(id) : Promise.resolve(null);
   });
 
   // Helper to check if note exists (null means not found, undefined means loading)

@@ -1,21 +1,15 @@
 import Home from "lucide-solid/icons/home";
 import { For, Show, Accessor } from "solid-js";
-import { createAsync, query } from "@solidjs/router";
+import { createAsync } from "@solidjs/router";
 import { Breadcrumbs } from "~/solid-daisy-components/components/Breadcrumbs";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { useNoteNavigation } from "~/lib/hooks/useNoteNavigation";
 import { useNoteParents } from "~/lib/hooks/useNoteParents";
+import { getNoteByIdQuery } from "~/lib/db/notes/read";
 
 interface NoteBreadcrumbsByIdProps {
   noteId: Accessor<string | undefined>;
 }
-
-// Query function to get note by ID
-const getNoteByIdQuery = query(async (id: string) => {
-  "use server";
-  const { getNoteById: dbGetNoteById } = await import("~/lib/db");
-  return await dbGetNoteById(id);
-}, "note-by-id");
 
 export function NoteBreadcrumbsById(props: NoteBreadcrumbsByIdProps) {
   const note = createAsync(async () => {

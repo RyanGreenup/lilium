@@ -7,8 +7,56 @@
 import { query } from "@solidjs/router";
 import { requireUser } from "../../auth";
 import { redirect } from "@solidjs/router";
-import type { Note } from "../types";
+import type { Note, NoteWithTags } from "../types";
 import { db } from "../index";
+
+/**
+ * Get note by ID
+ */
+export async function getNoteById(id: string): Promise<Note | null> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  const stmt = db.prepare("SELECT * FROM notes WHERE id = ? AND user_id = ?");
+  const note = stmt.get(id, user.id) as Note | undefined;
+  return note || null;
+}
+
+/**
+ * Get notes with their tags
+ */
+export async function getNotesWithTags(): Promise<NoteWithTags[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  const stmt = db.prepare(`
+    SELECT
+      n.*,
+      json_group_array(
+        CASE WHEN t.id IS NOT NULL
+        THEN json_object('id', t.id, 'title', t.title, 'parent_id', t.parent_id, 'user_id', t.user_id, 'created_at', t.created_at)
+        ELSE NULL END
+      ) as tags_json
+    FROM notes n
+    LEFT JOIN note_tags nt ON n.id = nt.note_id
+    LEFT JOIN tags t ON nt.tag_id = t.id
+    WHERE n.user_id = ?
+    GROUP BY n.id
+    ORDER BY n.updated_at DESC
+  `);
+
+  const results = stmt.all(user.id) as (Note & { tags_json: string })[];
+
+  return results.map((row) => {
+    const tags = JSON.parse(row.tags_json).filter((tag: any) => tag !== null);
+    const { tags_json, ...note } = row;
+    return { ...note, tags };
+  });
+}
 
 /**
  * Get children with their folder status (enhanced version)
@@ -133,6 +181,22 @@ export const getNoteChildCountQuery = query(async (noteId: string) => {
   "use server";
   return await getNoteChildCount(noteId);
 }, "note-child-count");
+
+/**
+ * Query function to get note by ID (for client-side use)
+ */
+export const getNoteByIdQuery = query(async (noteId: string) => {
+  "use server";
+  return await getNoteById(noteId);
+}, "note-by-id");
+
+/**
+ * Query function to get notes with tags (for client-side use)
+ */
+export const getNotesWithTagsQuery = query(async () => {
+  "use server";
+  return await getNotesWithTags();
+}, "notes-with-tags");
 
 /**
  * Query function to get note parents (for client-side use)

@@ -20,56 +20,6 @@ const db = new Database("./.data/notes.sqlite");
 // Note Management /////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-
-/**
- * Get note by ID
- */
-export async function getNoteById(id: string): Promise<Note | null> {
-  const user = await requireUser();
-  if (!user.id) {
-    throw redirect("/login");
-  }
-
-  const stmt = db.prepare("SELECT * FROM notes WHERE id = ? AND user_id = ?");
-  const note = stmt.get(id, user.id) as Note | undefined;
-  return note || null;
-}
-
-
-/**
- * Get notes with their tags
- */
-export async function getNotesWithTags(): Promise<NoteWithTags[]> {
-  const user = await requireUser();
-  if (!user.id) {
-    throw redirect("/login");
-  }
-
-  const stmt = db.prepare(`
-    SELECT
-      n.*,
-      json_group_array(
-        CASE WHEN t.id IS NOT NULL
-        THEN json_object('id', t.id, 'title', t.title, 'parent_id', t.parent_id, 'user_id', t.user_id, 'created_at', t.created_at)
-        ELSE NULL END
-      ) as tags_json
-    FROM notes n
-    LEFT JOIN note_tags nt ON n.id = nt.note_id
-    LEFT JOIN tags t ON nt.tag_id = t.id
-    WHERE n.user_id = ?
-    GROUP BY n.id
-    ORDER BY n.updated_at DESC
-  `);
-
-  const results = stmt.all(user.id) as (Note & { tags_json: string })[];
-
-  return results.map((row) => {
-    const tags = JSON.parse(row.tags_json).filter((tag: any) => tag !== null);
-    const { tags_json, ...note } = row;
-    return { ...note, tags };
-  });
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Tag Management //////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -138,6 +88,7 @@ export async function addTagToNote(
   }
 
   // Verify both note and tag belong to the user
+  const { getNoteById } = await import("./db/notes/read");
   await getNoteById(note_id);
   await getTagById(tag_id);
 
