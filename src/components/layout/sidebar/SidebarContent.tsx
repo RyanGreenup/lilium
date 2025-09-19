@@ -22,7 +22,6 @@ import { SidebarSearchContent } from "./tabs/SearchTab";
 export const SidebarTabs = () => {
   const [activeTab, setActiveTab] = createSignal(0);
   const [isGoingDeeper, setIsGoingDeeper] = createSignal(true);
-  const [showContent, setShowContent] = createSignal(true);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tabs = [
@@ -45,16 +44,11 @@ export const SidebarTabs = () => {
   const handleTabChange = (tabId: number) => {
     const currentTab = activeTab();
     setIsGoingDeeper(tabId > currentTab);
-    
-    setShowContent(false);
-    setTimeout(() => {
-      setActiveTab(tabId);
-      const tab = tabs.find(t => t.id === tabId);
-      if (tab) {
-        setSearchParams({ sidebar: tab.key });
-      }
-      setShowContent(true);
-    }, 0);
+    setActiveTab(tabId);
+    const tab = tabs.find(t => t.id === tabId);
+    if (tab) {
+      setSearchParams({ sidebar: tab.key });
+    }
   };
 
   // Global keybindings for tab switching (Alt + 1-7)
@@ -99,7 +93,7 @@ export const SidebarTabs = () => {
       </Tabs>
 
       <div class="mt-4 relative overflow-hidden">
-        <SlideTransition isGoingDeeper={isGoingDeeper} show={showContent}>
+        <SlideTransition isGoingDeeper={isGoingDeeper} contentId={`tab-${activeTab()}`}>
           <div>
             <Show when={activeTab() === 0}>
               <NotesTab />

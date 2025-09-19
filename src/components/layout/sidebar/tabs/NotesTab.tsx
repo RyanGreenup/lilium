@@ -302,9 +302,6 @@ export default function NotesTab() {
     return true;
   });
 
-  // Track when content should be shown for transition
-  const [showContent, setShowContent] = createSignal(true);
-
   // Track which item has keyboard focus (for navigation)
   const [focusedItemIndex, setFocusedItemIndex] = createSignal(-1);
 
@@ -312,29 +309,6 @@ export default function NotesTab() {
   const currentContentId = createMemo(() =>
     getSidebarContentId(note(), isCurrentNoteFolder()),
   );
-
-  // Track previous content id to detect changes
-  const [prevContentId, setPrevContentId] = createSignal<string | null>(null);
-
-  // Handle content change with animation
-  createEffect(() => {
-    const currentId = currentContentId();
-    const prevId = prevContentId();
-
-    if (currentId !== prevId) {
-      // Skip animation on initial load (when prevId is null)
-      if (prevId === null) {
-        setPrevContentId(currentId);
-        return;
-      }
-
-      setShowContent(false);
-      setTimeout(() => {
-        setPrevContentId(currentId);
-        setShowContent(true);
-      }, 0);
-    }
-  });
 
   // Auto-focus first item when display items change (but content ID stays same)
   createEffect(() => {
@@ -439,7 +413,7 @@ export default function NotesTab() {
             <UpDirectoryButton onClick={handleUpDirectory} />
           </Show>
 
-          <SlideTransition isGoingDeeper={isGoingDeeper} show={showContent}>
+          <SlideTransition isGoingDeeper={isGoingDeeper} contentId={currentContentId()}>
             <div>
               <Show
                 when={displayItems().length > 0}
@@ -556,53 +530,78 @@ const UpDirectoryButton = (props: { onClick: () => void }) => (
 export const SlideTransition = (props: {
   children: JSX.Element;
   isGoingDeeper: Accessor<boolean>;
-  show: Accessor<boolean>;
-}) => (
-  <Transition
-    onEnter={(el, done) => {
-      const direction = props.isGoingDeeper() ? 1 : -1; // 1 = slide from right, -1 = slide from left
-      const a = el.animate(
-        [
+  contentId: string;
+}) => {
+  const [showContent, setShowContent] = createSignal(true);
+  const [prevContentId, setPrevContentId] = createSignal<string | null>(null);
+
+  // Handle content change with animation
+  createEffect(() => {
+    const currentId = props.contentId;
+    const prevId = prevContentId();
+
+    if (currentId !== prevId) {
+      // Skip animation on initial load (when prevId is null)
+      if (prevId === null) {
+        setPrevContentId(currentId);
+        return;
+      }
+
+      setShowContent(false);
+      setTimeout(() => {
+        setPrevContentId(currentId);
+        setShowContent(true);
+      }, 0);
+    }
+  });
+
+  return (
+    <Transition
+      onEnter={(el, done) => {
+        const direction = props.isGoingDeeper() ? 1 : -1; // 1 = slide from right, -1 = slide from left
+        const a = el.animate(
+          [
+            {
+              transform: `translateX(${direction * 100}%)`,
+              opacity: 0,
+            },
+            {
+              transform: "translateX(0%)",
+              opacity: 1,
+            },
+          ],
           {
-            transform: `translateX(${direction * 100}%)`,
-            opacity: 0,
+            duration: 300,
+            easing: "cubic-bezier(0.4, 0, 0.2, 1)",
           },
+        );
+        a.finished.then(done);
+      }}
+      onExit={(el, done) => {
+        const direction = props.isGoingDeeper() ? -1 : 1; // Opposite direction for exit
+        const a = el.animate(
+          [
+            {
+              transform: "translateX(0%)",
+              opacity: 1,
+            },
+            {
+              transform: `translateX(${direction * 100}%)`,
+              opacity: 0,
+            },
+          ],
           {
-            transform: "translateX(0%)",
-            opacity: 1,
+            duration: 300,
+            easing: "cubic-bezier(0.4, 0, 0.2, 1)",
           },
-        ],
-        {
-          duration: 300,
-          easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-        },
-      );
-      a.finished.then(done);
-    }}
-    onExit={(el, done) => {
-      const direction = props.isGoingDeeper() ? -1 : 1; // Opposite direction for exit
-      const a = el.animate(
-        [
-          {
-            transform: "translateX(0%)",
-            opacity: 1,
-          },
-          {
-            transform: `translateX(${direction * 100}%)`,
-            opacity: 0,
-          },
-        ],
-        {
-          duration: 300,
-          easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-        },
-      );
-      a.finished.then(done);
-    }}
-  >
-    {props.show() && props.children}
-  </Transition>
-);
+        );
+        a.finished.then(done);
+      }}
+    >
+      {showContent() && props.children}
+    </Transition>
+  );
+};
 
 const EmptyMessage = (props: {
   note: AccessorWithLatest<Note | null | undefined>;
