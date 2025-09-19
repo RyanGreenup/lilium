@@ -61,3 +61,5 @@ Minimizes need for deps in consuming libraries
 ** TODO WAL on the DB
 ** TODO Dummy Data From Python
 ** TODO Create New Notes
+** TODO Drop the note id search parameter and juse use the param =note/:id=
+This will conflict with our need to preserve the `?sidebar=` searchParam (which is in turn useful for sending a link with a focused sidebar)

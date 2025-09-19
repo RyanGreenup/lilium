@@ -280,6 +280,30 @@ export async function getChildNotes(parent_id: string): Promise<Note[]> {
 }
 
 /**
+ * Get children with their folder status (enhanced version)
+ */
+export async function getChildNotesWithFolderStatus(parent_id?: string): Promise<(Note & { is_folder: boolean })[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const stmt = db.prepare(`
+    SELECT 
+      n.*,
+      CASE WHEN ncc.child_count > 0 THEN 1 ELSE 0 END as is_folder
+    FROM notes n
+    LEFT JOIN note_child_counts ncc ON n.id = ncc.id
+    WHERE ${parent_id ? 'n.parent_id = ?' : 'n.parent_id IS NULL'} 
+      AND n.user_id = ?
+    ORDER BY is_folder DESC, n.title ASC
+  `);
+  
+  const params = parent_id ? [parent_id, user.id] : [user.id];
+  return stmt.all(...params) as (Note & { is_folder: boolean })[];
+}
+
+/**
  * Get note child counts for all notes
  */
 export async function getNoteChildCounts(): Promise<NoteChildCount[]> {
@@ -315,6 +339,40 @@ export async function getNoteChildCount(note_id: string): Promise<number> {
   
   const result = stmt.get(note_id, user.id) as { child_count: number } | undefined;
   return result?.child_count ?? 0;
+}
+
+/**
+ * Get the parent hierarchy of a note (from root to current note)
+ */
+export async function getNoteParents(note_id: string): Promise<Note[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  // Recursive CTE to get the parent chain
+  const stmt = db.prepare(`
+    WITH RECURSIVE parent_chain AS (
+      -- Start with the current note
+      SELECT id, title, parent_id, user_id, 0 as level
+      FROM notes 
+      WHERE id = ? AND user_id = ?
+      
+      UNION ALL
+      
+      -- Recursively get parents
+      SELECT n.id, n.title, n.parent_id, n.user_id, pc.level + 1 as level
+      FROM notes n
+      INNER JOIN parent_chain pc ON n.id = pc.parent_id
+      WHERE n.user_id = ?
+    )
+    SELECT id, title, parent_id, user_id
+    FROM parent_chain 
+    WHERE level > 0  -- Exclude the current note itself
+    ORDER BY level DESC  -- Root first, then descendants
+  `);
+  
+  return stmt.all(note_id, user.id, user.id) as Note[];
 }
 
 ////////////////////////////////////////////////////////////////////////////////
