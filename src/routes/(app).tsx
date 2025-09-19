@@ -11,9 +11,11 @@ import Settings from "lucide-solid/icons/settings";
 import {
   ArrowLeft,
   ArrowRight,
+  FileTerminal,
   MessageSquare,
   Notebook,
   Search,
+  SearchX,
   Sparkles,
 } from "lucide-solid";
 import ToggleLeft from "lucide-solid/icons/toggle-left";
@@ -44,6 +46,17 @@ export const route = {
     getUser();
   },
 } satisfies RouteDefinition;
+
+const VStack = (props: { children: any; label: JSXElement }) => (
+  <div class="form-control flex flex-col">
+    <label class="label cursor-pointer flex flex-col items-start">
+      <span class="label-text text-sm flex items-center gap-2">
+        {props.label}
+      </span>
+      {props.children}
+    </label>
+  </div>
+);
 
 export default function MainLayout(props: { children: JSXElement }) {
   return (
@@ -255,38 +268,28 @@ const SidebarSearchContent = () => {
 
       <Collapsible class="p-0" title="Settings">
         <Fieldset class="bg-base-200 border-base-300 rounded-box border p-4 space-y-3">
-          <Fieldset.Legend>
-            Search Options
-          </Fieldset.Legend>
+          <Fieldset.Legend>Search Options</Fieldset.Legend>
 
-          <div class="form-control flex flex-col">
-            <label class="label cursor-pointer flex flex-col items-start">
-              <span class="label-text text-sm">Children Only</span>
-              <Toggle
-                size="sm"
-                checked={searchAllNotes()}
-                onChange={(e) => setSearchAllNotes(e.currentTarget.checked)}
-              />
-            </label>
-          </div>
+          <VStack label={<>Children Only</>}>
+            <Toggle
+              size="sm"
+              checked={searchAllNotes()}
+              onChange={(e) => setSearchAllNotes(e.currentTarget.checked)}
+            />
+          </VStack>
 
-          <div class="form-control flex flex-col">
-            <label class="label cursor-pointer flex flex-col items-start">
-              <span class="label-text text-sm">Semantic search</span>
-              <Toggle
-                size="sm"
-                color="primary"
-                checked={useSemanticSearch()}
-                onChange={(e) => setUseSemanticSearch(e.currentTarget.checked)}
-              />
-            </label>
-          </div>
+          <VStack label={<>Semantic search</>}>
+            <Toggle
+              size="sm"
+              color="primary"
+              checked={useSemanticSearch()}
+              onChange={(e) => setUseSemanticSearch(e.currentTarget.checked)}
+            />
+          </VStack>
         </Fieldset>
 
         <Fieldset class="bg-base-200 border-base-300 rounded-box border p-4 space-y-3">
-          <Fieldset.Legend>
-            Path Display
-          </Fieldset.Legend>
+          <Fieldset.Legend>Path Display</Fieldset.Legend>
           <For each={pathDisplayOptions}>
             {(option) => (
               <div class="form-control">
