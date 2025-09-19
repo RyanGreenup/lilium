@@ -14,6 +14,7 @@ import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
 import { Select } from "~/solid-daisy-components/components/Select";
 import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
+import { Textarea } from "~/solid-daisy-components/components/Textarea";
 
 interface Note {
   id: string;
@@ -122,10 +123,12 @@ def engineer_features(df):
                 fallback={
                   <Fieldset class="bg-base-100 border-base-300 rounded-lg border p-4 space-y-3">
                     <Fieldset.Legend>Note Metadata</Fieldset.Legend>
-                    
+
                     <div>
                       <label class="label py-1">
-                        <span class="label-text text-sm font-medium">Title</span>
+                        <span class="label-text text-sm font-medium">
+                          Title
+                        </span>
                       </label>
                       <input
                         type="text"
@@ -144,12 +147,11 @@ def engineer_features(df):
                           Abstract
                         </span>
                       </label>
-                      <textarea
+                      <Textarea
                         value={note().abstract}
                         onInput={(e) =>
                           updateNote("abstract", e.currentTarget.value)
                         }
-                        class="textarea textarea-bordered w-full h-20 resize-none text-sm"
                         placeholder="Brief description of the note content..."
                       />
                     </div>
@@ -158,17 +160,19 @@ def engineer_features(df):
               >
                 <div>
                   <h1
-                    class="text-lg font-semibold truncate"
+                    class="text-lg font-semibold break-words"
                     title={note().title}
                   >
                     {note().title}
                   </h1>
-                  <p
-                    class="text-sm text-base-content/60 truncate mt-1"
-                    title={note().abstract}
-                  >
-                    {note().abstract}
-                  </p>
+                  <div class="tooltip" data-tip={note().abstract}>
+                    <p
+                      class="text-sm text-base-content/60 truncate mt-1"
+                      title={note().abstract}
+                    >
+                      {note().abstract}
+                    </p>
+                  </div>
                 </div>
               </Show>
             </div>
