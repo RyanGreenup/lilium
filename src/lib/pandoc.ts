@@ -36,6 +36,18 @@ export async function renderJupyterNotebook(notebookContent: string): Promise<st
   return renderWithPandoc(notebookContent, "ipynb", "ipynb");
 }
 
+export async function renderDokuWiki(wikiContent: string): Promise<string> {
+  return renderWithPandoc(wikiContent, "dokuwiki", "wiki");
+}
+
+export async function renderMediaWiki(wikiContent: string): Promise<string> {
+  return renderWithPandoc(wikiContent, "mediawiki", "wiki");
+}
+
+export async function renderLatex(latexContent: string): Promise<string> {
+  return renderWithPandoc(latexContent, "latex", "tex");
+}
+
 export const renderOrgModeQuery = query(async (orgContent: string) => {
   "use server";
   return await renderOrgMode(orgContent);
@@ -45,3 +57,18 @@ export const renderJupyterNotebookQuery = query(async (notebookContent: string) 
   "use server";
   return await renderJupyterNotebook(notebookContent);
 }, "render-jupyter-notebook");
+
+export const renderDokuWikiQuery = query(async (wikiContent: string) => {
+  "use server";
+  return await renderDokuWiki(wikiContent);
+}, "render-dokuwiki");
+
+export const renderMediaWikiQuery = query(async (wikiContent: string) => {
+  "use server";
+  return await renderMediaWiki(wikiContent);
+}, "render-mediawiki");
+
+export const renderLatexQuery = query(async (latexContent: string) => {
+  "use server";
+  return await renderLatex(latexContent);
+}, "render-latex");

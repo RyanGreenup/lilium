@@ -1,6 +1,6 @@
 import { createSignal, createEffect, type Accessor, Suspense, Switch, Match } from "solid-js";
 import { createAsync } from "@solidjs/router";
-import { renderOrgModeQuery, renderJupyterNotebookQuery } from "~/lib/pandoc";
+import { renderOrgModeQuery, renderJupyterNotebookQuery, renderDokuWikiQuery, renderMediaWikiQuery, renderLatexQuery } from "~/lib/pandoc";
 
 const renderMarkdownClient = async (markdownContent: string): Promise<string> => {
   if (!markdownContent.trim()) return "No notes";
@@ -33,6 +33,12 @@ export const MarkdownRenderer = (props: {
         return await renderOrgModeQuery(content);
       } else if (syntax === "ipynb") {
         return await renderJupyterNotebookQuery(content);
+      } else if (syntax === "dokuwiki") {
+        return await renderDokuWikiQuery(content);
+      } else if (syntax === "mediawiki") {
+        return await renderMediaWikiQuery(content);
+      } else if (syntax === "latex") {
+        return await renderLatexQuery(content);
       }
     } catch (error) {
       console.error(`${syntax} rendering failed:`, error);
@@ -64,7 +70,7 @@ export const MarkdownRenderer = (props: {
   return (
     <div class="prose prose-sm max-w-none dark:prose-invert">
       <Switch>
-        <Match when={props.syntax?.() === "org" || props.syntax?.() === "ipynb"}>
+        <Match when={["org", "ipynb", "dokuwiki", "mediawiki", "latex"].includes(props.syntax?.() || "")}>
           <Suspense 
             fallback={
               <div class="flex items-center justify-center p-4">
