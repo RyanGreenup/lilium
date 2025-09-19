@@ -227,24 +227,6 @@ export async function getNotesWithTags(): Promise<NoteWithTags[]> {
 
 
 
-/**
- * Get note child counts for all notes
- */
-export async function getNoteChildCounts(): Promise<NoteChildCount[]> {
-  const user = await requireUser();
-  if (!user.id) {
-    throw redirect("/login");
-  }
-
-  const stmt = db.prepare(`
-    SELECT id, user_id, child_count
-    FROM note_child_counts
-    WHERE user_id = ?
-    ORDER BY child_count DESC, id
-  `);
-
-  return stmt.all(user.id) as NoteChildCount[];
-}
 
 /**
  * Get child count for a specific note

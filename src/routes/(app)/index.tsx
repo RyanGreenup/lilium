@@ -6,6 +6,7 @@ import Folder from "lucide-solid/icons/folder";
 
 import { For, Suspense, Show } from "solid-js";
 import { getUser } from "~/lib/auth";
+import { getNoteChildCountsQuery } from "~/lib/db/notes/read";
 
 // Server functions
 const getStats = async () => {
@@ -20,11 +21,6 @@ const getRecentNotesData = async () => {
   return await getRecentNotes(4);
 };
 
-const getChildCounts = async () => {
-  "use server";
-  const { getNoteChildCounts } = await import("~/lib/db");
-  return await getNoteChildCounts();
-};
 import { Badge } from "~/solid-daisy-components/components/Badge";
 import { Card } from "~/solid-daisy-components/components/Card";
 import {
@@ -37,14 +33,13 @@ import {
 
 const getStatsQuery = query(getStats, "stats");
 const getRecentNotesQuery = query(getRecentNotesData, "recent-notes");
-const getChildCountsQuery = query(getChildCounts, "child-counts");
 
 export const route = {
   preload() {
     getUser();
     getStatsQuery();
     getRecentNotesQuery();
-    getChildCountsQuery();
+    getNoteChildCountsQuery();
   },
 } satisfies RouteDefinition;
 
@@ -52,7 +47,7 @@ export const route = {
 export default function Home() {
   const stats = createAsync(() => getStatsQuery());
   const recentNotes = createAsync(() => getRecentNotesQuery());
-  const childCounts = createAsync(() => getChildCountsQuery());
+  const childCounts = createAsync(() => getNoteChildCountsQuery());
 
   const formatDate = (isoString: string) => {
     return new Date(isoString).toLocaleDateString();
