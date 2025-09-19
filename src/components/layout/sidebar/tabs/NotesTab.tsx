@@ -11,6 +11,7 @@ import {
   createSignal,
   For,
   JSX,
+  onMount,
   Show,
 } from "solid-js";
 import { Transition } from "solid-transition-group";
@@ -405,17 +406,20 @@ export default function NotesTab() {
   };
 
   // Use navigation keybindings hook
-  useNavigationKeybindings(
-    () => tabRef,
-    displayItems,
-    focusedItemIndex,
-    setFocusedItemIndex,
-    focusedItem,
-    handleUpDirectory,
-    handleItemClickWithDirection,
-    handleCreateNote,
-    startEditingFocusedItem,
-  );
+  onMount(() => {
+    useNavigationKeybindings(
+      // The ref exists because we're in onMount
+      () => tabRef!,
+      displayItems,
+      focusedItemIndex,
+      setFocusedItemIndex,
+      focusedItem,
+      handleUpDirectory,
+      handleItemClickWithDirection,
+      handleCreateNote,
+      startEditingFocusedItem,
+    );
+  });
 
   return (
     <div
