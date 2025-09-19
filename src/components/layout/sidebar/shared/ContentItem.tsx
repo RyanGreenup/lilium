@@ -1,4 +1,33 @@
 import { JSXElement, For } from "solid-js";
+import { tv } from "tailwind-variants";
+import { Breadcrumbs } from "~/solid-daisy-components/components/Breadcrumbs";
+
+const breadcrumbsVariants = tv({
+  base: "text-xs",
+  variants: {
+    wrap: {
+      true: "flex-wrap",
+      false: "overflow-hidden"
+    }
+  },
+  defaultVariants: {
+    wrap: true
+  }
+});
+
+const breadcrumbItemVariants = tv({
+  base: "transition-colors",
+  variants: {
+    isLast: {
+      true: "text-base-content/80 font-medium",
+      false: "text-base-content/50 hover:text-base-content/70 cursor-pointer"
+    },
+    wrap: {
+      true: "",
+      false: "truncate"
+    }
+  }
+});
 
 export interface ContentItemData {
   id: string;
@@ -13,24 +42,63 @@ interface ContentItemProps {
   showPath?: boolean;
 }
 
-export const ContentItem = (props: ContentItemProps) => (
-  <div
-    class="p-3 bg-base-200 rounded-lg hover:bg-base-300 cursor-pointer transition-colors"
-    onClick={props.item.onClick}
-  >
-    <h4 class="font-medium text-sm text-base-content mb-1 line-clamp-2">
-      {props.item.title}
-    </h4>
-    {props.showPath && props.item.path && (
-      <p class="text-xs text-base-content/60 mb-2 font-mono">
-        {props.item.path}
+const parsePathToBreadcrumbs = (path: string) => {
+  if (!path) return [];
+  
+  // Remove leading slash and file extension
+  const cleanPath = path.replace(/^\//, '').replace(/\.[^/.]+$/, '');
+  const segments = cleanPath.split('/');
+  
+  return segments.map((segment, index) => ({
+    label: segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' '),
+    isLast: index === segments.length - 1,
+    fullPath: '/' + segments.slice(0, index + 1).join('/')
+  }));
+};
+
+export const ContentItem = (props: ContentItemProps) => {
+  const breadcrumbs = () => props.showPath && props.item.path ? parsePathToBreadcrumbs(props.item.path) : [];
+
+  return (
+    <div
+      class="p-3 bg-base-200 rounded-lg hover:bg-base-300 cursor-pointer transition-colors"
+      onClick={props.item.onClick}
+    >
+      <h4 class="font-medium text-sm text-base-content mb-1 line-clamp-2">
+        {props.item.title}
+      </h4>
+      {props.showPath && props.item.path && breadcrumbs().length > 0 && (
+        <div class="mb-2">
+          <Breadcrumbs class={breadcrumbsVariants({ wrap: true })}>
+            <For each={breadcrumbs()}>
+              {(crumb, index) => (
+                <Breadcrumbs.Item>
+                  <span 
+                    class={breadcrumbItemVariants({ 
+                      isLast: crumb.isLast, 
+                      wrap: true 
+                    })}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!crumb.isLast) {
+                        console.log(`Navigate to: ${crumb.fullPath}`);
+                      }
+                    }}
+                  >
+                    {crumb.label}
+                  </span>
+                </Breadcrumbs.Item>
+              )}
+            </For>
+          </Breadcrumbs>
+        </div>
+      )}
+      <p class="text-xs text-base-content/70 line-clamp-3">
+        {props.item.abstract}
       </p>
-    )}
-    <p class="text-xs text-base-content/70 line-clamp-3">
-      {props.item.abstract}
-    </p>
-  </div>
-);
+    </div>
+  );
+};
 
 interface ContentListProps {
   items: ContentItemData[];
