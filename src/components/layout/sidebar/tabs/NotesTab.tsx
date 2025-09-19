@@ -16,13 +16,14 @@ const MenuItem = (props: MenuItemProps) => {
   const [local, others] = splitProps(props, ["children", "icon", "submenu"]);
   const safeSubMenu = children(() => local.submenu);
   const safeChildren = children(() => local.children);
+  const safeIcon = children(() => local.icon);
   return (
     <li>
       <a
         class={props.size === "sm" ? "text-sm py-1" : ""}
         onClick={props.onClick}
       >
-        {local.icon && <span class="mr-2">{local.icon}</span>}
+        {safeIcon() && <span class="mr-2">{safeIcon()}</span>}
         {safeChildren()}
       </a>
       {safeSubMenu() && <ul>{safeSubMenu()}</ul>}
