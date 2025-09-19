@@ -71,6 +71,41 @@ db.exec(`
   ) child_counts ON n.id = child_counts.parent_id;
 `);
 
+// Create FTS5 virtual table for full-text search
+db.exec(`
+  CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+    id UNINDEXED,
+    title,
+    abstract,
+    content,
+    user_id UNINDEXED,
+    content='notes',
+    content_rowid='id'
+  );
+`);
+
+// Create triggers to keep FTS5 table in sync with notes table
+db.exec(`
+  CREATE TRIGGER IF NOT EXISTS notes_fts_insert AFTER INSERT ON notes BEGIN
+    INSERT INTO notes_fts(rowid, id, title, abstract, content, user_id)
+    VALUES (new.rowid, new.id, new.title, new.abstract, new.content, new.user_id);
+  END;
+`);
+
+db.exec(`
+  CREATE TRIGGER IF NOT EXISTS notes_fts_delete AFTER DELETE ON notes BEGIN
+    DELETE FROM notes_fts WHERE rowid = old.rowid;
+  END;
+`);
+
+db.exec(`
+  CREATE TRIGGER IF NOT EXISTS notes_fts_update AFTER UPDATE ON notes BEGIN
+    DELETE FROM notes_fts WHERE rowid = old.rowid;
+    INSERT INTO notes_fts(rowid, id, title, abstract, content, user_id)
+    VALUES (new.rowid, new.id, new.title, new.abstract, new.content, new.user_id);
+  END;
+`);
+
 // Create indexes for better query performance
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);

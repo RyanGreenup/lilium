@@ -1,4 +1,4 @@
-import { A, RouteDefinition, createAsync, query } from "@solidjs/router";
+import { A, RouteDefinition, createAsync } from "@solidjs/router";
 import Clock from "lucide-solid/icons/clock";
 
 import FileText from "lucide-solid/icons/file-text";
@@ -8,12 +8,7 @@ import { For, Suspense, Show } from "solid-js";
 import { getUser } from "~/lib/auth";
 import { getNoteChildCountsQuery } from "~/lib/db/notes/read";
 import { getNotesStatsQuery } from "~/lib/db/noteStats";
-
-const getRecentNotesData = async () => {
-  "use server";
-  const { getRecentNotes } = await import("~/lib/db");
-  return await getRecentNotes(4);
-};
+import { getRecentNotesQuery } from "~/lib/db/notes/search";
 
 import { Badge } from "~/solid-daisy-components/components/Badge";
 import { Card } from "~/solid-daisy-components/components/Card";
@@ -25,13 +20,12 @@ import {
   Stats,
 } from "~/solid-daisy-components/components/Stat";
 
-const getRecentNotesQuery = query(getRecentNotesData, "recent-notes");
 
 export const route = {
   preload() {
     getUser();
     getNotesStatsQuery();
-    getRecentNotesQuery();
+    getRecentNotesQuery(20);
     getNoteChildCountsQuery();
   },
 } satisfies RouteDefinition;
@@ -39,7 +33,7 @@ export const route = {
 
 export default function Home() {
   const stats = createAsync(() => getNotesStatsQuery());
-  const recentNotes = createAsync(() => getRecentNotesQuery());
+  const recentNotes = createAsync(() => getRecentNotesQuery(4));
   const childCounts = createAsync(() => getNoteChildCountsQuery());
 
   const formatDate = (isoString: string) => {
