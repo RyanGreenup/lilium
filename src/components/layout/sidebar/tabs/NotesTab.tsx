@@ -1,7 +1,7 @@
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
-import { Accessor, For, Show, createMemo } from "solid-js";
+import { For, Show, createMemo } from "solid-js";
 import { useCurrentNoteChildren } from "~/lib/hooks/useCurrentDirectory";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import {
@@ -17,35 +17,13 @@ export default function NotesTab() {
   const { note, noteId } = useCurrentNote();
   const { children } = useCurrentNoteChildren();
   const { handleItemClick } = useNoteNavigation();
+  
+  const siblings = useNoteSiblings(noteId, createMemo(() => note()?.parent_id));
 
-  // Get parent ID for siblings
-  const parentId = createMemo(() => note()?.parent_id);
-
-  // Get siblings of the current note
-  const siblings = useNoteSiblings(noteId, parentId);
-
-  // Check if current note is a folder (has children)
-  const isCurrentNoteFolder = createMemo(() => {
-    const childrenData = children();
-    return childrenData && childrenData.length > 0;
-  });
-
-  // Get the title for the section
-  const sectionTitle = createMemo(() => {
-    const currentNote = note();
-    if (!currentNote) return "Root Directory";
-    return isCurrentNoteFolder()
-      ? `Contents of "${currentNote.title}"`
-      : `Siblings of "${currentNote.title}"`;
-  });
-
-  // Get items to display - children if folder, siblings if note
-  const displayItems = createMemo(() => {
-    return isCurrentNoteFolder() ? children() || [] : siblings() || [];
-  });
-
-  // Check if item is currently active - make it reactive
-  const isItemActive = createMemo(() => (itemId: string) => noteId() === itemId);
+  const isCurrentNoteFolder = createMemo(() => (children()?.length ?? 0) > 0);
+  const displayItems = createMemo(() => 
+    isCurrentNoteFolder() ? children() ?? [] : siblings() ?? []
+  );
 
   return (
     <div class="space-y-4">
@@ -67,7 +45,7 @@ export default function NotesTab() {
               {(item: NavigationItem) => (
                 <MenuItem
                   item={item}
-                  isActive={() => isItemActive()(item.id)}
+                  isActive={noteId() === item.id}
                   handleItemClick={handleItemClick}
                 />
               )}
@@ -81,23 +59,21 @@ export default function NotesTab() {
 
 const MenuItem = (props: {
   item: NavigationItem;
-  isActive: Accessor<boolean>;
+  isActive: boolean;
   handleItemClick: (item: NavigationItem) => void;
-}) => {
-  return (
-    <li>
-      <a
-        class={props.isActive() ? "menu-active" : ""}
-        onClick={() => props.handleItemClick(props.item)}
-      >
-        <Show when={props.item.is_folder} fallback={<FileText size={16} />}>
-          <Folder size={16} />
-        </Show>
-        <span class="flex-1">{props.item.title}</span>
-        <Show when={props.item.is_folder}>
-          <ChevronRight size={14} class="text-base-content/40" />
-        </Show>
-      </a>
-    </li>
-  );
-};
+}) => (
+  <li>
+    <a
+      class={props.isActive ? "menu-active" : ""}
+      onClick={() => props.handleItemClick(props.item)}
+    >
+      <Show when={props.item.is_folder} fallback={<FileText size={16} />}>
+        <Folder size={16} />
+      </Show>
+      <span class="flex-1">{props.item.title}</span>
+      <Show when={props.item.is_folder}>
+        <ChevronRight size={14} class="text-base-content/40" />
+      </Show>
+    </a>
+  </li>
+);
