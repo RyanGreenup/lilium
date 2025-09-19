@@ -69,3 +69,9 @@ This will conflict with our need to preserve the `?sidebar=` searchParam (which 
 ** TODO Transitions
 ** TODO Sidebar needs to focus the note from the url
 ** TODO Sidebar transition is wrong.
+** TODO Context Menu
+** TODO Move the Sql into CRUD folders
+** TODO Create associated.ts files with the server side function
+** TODO Command Palette
+** TODO Breadcrumbs in the Navbar
+** TODO Context Menu

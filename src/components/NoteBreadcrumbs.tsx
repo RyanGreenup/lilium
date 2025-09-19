@@ -10,6 +10,7 @@ interface NoteBreadcrumbsByIdProps {
   noteId: Accessor<string | undefined>;
 }
 
+// TODO there's already a getNoteById I think?
 const getNoteById = async (id: string | undefined) => {
   if (!id) return null;
   ("use server");

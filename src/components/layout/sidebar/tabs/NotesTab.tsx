@@ -30,6 +30,7 @@ import { Alert } from "~/solid-daisy-components/components/Alert";
 import { Badge } from "~/solid-daisy-components/components/Badge";
 import { Input } from "~/solid-daisy-components/components/Input";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
+import { createNewNote } from "~/lib/db/notes/create";
 
 // Hook for navigation keybindings
 function useNavigationKeybindings(
@@ -291,16 +292,6 @@ function useNoteRenaming(
     setNewlyCreatedNoteId,
   };
 }
-
-// Query function to create a new note
-const createNewNote = query(
-  async (title: string, content: string, parentId?: string) => {
-    "use server";
-    const { createNote } = await import("~/lib/db");
-    return await createNote(title, content, "markdown", undefined, parentId);
-  },
-  "create-note",
-);
 
 // Query function to update note title
 const updateNoteTitle = query(async (noteId: string, newTitle: string) => {
