@@ -14,6 +14,7 @@ import {
   onMount,
   Show,
 } from "solid-js";
+import NoteBreadcrumbsVertical from "~/components/NoteBreadcrumbsVertical";
 import { useAutoFocus } from "~/lib/hooks/useAutoFocus";
 import { useCurrentNoteChildren } from "~/lib/hooks/useCurrentDirectory";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
@@ -29,6 +30,7 @@ import { createNewNote } from "~/lib/db/notes/create";
 import { updateNoteTitle, moveNoteQuery } from "~/lib/db/notes/update";
 import { deleteNoteQuery } from "~/lib/db/notes/delete";
 import { Note } from "~/lib/db/types";
+import { Card } from "~/solid-daisy-components/components/Card";
 
 // Hook for navigation keybindings
 function useNavigationKeybindings(
@@ -625,6 +627,12 @@ export default function NotesTab() {
     >
       <div class="flex-1 space-y-4">
         {/*TODO Down the line we'll have to use context provider for keybindings to focus elements*/}
+
+        <div class="mb-4">
+          <NoteBreadcrumbsVertical />
+        </div>
+
+        <div class="divider"/>
 
         <div class="w-full h-full bg-base-200 group-focus:bg-base-300  transition-bg duration-300 ease-in-out rounded">
           <Show when={cutNoteId()}>

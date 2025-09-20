@@ -89,13 +89,6 @@ export default function NoteEditor() {
         <div class="h-full flex flex-col">
       {/* Header */}
       <div class="border-b border-base-300 bg-base-200">
-        {/* Breadcrumbs */}
-        <div class="px-4 pt-3 pb-2 border-b border-base-300/50">
-          <Suspense fallback={<div class="text-sm text-base-content/60">Loading...</div>}>
-            <NoteBreadcrumbs />
-          </Suspense>
-        </div>
-        
         {/* Title Section */}
         <div class="px-4 pt-4 pb-3">
           <div class="flex items-start gap-3">
