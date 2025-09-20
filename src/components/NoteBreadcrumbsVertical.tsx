@@ -1,6 +1,5 @@
 import { createAsync } from "@solidjs/router";
 import ChevronDown from "lucide-solid/icons/chevron-down";
-import Home from "lucide-solid/icons/home";
 import { Accessor, For, Show, createMemo } from "solid-js";
 import { getNoteByIdQuery } from "~/lib/db/notes/read";
 import { useCurrentNoteChildren } from "~/lib/hooks/useCurrentDirectory";
@@ -9,6 +8,7 @@ import { useNoteNavigation } from "~/lib/hooks/useNoteNavigation";
 import { useNoteParents } from "~/lib/hooks/useNoteParents";
 import { Badge } from "~/solid-daisy-components/components/Badge";
 import { Button } from "~/solid-daisy-components/components/Button";
+import { HomeIconBreadcrumbs } from "./NoteBreadcrumbs";
 
 interface NoteBreadcrumbsVerticalByIdProps {
   noteId: Accessor<string | undefined>;
@@ -38,8 +38,7 @@ export function NoteBreadcrumbsVerticalById(
             onClick={navigateToRoot}
             class="justify-start px-2 py-1 h-auto min-h-0"
           >
-            <Home size={14} />
-            Home
+            <HomeIconBreadcrumbs />
           </Button>
         </div>
 
