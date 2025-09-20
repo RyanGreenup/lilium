@@ -3,8 +3,8 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 import Home from "lucide-solid/icons/home";
 import { Accessor, For, Show, createMemo } from "solid-js";
 import { getNoteByIdQuery } from "~/lib/db/notes/read";
-import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { useCurrentNoteChildren } from "~/lib/hooks/useCurrentDirectory";
+import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { useNoteNavigation } from "~/lib/hooks/useNoteNavigation";
 import { useNoteParents } from "~/lib/hooks/useNoteParents";
 import { Badge } from "~/solid-daisy-components/components/Badge";
@@ -25,7 +25,7 @@ export function NoteBreadcrumbsVerticalById(
   const parents = useNoteParents(props.noteId);
   const { navigateToNote, navigateToRoot } = useNoteNavigation();
   const { children } = useCurrentNoteChildren();
-  
+
   const hasChildren = createMemo(() => (children()?.length ?? 0) > 0);
 
   return (
@@ -66,6 +66,7 @@ export function NoteBreadcrumbsVerticalById(
           )}
         </For>
 
+        {/*Only show when current note is an index page of the folder*/}
         <Show when={hasChildren()}>
           <div class="flex items-center space-x-2">
             <div class="flex-1 px-2 py-1">
