@@ -88,8 +88,9 @@ Maybe just
 ** TODO Remove the Background on Focus
 ** TODO Remove the Animations
 ** TODO Visiting a Note ID should move the Sidebar to it's parent id and select that itemkj
-** TODO Add Typst
-** TODO Add Transclusion
+** DONE Add Typst
+** DONE Add Transclusion
+nope. Don't wanna deal with the rendering. Unless I can do it in SQL?
 * Exemplar
 Some writing
 
