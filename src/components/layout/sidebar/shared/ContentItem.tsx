@@ -1,4 +1,4 @@
-import { For, createSignal, createEffect, Accessor } from "solid-js";
+import { For, createSignal, createEffect, Accessor, Show } from "solid-js";
 import { tv } from "tailwind-variants";
 import { useNavigate } from "@solidjs/router";
 import { Breadcrumbs } from "~/solid-daisy-components/components/Breadcrumbs";
@@ -72,7 +72,14 @@ export const ContentItem = (props: ContentItemProps) => {
       : [];
 
   const classList = () => {
-    const classes = ["p-3", "bg-base-200", "rounded-lg", "hover:bg-base-300", "cursor-pointer", "transition-colors"];
+    const classes = [
+      "p-3",
+      "bg-base-200",
+      "rounded-lg",
+      "hover:bg-base-300",
+      "cursor-pointer",
+      "transition-colors",
+    ];
     if (props.isFocused) {
       classes.push("ring-2", "ring-primary", "ring-inset");
     }
@@ -80,22 +87,19 @@ export const ContentItem = (props: ContentItemProps) => {
   };
 
   return (
-    <div
-      class={classList()}
-      onClick={props.item.onClick}
-    >
+    <div class={classList()} onClick={props.item.onClick}>
       <button onclick={() => navigate(`/note/${props.item.id}`)}>
         <h4 class="font-medium text-sm text-base-content mb-1 line-clamp-2">
           {props.item.title}
         </h4>
       </button>
-      {props.showPath && (
+      <Show when={props.showPath}>
         <div class="mb-2">
           <div class={breadcrumbsVariants({ wrap: true })}>
             <NoteBreadcrumbsById noteId={createSignal(props.item.id)[0]} />
           </div>
         </div>
-      )}
+      </Show>
       <p class="text-xs text-base-content/70 line-clamp-3">
         {props.item.abstract}
       </p>
@@ -119,15 +123,17 @@ export const ContentList = (props: ContentListProps) => {
   let containerRef: HTMLDivElement | undefined;
 
   // Follow mode hook (only if showFollowMode is true)
-  const followModeHook = props.showFollowMode ? useFollowMode({
-    getFocusedItem: () => {
-      const items = props.items;
-      const index = focusedIndex();
-      return index >= 0 && index < items.length ? items[index] : null;
-    },
-    keyBindingRef: () => containerRef,
-    shouldNavigate: () => true, // Always navigate for content lists
-  }) : { followMode: () => false, setFollowMode: () => {} };
+  const followModeHook = props.showFollowMode
+    ? useFollowMode({
+        getFocusedItem: () => {
+          const items = props.items;
+          const index = focusedIndex();
+          return index >= 0 && index < items.length ? items[index] : null;
+        },
+        keyBindingRef: () => containerRef,
+        shouldNavigate: () => true, // Always navigate for content lists
+      })
+    : { followMode: () => false, setFollowMode: () => {} };
 
   // Auto-focus first item when items change and keyboard nav is enabled
   createEffect(() => {
@@ -151,7 +157,7 @@ export const ContentList = (props: ContentListProps) => {
           setFocusedIndex(nextIndex);
         }
       },
-      { ref: () => containerRef }
+      { ref: () => containerRef },
     );
 
     useKeybinding(
@@ -163,7 +169,7 @@ export const ContentList = (props: ContentListProps) => {
           setFocusedIndex(nextIndex);
         }
       },
-      { ref: () => containerRef }
+      { ref: () => containerRef },
     );
 
     useKeybinding(
@@ -181,7 +187,7 @@ export const ContentList = (props: ContentListProps) => {
           }
         }
       },
-      { ref: () => containerRef }
+      { ref: () => containerRef },
     );
 
     useKeybinding(
@@ -191,7 +197,7 @@ export const ContentList = (props: ContentListProps) => {
           props.onEscape();
         }
       },
-      { ref: () => containerRef }
+      { ref: () => containerRef },
     );
   }
 
@@ -199,13 +205,13 @@ export const ContentList = (props: ContentListProps) => {
     <div class="space-y-4">
       {/* Follow Mode Toggle */}
       {props.showFollowMode && (
-        <FollowModeToggle 
-          followMode={followModeHook.followMode} 
-          setFollowMode={followModeHook.setFollowMode} 
+        <FollowModeToggle
+          followMode={followModeHook.followMode}
+          setFollowMode={followModeHook.setFollowMode}
         />
       )}
-      
-      <div 
+
+      <div
         ref={(el) => {
           containerRef = el;
           if (props.ref) props.ref(el);
@@ -221,10 +227,12 @@ export const ContentList = (props: ContentListProps) => {
           <div class="space-y-2">
             <For each={props.items}>
               {(item, index) => (
-                <ContentItem 
-                  item={item} 
-                  showPath={props.showPath} 
-                  isFocused={props.enableKeyboardNav && focusedIndex() === index()}
+                <ContentItem
+                  item={item}
+                  showPath={props.showPath}
+                  isFocused={
+                    props.enableKeyboardNav && focusedIndex() === index()
+                  }
                 />
               )}
             </For>
