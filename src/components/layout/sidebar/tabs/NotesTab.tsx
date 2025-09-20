@@ -15,7 +15,6 @@ import {
   Show,
 } from "solid-js";
 import NoteBreadcrumbsVertical from "~/components/NoteBreadcrumbsVertical";
-import { useAutoFocus } from "~/lib/hooks/useAutoFocus";
 import {
   useNoteNavigation,
   type NavigationItem,
@@ -292,7 +291,11 @@ function useNoteRenaming(
 }
 
 
-export default function NotesTab() {
+interface NotesTabProps {
+  focusTrigger?: () => string | null;
+}
+
+export default function NotesTab(props: NotesTabProps = {}) {
   const { 
     note, 
     noteId, 
@@ -384,8 +387,16 @@ export default function NotesTab() {
     setFocusedItemIndex,
   );
 
-  // Auto-focus the tab when it mounts
-  useAutoFocus(() => tabRef);
+  // Handle external focus requests
+  createEffect(() => {
+    const trigger = props.focusTrigger?.();
+    if (trigger && tabRef) {
+      // Focus on next tick after render
+      setTimeout(() => {
+        tabRef.focus();
+      }, 0);
+    }
+  });
 
   // Handle creating a new note
   const handleCreateNote = async () => {

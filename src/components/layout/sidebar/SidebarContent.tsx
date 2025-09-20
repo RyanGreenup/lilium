@@ -25,6 +25,10 @@ export const SidebarTabs = () => {
   const [isGoingDeeper, setIsGoingDeeper] = createSignal(true);
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Focus triggers for tabs
+  const [notesFocusTrigger, setNotesFocusTrigger] = createSignal<string | null>(null);
+  const [searchFocusTrigger, setSearchFocusTrigger] = createSignal<string | null>(null);
+
   const tabs = [
     { id: 0, label: "Notes", key: "notes", icon: <Notebook class="w-4 h-4" /> },
     { id: 1, label: "Recent", key: "recent", icon: <Clock class="w-4 h-4" /> },
@@ -62,7 +66,7 @@ export const SidebarTabs = () => {
     }
   });
 
-  const handleTabChange = (tabId: number) => {
+  const handleTabChange = (tabId: number, fromKeybinding = false) => {
     const currentTab = activeTab();
     setIsGoingDeeper(tabId > currentTab);
     setActiveTab(tabId);
@@ -70,23 +74,39 @@ export const SidebarTabs = () => {
     if (tab) {
       setSearchParams({ sidebar: tab.key });
     }
+
+    // Trigger focus only when switching via keybinding
+    if (fromKeybinding) {
+      const triggerId = Date.now().toString();
+      if (tabId === 0) {
+        // Notes tab
+        setNotesFocusTrigger(triggerId);
+        // Clear trigger after a short delay
+        setTimeout(() => setNotesFocusTrigger(null), 100);
+      } else if (tabId === 2) {
+        // Search tab
+        setSearchFocusTrigger(triggerId);
+        // Clear trigger after a short delay
+        setTimeout(() => setSearchFocusTrigger(null), 100);
+      }
+    }
   };
 
   // Global keybindings for tab switching (Alt + 1-7)
-  useKeybinding({ key: "1", alt: true }, () => handleTabChange(0));
-  useKeybinding({ key: "2", alt: true }, () => handleTabChange(1));
-  useKeybinding({ key: "3", alt: true }, () => handleTabChange(2));
-  useKeybinding({ key: "4", alt: true }, () => handleTabChange(3));
-  useKeybinding({ key: "5", alt: true }, () => handleTabChange(4));
-  useKeybinding({ key: "6", alt: true }, () => handleTabChange(5));
-  useKeybinding({ key: "7", alt: true }, () => handleTabChange(6));
+  useKeybinding({ key: "1", alt: true }, () => handleTabChange(0, true));
+  useKeybinding({ key: "2", alt: true }, () => handleTabChange(1, true));
+  useKeybinding({ key: "3", alt: true }, () => handleTabChange(2, true));
+  useKeybinding({ key: "4", alt: true }, () => handleTabChange(3, true));
+  useKeybinding({ key: "5", alt: true }, () => handleTabChange(4, true));
+  useKeybinding({ key: "6", alt: true }, () => handleTabChange(5, true));
+  useKeybinding({ key: "7", alt: true }, () => handleTabChange(6, true));
 
   // Global keybindings for tab navigation (Alt + h/l)
   useKeybinding({ key: "h", alt: true }, () => {
     const currentTab = activeTab();
     const prevTab = currentTab - 1;
     if (prevTab >= 0) {
-      handleTabChange(prevTab);
+      handleTabChange(prevTab, true);
     }
   });
 
@@ -94,7 +114,7 @@ export const SidebarTabs = () => {
     const currentTab = activeTab();
     const nextTab = currentTab + 1;
     if (nextTab < tabs.length) {
-      handleTabChange(nextTab);
+      handleTabChange(nextTab, true);
     }
   });
 
@@ -120,7 +140,7 @@ export const SidebarTabs = () => {
         >
           <div>
             <Show when={activeTab() === 0}>
-              <NotesTab />
+              <NotesTab focusTrigger={notesFocusTrigger} />
             </Show>
 
             <Show when={activeTab() === 1}>
@@ -128,7 +148,7 @@ export const SidebarTabs = () => {
             </Show>
 
             <Show when={activeTab() === 2}>
-              <SidebarSearchContent />
+              <SidebarSearchContent focusTrigger={searchFocusTrigger} />
             </Show>
 
             <Show when={activeTab() === 3}>

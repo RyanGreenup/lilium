@@ -23,7 +23,11 @@ import {
 } from "~/lib/db/notes/search";
 import type { Note } from "~/lib/db/types";
 
-export const SidebarSearchContent = () => {
+interface SidebarSearchContentProps {
+  focusTrigger?: () => string | null;
+}
+
+export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
   const [useFtsSearch, setUseFtsSearch] = createSignal(true);
   const [syntaxFilter, setSyntaxFilter] = createSignal<string>("");
   const [hasAbstractFilter, setHasAbstractFilter] = createSignal<
@@ -31,6 +35,20 @@ export const SidebarSearchContent = () => {
   >(undefined);
   const [pathDisplay, setPathDisplay] = createSignal(0); // 0: Absolute, 1: Relative, 2: Title
   const [searchTerm, setSearchTerm] = createSignal("");
+
+  // Create ref for search input
+  let searchInputRef: HTMLInputElement | undefined;
+
+  // Handle external focus requests
+  createEffect(() => {
+    const trigger = props.focusTrigger?.();
+    if (trigger && searchInputRef) {
+      // Focus on next tick after render
+      setTimeout(() => {
+        searchInputRef.focus();
+      }, 0);
+    }
+  });
 
   const pathDisplayOptions = [
     { id: 0, label: "Absolute" },
@@ -114,6 +132,7 @@ export const SidebarSearchContent = () => {
     <div class="space-y-4">
       <div class="p-4 space-y-4">
         <input
+          ref={searchInputRef}
           type="text"
           placeholder="Search..."
           class="input input-bordered w-full"
