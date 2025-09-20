@@ -7,7 +7,7 @@ import { useNoteParents } from "~/lib/hooks/useNoteParents";
 // Server function to get recent notes
 const getRecentNotesData = async () => {
   "use server";
-  const { getRecentNotes } = await import("~/lib/db");
+  const { getRecentNotes } = await import("~/lib/db/notes/search");
   return await getRecentNotes(10);
 };
 
