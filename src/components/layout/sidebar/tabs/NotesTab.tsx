@@ -46,10 +46,10 @@ function useNavigationKeybindings(
   handleCreateNote: () => void,
   handleCreateChildNote: () => void,
   startEditingFocusedItem: () => void,
-  handleCutNote: () => void,
+  handleCutNote: (noteId?: string) => void,
   handleClearCut: () => void,
   handlePasteNote: () => void,
-  handlePasteAsChild: () => void,
+  handlePasteAsChild: (parentId?: string) => void,
   handleDeleteNote: (noteId?: string) => void,
   handleDuplicateNote: (id: string) => void,
 ) {
@@ -500,11 +500,15 @@ export default function NotesTab(props: NotesTabProps = {}) {
   };
 
   // Handle cutting a note
-  const handleCutNote = () => {
-    const focused = focusedItem();
-    if (focused) {
-      setCutNoteId(focused.id);
-      console.log(`Cut note: ${focused.title} (${focused.id})`);
+  const handleCutNote = (noteId?: string) => {
+    // Use provided ID or fall back to focused item
+    const targetItem = noteId 
+      ? displayItems().find(item => item.id === noteId)
+      : focusedItem();
+      
+    if (targetItem) {
+      setCutNoteId(targetItem.id);
+      console.log(`Cut note: ${targetItem.title} (${targetItem.id})`);
     }
   };
 
@@ -568,23 +572,27 @@ export default function NotesTab(props: NotesTabProps = {}) {
     }
   };
 
-  // Handle pasting a cut note as a child of the focused note
-  const handlePasteAsChild = async () => {
+  // Handle pasting a cut note as a child of the specified or focused note
+  const handlePasteAsChild = async (parentId?: string) => {
     const cutId = cutNoteId();
     if (!cutId) {
       console.log("No note to paste");
       return;
     }
 
-    const focused = focusedItem();
-    if (!focused) {
-      console.log("No focused item to paste under");
+    // Use provided parentId or fall back to focused item
+    const targetItem = parentId 
+      ? displayItems().find(item => item.id === parentId)
+      : focusedItem();
+      
+    if (!targetItem) {
+      console.log("No target item to paste under");
       return;
     }
 
     try {
-      // Always paste as child of the focused item
-      const newParentId = focused.id;
+      // Paste as child of the target item
+      const newParentId = targetItem.id;
 
       // Prevent setting note as its own parent
       if (newParentId === cutId) {
@@ -592,7 +600,7 @@ export default function NotesTab(props: NotesTabProps = {}) {
         return;
       }
 
-      console.log(`Pasting note ${cutId} as child of ${focused.title} (${newParentId})`);
+      console.log(`Pasting note ${cutId} as child of ${targetItem.title} (${newParentId})`);
 
       await moveNoteQuery(cutId, newParentId);
 
@@ -856,12 +864,12 @@ const MenuItem = (props: {
   onCancelEdit: () => void;
   startEditingItem: (id: string) => void;
   handleDeleteNote: (id?: string) => void;
-  handleCutNote: (id: string) => void;
+  handleCutNote: (id?: string) => void;
   handleCreateChildNote: (parentId: string) => void;
   handleCreateSiblingNote: () => void;
   handleDuplicateNote: (id: string) => void;
   handlePasteNote: () => void;
-  handlePasteAsChild: (parentId: string) => void;
+  handlePasteAsChild: (parentId?: string) => void;
 }) => {
   let inputRef: HTMLInputElement | undefined;
 
