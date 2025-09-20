@@ -1,6 +1,7 @@
 import { createSignal, createEffect, type Accessor, Suspense, Switch, Match } from "solid-js";
 import { createAsync } from "@solidjs/router";
 import { renderOrgModeQuery, renderJupyterNotebookQuery, renderDokuWikiQuery, renderMediaWikiQuery, renderLatexQuery, renderTypstQuery } from "~/lib/pandoc";
+import { CodeBlockEnhancer } from "./CodeBlockCopy";
 
 const renderMarkdownClient = async (markdownContent: string): Promise<string> => {
   if (!markdownContent.trim()) return "No notes";
@@ -70,40 +71,42 @@ export const MarkdownRenderer = (props: {
   });
 
   return (
-    <div class="prose prose-sm max-w-none dark:prose-invert">
-      <Switch>
-        <Match when={["org", "ipynb", "dokuwiki", "mediawiki", "latex", "typst"].includes(props.syntax?.() || "")}>
-          <Suspense 
-            fallback={
+    <CodeBlockEnhancer>
+      <div class="prose prose-sm max-w-none dark:prose-invert">
+        <Switch>
+          <Match when={["org", "ipynb", "dokuwiki", "mediawiki", "latex", "typst"].includes(props.syntax?.() || "")}>
+            <Suspense 
+              fallback={
+                <div class="flex items-center justify-center p-4">
+                  <div class="loading loading-spinner loading-sm"></div>
+                  <span class="ml-2 text-sm text-base-content/60">Rendering {props.syntax?.()}...</span>
+                </div>
+              }
+            >
+              <div innerHTML={pandocHtml()} />
+            </Suspense>
+          </Match>
+          
+          <Match when={props.syntax?.() === "markdown"}>
+            {isLoadingMarkdown() ? (
               <div class="flex items-center justify-center p-4">
                 <div class="loading loading-spinner loading-sm"></div>
-                <span class="ml-2 text-sm text-base-content/60">Rendering {props.syntax?.()}...</span>
+                <span class="ml-2 text-sm text-base-content/60">Rendering Markdown...</span>
               </div>
-            }
-          >
-            <div innerHTML={pandocHtml()} />
-          </Suspense>
-        </Match>
-        
-        <Match when={props.syntax?.() === "markdown"}>
-          {isLoadingMarkdown() ? (
-            <div class="flex items-center justify-center p-4">
-              <div class="loading loading-spinner loading-sm"></div>
-              <span class="ml-2 text-sm text-base-content/60">Rendering Markdown...</span>
-            </div>
-          ) : (
-            <div innerHTML={markdownHtml()} />
-          )}
-        </Match>
-        
-        <Match when={props.syntax?.() === "html"}>
-          <div innerHTML={props.content() || "No content"} />
-        </Match>
-        
-        <Match when={true}>
-          <pre><code>{props.content() || "No content"}</code></pre>
-        </Match>
-      </Switch>
-    </div>
+            ) : (
+              <div innerHTML={markdownHtml()} />
+            )}
+          </Match>
+          
+          <Match when={props.syntax?.() === "html"}>
+            <div innerHTML={props.content() || "No content"} />
+          </Match>
+          
+          <Match when={true}>
+            <pre><code>{props.content() || "No content"}</code></pre>
+          </Match>
+        </Switch>
+      </div>
+    </CodeBlockEnhancer>
   );
 };
