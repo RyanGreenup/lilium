@@ -55,6 +55,34 @@ export async function createNote(
 }
 
 /**
+ * Duplicate an existing note with a new ID and title
+ */
+export async function duplicateNote(
+  sourceId: string,
+  newTitle: string,
+): Promise<Note> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+  
+  const newId = randomBytes(16).toString("hex");
+  const stmt = db.prepare(`
+    INSERT INTO notes (id, title, abstract, content, syntax, parent_id, user_id)
+    SELECT ?, ?, abstract, content, syntax, parent_id, user_id
+    FROM notes 
+    WHERE id = ? AND user_id = ?
+  `);
+  
+  stmt.run(newId, newTitle, sourceId, user.id);
+  const duplicatedNote = await getNoteById(newId);
+  if (!duplicatedNote) {
+    throw new Error("Failed to duplicate note");
+  }
+  return duplicatedNote;
+}
+
+/**
  * Query function to create a new note (for client-side use)
  */
 export const createNewNote = query(
@@ -63,4 +91,15 @@ export const createNewNote = query(
     return await createNote(title, content, "markdown", undefined, parentId);
   },
   "create-note",
+);
+
+/**
+ * Query function to duplicate a note (for client-side use)
+ */
+export const duplicateNoteQuery = query(
+  async (sourceId: string, newTitle: string) => {
+    "use server";
+    return await duplicateNote(sourceId, newTitle);
+  },
+  "duplicate-note",
 );

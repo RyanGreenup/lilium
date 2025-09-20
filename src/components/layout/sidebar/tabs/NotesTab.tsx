@@ -25,7 +25,7 @@ import { Input } from "~/solid-daisy-components/components/Input";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Kbd } from "~/solid-daisy-components/components/Kbd";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
-import { createNewNote } from "~/lib/db/notes/create";
+import { createNewNote, duplicateNoteQuery } from "~/lib/db/notes/create";
 import { updateNoteTitle, moveNoteQuery } from "~/lib/db/notes/update";
 import { deleteNoteQuery } from "~/lib/db/notes/delete";
 import { Note } from "~/lib/db/types";
@@ -51,6 +51,7 @@ function useNavigationKeybindings(
   handlePasteNote: () => void,
   handlePasteAsChild: () => void,
   handleDeleteNote: () => void,
+  handleDuplicateNote: (id: string) => void,
 ) {
   // Navigation keybindings
   useKeybinding(
@@ -176,6 +177,19 @@ function useNavigationKeybindings(
     () => {
       console.log("Pasting note as child...");
       handlePasteAsChild();
+    },
+    { ref: tabRef },
+  );
+
+  // Duplicate keybinding
+  useKeybinding(
+    { key: "d", ctrl: true },
+    () => {
+      console.log("Duplicating note...");
+      const focused = focusedItem();
+      if (focused) {
+        handleDuplicateNote(focused.id);
+      }
     },
     { ref: tabRef },
   );
@@ -669,6 +683,33 @@ export default function NotesTab(props: NotesTabProps = {}) {
     }
   };
 
+  // Handle duplicating a note
+  const handleDuplicateNote = async (noteId: string) => {
+    try {
+      // Get the note to duplicate
+      const noteToClone = displayItems().find(item => item.id === noteId);
+      if (!noteToClone) return;
+
+      // Create a new title with (copy) suffix
+      const newTitle = `${noteToClone.title} (copy)`;
+      const newNote = await duplicateNoteQuery(noteId, newTitle);
+      
+      if (newNote) {
+        // Revalidate to refresh the display
+        revalidate([
+          duplicateNoteQuery.key,
+          "children-with-folder-status",
+          "note-by-id",
+        ]);
+      }
+    } catch (error) {
+      console.error("Failed to duplicate note:", error);
+      alert(
+        `Failed to duplicate note: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  };
+
   // Use navigation keybindings hook
   onMount(() => {
     useNavigationKeybindings(
@@ -688,6 +729,7 @@ export default function NotesTab(props: NotesTabProps = {}) {
       handlePasteNote,
       handlePasteAsChild,
       handleDeleteNote,
+      handleDuplicateNote,
     );
   });
 
@@ -769,6 +811,7 @@ export default function NotesTab(props: NotesTabProps = {}) {
                       handleCutNote={handleCutNote}
                       handleCreateChildNote={handleCreateChildNote}
                       handleCreateSiblingNote={handleCreateNote}
+                      handleDuplicateNote={handleDuplicateNote}
                       handlePasteNote={handlePasteNote}
                       handlePasteAsChild={handlePasteAsChild}
                     />
@@ -812,6 +855,7 @@ const MenuItem = (props: {
   handleCutNote: (id: string) => void;
   handleCreateChildNote: (parentId: string) => void;
   handleCreateSiblingNote: () => void;
+  handleDuplicateNote: (id: string) => void;
   handlePasteNote: () => void;
   handlePasteAsChild: (parentId: string) => void;
 }) => {
@@ -841,6 +885,12 @@ const MenuItem = (props: {
       id: "sep1",
       label: "",
       separator: true
+    },
+    {
+      id: "duplicate",
+      label: "Duplicate",
+      keybind: "Ctrl+D",
+      onClick: () => props.handleDuplicateNote(props.item.id)
     },
     {
       id: "cut",
