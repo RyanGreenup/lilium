@@ -69,6 +69,7 @@ export default function RelatedTab(props: RelatedTabProps = {}) {
       showPath={true}
       emptyMessage="No related content found"
       enableKeyboardNav={true}
+      showFollowMode={true}
       ref={(el) => containerRef = el}
     />
   );

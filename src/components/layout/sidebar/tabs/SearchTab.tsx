@@ -21,6 +21,8 @@ import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Select } from "~/solid-daisy-components/components/Select";
 import { Kbd } from "~/solid-daisy-components/components/Kbd";
 import { ContentItem, ContentItemData } from "../shared/ContentItem";
+import { useFollowMode } from "~/lib/hooks/useFollowMode";
+import { FollowModeToggle } from "~/components/shared/FollowModeToggle";
 import {
   searchNotesQuery,
   searchNotesSimpleQuery,
@@ -42,7 +44,6 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
     boolean | undefined
   >(undefined);
   const [pathDisplay, setPathDisplay] = createSignal(0); // 0: Absolute, 1: Relative, 2: Title
-  const [followMode, setFollowMode] = createSignal(false);
   const [settingsExpanded, setSettingsExpanded] = createSignal(false);
   
   // Use external search term if provided, otherwise local state
@@ -55,6 +56,16 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
   
   // Virtual focus for results navigation (keeps input focused)
   const [virtualFocusIndex, setVirtualFocusIndex] = createSignal(-1);
+
+  // Follow mode hook
+  const { followMode, setFollowMode } = useFollowMode({
+    getFocusedItem: () => {
+      const results = formattedResults();
+      const index = virtualFocusIndex();
+      return index >= 0 && index < results.length ? results[index] : null;
+    },
+    shouldNavigate: () => true, // Always navigate for search results
+  });
 
   // Handle external focus requests
   createEffect(() => {
@@ -77,18 +88,6 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
     }
   });
 
-  // Follow mode: navigate to note when virtual focus changes
-  createEffect(() => {
-    if (!followMode()) return;
-    
-    const currentIndex = virtualFocusIndex();
-    const results = formattedResults();
-    
-    if (currentIndex >= 0 && currentIndex < results.length) {
-      const item = results[currentIndex];
-      navigate(`/note/${item.id}`);
-    }
-  });
 
   const pathDisplayOptions = [
     { id: 0, label: "Absolute" },
@@ -202,9 +201,6 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
     } else if (e.key === "Escape") {
       e.preventDefault();
       setVirtualFocusIndex(-1);
-    } else if (e.key === "f" && e.ctrlKey) {
-      e.preventDefault();
-      setFollowMode(!followMode());
     } else if (e.key === "," && e.ctrlKey) {
       e.preventDefault();
       console.log("Toggling settings:", !settingsExpanded());

@@ -55,6 +55,7 @@ export default function BacklinksTab(props: BacklinksTabProps = {}) {
       showPath={true}
       emptyMessage="No backlinks found for this note"
       enableKeyboardNav={true}
+      showFollowMode={true}
       ref={(el) => containerRef = el}
     />
   );

@@ -62,6 +62,7 @@ export default function ForwardLinks(props: ForwardLinksTabProps = {}) {
       showPath={true}
       emptyMessage="No forward links found for this note"
       enableKeyboardNav={true}
+      showFollowMode={true}
       ref={(el) => containerRef = el}
     />
   );

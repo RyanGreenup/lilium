@@ -30,6 +30,8 @@ import { updateNoteTitle, moveNoteQuery } from "~/lib/db/notes/update";
 import { deleteNoteQuery } from "~/lib/db/notes/delete";
 import { Note } from "~/lib/db/types";
 import { Card } from "~/solid-daisy-components/components/Card";
+import { useFollowMode } from "~/lib/hooks/useFollowMode";
+import { FollowModeToggle } from "~/components/shared/FollowModeToggle";
 
 // Hook for navigation keybindings
 function useNavigationKeybindings(
@@ -48,8 +50,6 @@ function useNavigationKeybindings(
   handlePasteNote: () => void,
   handlePasteAsChild: () => void,
   handleDeleteNote: () => void,
-  followMode: Accessor<boolean>,
-  setFollowMode: (value: boolean) => void,
 ) {
   // Navigation keybindings
   useKeybinding(
@@ -189,15 +189,6 @@ function useNavigationKeybindings(
     { ref: tabRef },
   );
 
-  // Follow mode toggle keybinding
-  useKeybinding(
-    { key: "f", ctrl: true },
-    () => {
-      console.log("Toggling follow mode...");
-      setFollowMode(!followMode());
-    },
-    { ref: tabRef },
-  );
 }
 
 // Hook for note renaming and creation functionality
@@ -375,9 +366,6 @@ export default function NotesTab(props: NotesTabProps = {}) {
   // Track cut note for clipboard operations
   const [cutNoteId, setCutNoteId] = createSignal<string | null>(null);
 
-  // Follow mode: navigate to notes as user browses
-  const [followMode, setFollowMode] = createSignal(false);
-
 
   // Auto-focus first item when display items change (but content ID stays same)
   createEffect(() => {
@@ -399,6 +387,13 @@ export default function NotesTab(props: NotesTabProps = {}) {
     const items = displayItems();
     const index = focusedItemIndex();
     return index >= 0 && index < items.length ? items[index] : null;
+  });
+
+  // Follow mode hook (after focusedItem is defined)
+  const { followMode, setFollowMode } = useFollowMode({
+    getFocusedItem: focusedItem,
+    keyBindingRef: () => tabRef,
+    shouldNavigate: (item) => !item.is_folder, // Don't navigate to folders
   });
 
   // Use renaming hook
@@ -426,16 +421,6 @@ export default function NotesTab(props: NotesTabProps = {}) {
     }
   });
 
-  // Follow mode: navigate to note when focus changes
-  createEffect(() => {
-    if (!followMode()) return;
-    
-    const focused = focusedItem();
-    if (focused && !focused.is_folder) {
-      // Only navigate to regular notes, not folders
-      navigateToNote(focused.id);
-    }
-  });
 
   // Handle creating a new note
   const handleCreateNote = async () => {
@@ -702,8 +687,6 @@ export default function NotesTab(props: NotesTabProps = {}) {
       handlePasteNote,
       handlePasteAsChild,
       handleDeleteNote,
-      followMode,
-      setFollowMode,
     );
   });
 
@@ -743,26 +726,10 @@ export default function NotesTab(props: NotesTabProps = {}) {
         <div class="divider"/>
 
         {/* Follow Mode Toggle */}
-        <div class="px-4 py-2 bg-base-100 rounded-lg border border-base-300">
-          <div class="flex items-center justify-between">
-            <label class="label cursor-pointer p-0">
-              <span class="label-text text-sm font-medium">
-                Follow Mode <Kbd size="xs">Ctrl+F</Kbd>
-              </span>
-            </label>
-            <Toggle
-              size="sm"
-              color="primary"
-              checked={followMode()}
-              onChange={(e) => setFollowMode(e.currentTarget.checked)}
-            />
-          </div>
-          <div class="text-xs text-base-content/60 mt-1">
-            {followMode()
-              ? "Navigate to notes as you browse"
-              : "Navigate only on Enter"}
-          </div>
-        </div>
+        <FollowModeToggle 
+          followMode={followMode} 
+          setFollowMode={setFollowMode} 
+        />
 
         <div class="w-full h-full bg-base-200 group-focus:bg-base-300  transition-bg duration-300 ease-in-out rounded">
           <Show when={cutNoteId()}>

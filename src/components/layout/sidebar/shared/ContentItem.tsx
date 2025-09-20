@@ -4,6 +4,8 @@ import { useNavigate } from "@solidjs/router";
 import { Breadcrumbs } from "~/solid-daisy-components/components/Breadcrumbs";
 import { NoteBreadcrumbsById } from "~/components/NoteBreadcrumbs";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
+import { useFollowMode } from "~/lib/hooks/useFollowMode";
+import { FollowModeToggle } from "~/components/shared/FollowModeToggle";
 
 const breadcrumbsVariants = tv({
   base: "text-xs",
@@ -108,12 +110,24 @@ interface ContentListProps {
   enableKeyboardNav?: boolean;
   onEscape?: () => void;
   ref?: (el: HTMLDivElement) => void;
+  showFollowMode?: boolean;
 }
 
 export const ContentList = (props: ContentListProps) => {
   const [focusedIndex, setFocusedIndex] = createSignal(-1);
   const navigate = useNavigate();
   let containerRef: HTMLDivElement | undefined;
+
+  // Follow mode hook (only if showFollowMode is true)
+  const followModeHook = props.showFollowMode ? useFollowMode({
+    getFocusedItem: () => {
+      const items = props.items;
+      const index = focusedIndex();
+      return index >= 0 && index < items.length ? items[index] : null;
+    },
+    keyBindingRef: () => containerRef,
+    shouldNavigate: () => true, // Always navigate for content lists
+  }) : { followMode: () => false, setFollowMode: () => {} };
 
   // Auto-focus first item when items change and keyboard nav is enabled
   createEffect(() => {
@@ -182,31 +196,41 @@ export const ContentList = (props: ContentListProps) => {
   }
 
   return (
-    <div 
-      ref={(el) => {
-        containerRef = el;
-        if (props.ref) props.ref(el);
-      }}
-      tabIndex={props.enableKeyboardNav ? 0 : undefined}
-      class="p-4 space-y-3 outline-none focus:outline-none"
-    >
-      {props.items.length === 0 ? (
-        <div class="text-center text-base-content/60 text-sm py-8">
-          {props.emptyMessage || "No items found"}
-        </div>
-      ) : (
-        <div class="space-y-2">
-          <For each={props.items}>
-            {(item, index) => (
-              <ContentItem 
-                item={item} 
-                showPath={props.showPath} 
-                isFocused={props.enableKeyboardNav && focusedIndex() === index()}
-              />
-            )}
-          </For>
-        </div>
+    <div class="space-y-4">
+      {/* Follow Mode Toggle */}
+      {props.showFollowMode && (
+        <FollowModeToggle 
+          followMode={followModeHook.followMode} 
+          setFollowMode={followModeHook.setFollowMode} 
+        />
       )}
+      
+      <div 
+        ref={(el) => {
+          containerRef = el;
+          if (props.ref) props.ref(el);
+        }}
+        tabIndex={props.enableKeyboardNav ? 0 : undefined}
+        class="p-4 space-y-3 outline-none focus:outline-none"
+      >
+        {props.items.length === 0 ? (
+          <div class="text-center text-base-content/60 text-sm py-8">
+            {props.emptyMessage || "No items found"}
+          </div>
+        ) : (
+          <div class="space-y-2">
+            <For each={props.items}>
+              {(item, index) => (
+                <ContentItem 
+                  item={item} 
+                  showPath={props.showPath} 
+                  isFocused={props.enableKeyboardNav && focusedIndex() === index()}
+                />
+              )}
+            </For>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

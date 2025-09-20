@@ -31,6 +31,7 @@ export const SidebarTabs = () => {
   const [searchFocusTrigger, setSearchFocusTrigger] = createSignal<string | null>(null);
   const [backlinksFocusTrigger, setBacklinksFocusTrigger] = createSignal<string | null>(null);
   const [forwardLinksFocusTrigger, setForwardLinksFocusTrigger] = createSignal<string | null>(null);
+  const [relatedFocusTrigger, setRelatedFocusTrigger] = createSignal<string | null>(null);
 
   // Persistent search state across tab navigation
   const [searchTerm, setSearchTerm] = createSignal("");
