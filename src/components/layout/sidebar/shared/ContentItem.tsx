@@ -1,10 +1,8 @@
-import { JSXElement, For, createSignal } from "solid-js";
+import {  For, createSignal } from "solid-js";
 import { tv } from "tailwind-variants";
 import { useNavigate } from "@solidjs/router";
 import { Breadcrumbs } from "~/solid-daisy-components/components/Breadcrumbs";
-import NoteBreadcrumbs, {
-  NoteBreadcrumbsById,
-} from "~/components/NoteBreadcrumbs";
+import { NoteBreadcrumbsById } from "~/components/NoteBreadcrumbs";
 
 const breadcrumbsVariants = tv({
   base: "text-xs",

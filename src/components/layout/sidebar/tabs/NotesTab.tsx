@@ -1,5 +1,4 @@
-import { AccessorWithLatest, revalidate, query } from "@solidjs/router";
-import { Focus } from "lucide-solid";
+import { AccessorWithLatest, revalidate} from "@solidjs/router";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
@@ -12,12 +11,9 @@ import {
   createMemo,
   createSignal,
   For,
-  JSX,
   onMount,
   Show,
 } from "solid-js";
-import { Transition } from "solid-transition-group";
-import { Note } from "~/lib/db";
 import { useAutoFocus } from "~/lib/hooks/useAutoFocus";
 import { useCurrentNoteChildren } from "~/lib/hooks/useCurrentDirectory";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
@@ -27,12 +23,12 @@ import {
 } from "~/lib/hooks/useNoteNavigation";
 import { useNoteSiblings } from "~/lib/hooks/useNoteSiblings";
 import { Alert } from "~/solid-daisy-components/components/Alert";
-import { Badge } from "~/solid-daisy-components/components/Badge";
 import { Input } from "~/solid-daisy-components/components/Input";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import { createNewNote } from "~/lib/db/notes/create";
 import { updateNoteTitle, moveNoteQuery } from "~/lib/db/notes/update";
 import { deleteNoteQuery } from "~/lib/db/notes/delete";
+import { Note } from "~/lib/db/types";
 
 // Hook for navigation keybindings
 function useNavigationKeybindings(
@@ -296,26 +292,6 @@ function useNoteRenaming(
 }
 
 
-
-
-/**
- * Generates a unique identifier for sidebar content based on what's actually displayed.
- * This ensures animations only trigger when the displayed items actually change.
- */
-function getSidebarContentId(
-  currentNote: Note | null | undefined,
-  isFolder: boolean,
-): string {
-  if (isFolder) {
-    // For folders, the content is the children of this note
-    return `children-of-${currentNote?.id || "root"}`;
-  } else {
-    // For notes, the content is the siblings (children of the parent)
-    // Use the parent ID since that's what determines the displayed items
-    return `children-of-${currentNote?.parent_id || "root"}`;
-  }
-}
-
 export default function NotesTab() {
   const { note, noteId, noteExists, noteLoaded } = useCurrentNote();
   const { children } = useCurrentNoteChildren();
@@ -324,9 +300,6 @@ export default function NotesTab() {
 
   // Create a ref for the tab container to make it focusable
   let tabRef: HTMLDivElement | undefined;
-
-  // Track navigation direction for slide animation
-  const [isGoingDeeper, setIsGoingDeeper] = createSignal(true);
 
   const siblings = useNoteSiblings(
     noteId,
@@ -340,7 +313,6 @@ export default function NotesTab() {
 
   // Handle up directory navigation
   const handleUpDirectory = () => {
-    setIsGoingDeeper(false); // Going up
     const currentNote = note();
     if (currentNote?.parent_id) {
       navigateToNote(currentNote.parent_id);
@@ -350,11 +322,8 @@ export default function NotesTab() {
   };
 
   // Enhanced item click handler with direction tracking
+  // TODO remove this
   const handleItemClickWithDirection = (item: NavigationItem) => {
-    // Only set direction for folders - notes don't change sidebar content
-    if (item.is_folder) {
-      setIsGoingDeeper(true); // Going deeper into folders
-    }
     handleItemClick(item);
   };
 
@@ -377,10 +346,6 @@ export default function NotesTab() {
   // Track cut note for clipboard operations
   const [cutNoteId, setCutNoteId] = createSignal<string | null>(null);
 
-  // Create a unique identifier based on what's actually displayed in the sidebar
-  const currentContentId = createMemo(() =>
-    getSidebarContentId(note(), isCurrentNoteFolder()),
-  );
 
   // Auto-focus first item when display items change (but content ID stays same)
   createEffect(() => {
@@ -520,8 +485,8 @@ export default function NotesTab() {
         newParentId = currentNote?.parent_id;
       }
 
-      console.log(`Pasting note ${cutId} to parent ${newParentId || 'root'}`);
-      
+      console.log(`Pasting note ${cutId} to parent ${newParentId || "root"}`);
+
       await moveNoteQuery(cutId, newParentId);
 
       // Invalidate relevant caches to show the moved note
@@ -540,7 +505,9 @@ export default function NotesTab() {
       console.log("Note pasted successfully");
     } catch (error) {
       console.error("Failed to paste note:", error);
-      alert(`Failed to paste note: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(
+        `Failed to paste note: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   };
 
@@ -554,7 +521,7 @@ export default function NotesTab() {
 
     // Check if note has children (is a folder)
     const isFolder = focused.is_folder;
-    const confirmMessage = isFolder 
+    const confirmMessage = isFolder
       ? `Are you sure you want to delete the folder "${focused.title}" and all its contents? This cannot be undone.`
       : `Are you sure you want to delete the note "${focused.title}"? This cannot be undone.`;
 
@@ -564,11 +531,10 @@ export default function NotesTab() {
 
     try {
       console.log(`Deleting note: ${focused.title} (${focused.id})`);
-      
+
       // Store current focus index for repositioning after deletion
       const currentIndex = focusedItemIndex();
-      const items = displayItems();
-      
+
       await deleteNoteQuery(focused.id);
 
       // Invalidate relevant caches to show the updated list
@@ -604,7 +570,9 @@ export default function NotesTab() {
       console.log("Note deleted successfully");
     } catch (error) {
       console.error("Failed to delete note:", error);
-      alert(`Failed to delete note: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(
+        `Failed to delete note: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   };
 
@@ -639,12 +607,10 @@ export default function NotesTab() {
           </span>
         </Alert>
         <p class="text-base-content/60 mb-4">
-          The note you're looking for doesn't exist or you don't have permission to view it.
+          The note you're looking for doesn't exist or you don't have permission
+          to view it.
         </p>
-        <button 
-          onClick={() => navigateToRoot()}
-          class="btn btn-primary"
-        >
+        <button onClick={() => navigateToRoot()} class="btn btn-primary">
           Go to Root
         </button>
       </div>
@@ -675,33 +641,28 @@ export default function NotesTab() {
               <UpDirectoryButton onClick={handleUpDirectory} />
             </Show>
 
-            <SlideTransition
-              isGoingDeeper={isGoingDeeper}
-              contentId={currentContentId()}
-            >
-              <div>
-                <Show
-                  when={displayItems().length > 0}
-                  fallback={
-                    <EmptyMessage note={note} isFolder={isCurrentNoteFolder} />
-                  }
-                >
-                  <For each={displayItems()}>
-                    {(item: NavigationItem, index) => (
-                      <MenuItem
-                        item={item}
-                        isActive={noteId() === item.id}
-                        isFocused={focusedItemIndex() === index()}
-                        isEditing={editingItemId() === item.id}
-                        handleItemClick={handleItemClickWithDirection}
-                        handleRename={handleRenameNote}
-                        onCancelEdit={cancelEditing}
-                      />
-                    )}
-                  </For>
-                </Show>
-              </div>
-            </SlideTransition>
+            <div>
+              <Show
+                when={displayItems().length > 0}
+                fallback={
+                  <EmptyMessage note={note} isFolder={isCurrentNoteFolder} />
+                }
+              >
+                <For each={displayItems()}>
+                  {(item: NavigationItem, index) => (
+                    <MenuItem
+                      item={item}
+                      isActive={noteId() === item.id}
+                      isFocused={focusedItemIndex() === index()}
+                      isEditing={editingItemId() === item.id}
+                      handleItemClick={handleItemClickWithDirection}
+                      handleRename={handleRenameNote}
+                      onCancelEdit={cancelEditing}
+                    />
+                  )}
+                </For>
+              </Show>
+            </div>
           </ul>
         </div>
       </div>
@@ -808,83 +769,6 @@ const UpDirectoryButton = (props: { onClick: () => void }) => (
     </a>
   </li>
 );
-
-export const SlideTransition = (props: {
-  children: JSX.Element;
-  isGoingDeeper: Accessor<boolean>;
-  contentId: string;
-}) => {
-  const [showContent, setShowContent] = createSignal(true);
-  const [prevContentId, setPrevContentId] = createSignal<string | null>(null);
-
-  // Handle content change with animation
-  createEffect(() => {
-    const currentId = props.contentId;
-    const prevId = prevContentId();
-
-    if (currentId !== prevId) {
-      // Skip animation on initial load (when prevId is null)
-      if (prevId === null) {
-        setPrevContentId(currentId);
-        return;
-      }
-
-      setShowContent(false);
-      // TODO Remove all setTimeout -- anti-pattern
-      setTimeout(() => {
-        setPrevContentId(currentId);
-        setShowContent(true);
-      }, 0);
-    }
-  });
-
-  return (
-    <Transition
-      onEnter={(el, done) => {
-        const direction = props.isGoingDeeper() ? 1 : -1; // 1 = slide from right, -1 = slide from left
-        const a = el.animate(
-          [
-            {
-              transform: `translateX(${direction * 100}%)`,
-              opacity: 0,
-            },
-            {
-              transform: "translateX(0%)",
-              opacity: 1,
-            },
-          ],
-          {
-            duration: 300,
-            easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-          },
-        );
-        a.finished.then(done);
-      }}
-      onExit={(el, done) => {
-        const direction = props.isGoingDeeper() ? -1 : 1; // Opposite direction for exit
-        const a = el.animate(
-          [
-            {
-              transform: "translateX(0%)",
-              opacity: 1,
-            },
-            {
-              transform: `translateX(${direction * 100}%)`,
-              opacity: 0,
-            },
-          ],
-          {
-            duration: 300,
-            easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-          },
-        );
-        a.finished.then(done);
-      }}
-    >
-      {showContent() && props.children}
-    </Transition>
-  );
-};
 
 const EmptyMessage = (props: {
   note: AccessorWithLatest<Note | null | undefined>;

@@ -14,10 +14,11 @@ import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding"
 import BacklinksTab from "./tabs/BacklinksTab";
 import DiscussionTab from "./tabs/DiscussionTab";
 import ForwardLinks from "./tabs/ForwardLinksTab";
-import NotesTab, { SlideTransition } from "./tabs/NotesTab";
+import NotesTab from "./tabs/NotesTab";
 import RecentNotesTab from "./tabs/RecentNotesTab";
 import RelatedTab from "./tabs/RelatedTab";
 import { SidebarSearchContent } from "./tabs/SearchTab";
+import { SlideTransition } from "~/components/Animations/SlideTransition";
 
 export const SidebarTabs = () => {
   const [activeTab, setActiveTab] = createSignal(0);
@@ -28,15 +29,35 @@ export const SidebarTabs = () => {
     { id: 0, label: "Notes", key: "notes", icon: <Notebook class="w-4 h-4" /> },
     { id: 1, label: "Recent", key: "recent", icon: <Clock class="w-4 h-4" /> },
     { id: 2, label: "Search", key: "search", icon: <Search class="w-4 h-4" /> },
-    { id: 3, label: "Backlinks", key: "backlinks", icon: <ArrowLeft class="w-4 h-4" /> },
-    { id: 4, label: "Forward", key: "forward", icon: <ArrowRight class="w-4 h-4" /> },
-    { id: 5, label: "Related", key: "related", icon: <Sparkles class="w-4 h-4" /> },
-    { id: 6, label: "Discussion", key: "discussion", icon: <MessageSquare class="w-4 h-4" /> },
+    {
+      id: 3,
+      label: "Backlinks",
+      key: "backlinks",
+      icon: <ArrowLeft class="w-4 h-4" />,
+    },
+    {
+      id: 4,
+      label: "Forward",
+      key: "forward",
+      icon: <ArrowRight class="w-4 h-4" />,
+    },
+    {
+      id: 5,
+      label: "Related",
+      key: "related",
+      icon: <Sparkles class="w-4 h-4" />,
+    },
+    {
+      id: 6,
+      label: "Discussion",
+      key: "discussion",
+      icon: <MessageSquare class="w-4 h-4" />,
+    },
   ];
 
   onMount(() => {
     if (searchParams.sidebar) {
-      const tab = tabs.find(t => t.key === searchParams.sidebar);
+      const tab = tabs.find((t) => t.key === searchParams.sidebar);
       setActiveTab(tab?.id ?? 0);
     }
   });
@@ -45,7 +66,7 @@ export const SidebarTabs = () => {
     const currentTab = activeTab();
     setIsGoingDeeper(tabId > currentTab);
     setActiveTab(tabId);
-    const tab = tabs.find(t => t.id === tabId);
+    const tab = tabs.find((t) => t.id === tabId);
     if (tab) {
       setSearchParams({ sidebar: tab.key });
     }
@@ -93,7 +114,10 @@ export const SidebarTabs = () => {
       </Tabs>
 
       <div class="mt-4 relative overflow-hidden">
-        <SlideTransition isGoingDeeper={isGoingDeeper} contentId={`tab-${activeTab()}`}>
+        <SlideTransition
+          isGoingDeeper={isGoingDeeper}
+          contentId={`tab-${activeTab()}`}
+        >
           <div>
             <Show when={activeTab() === 0}>
               <NotesTab />
