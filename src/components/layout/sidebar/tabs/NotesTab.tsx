@@ -338,15 +338,15 @@ interface NotesTabProps {
 }
 
 export default function NotesTab(props: NotesTabProps = {}) {
-  const { 
-    note, 
-    noteId, 
-    children, 
-    siblings, 
-    displayItems, 
-    isCurrentNoteFolder 
+  const {
+    note,
+    noteId,
+    children,
+    siblings,
+    displayItems,
+    isCurrentNoteFolder
   } = useNoteContext();
-  
+
   const { handleItemClick, navigateToNote, navigateToRoot } =
     useNoteNavigation();
 
@@ -515,10 +515,10 @@ export default function NotesTab(props: NotesTabProps = {}) {
   // Handle cutting a note
   const handleCutNote = (noteId?: string) => {
     // Use provided ID or fall back to focused item
-    const targetItem = noteId 
+    const targetItem = noteId
       ? displayItems().find(item => item.id === noteId)
       : focusedItem();
-      
+
     if (targetItem) {
       setCutNoteId(targetItem.id);
       console.log(`Cut note: ${targetItem.title} (${targetItem.id})`);
@@ -594,10 +594,10 @@ export default function NotesTab(props: NotesTabProps = {}) {
     }
 
     // Use provided parentId or fall back to focused item
-    const targetItem = parentId 
+    const targetItem = parentId
       ? displayItems().find(item => item.id === parentId)
       : focusedItem();
-      
+
     if (!targetItem) {
       console.log("No target item to paste under");
       return;
@@ -642,10 +642,10 @@ export default function NotesTab(props: NotesTabProps = {}) {
   // Handle deleting a note
   const handleDeleteNote = async (noteId?: string) => {
     // Use provided ID or fall back to focused item
-    const targetItem = noteId 
+    const targetItem = noteId
       ? displayItems().find(item => item.id === noteId)
       : focusedItem();
-      
+
     if (!targetItem) {
       console.log("No note to delete");
       return;
@@ -718,7 +718,7 @@ export default function NotesTab(props: NotesTabProps = {}) {
       // Create a new title with (copy) suffix
       const newTitle = `${noteToClone.title} (copy)`;
       const newNote = await duplicateNoteQuery(noteId, newTitle);
-      
+
       if (newNote) {
         // Revalidate to refresh the display
         revalidate([
@@ -794,9 +794,9 @@ export default function NotesTab(props: NotesTabProps = {}) {
         <div class="divider"/>
 
         {/* Follow Mode Toggle */}
-        <FollowModeToggle 
-          followMode={followMode} 
-          setFollowMode={setFollowMode} 
+        <FollowModeToggle
+          followMode={followMode}
+          setFollowMode={setFollowMode}
         />
 
         <div class="w-full h-full bg-base-200 group-focus:bg-base-300  transition-bg duration-300 ease-in-out rounded">
@@ -897,13 +897,13 @@ const MenuItem = (props: {
     {
       id: "create-sibling",
       label: "New sibling note",
-      keybind: "Ctrl+N", 
+      keybind: "Ctrl+N",
       onClick: () => props.handleCreateSiblingNote()
     },
     {
       id: "create-child",
       label: props.item.is_folder ? "New child note" : "New child note",
-      keybind: "Ctrl+Shift+N",
+      keybind: "Shift+N",
       onClick: () => props.handleCreateChildNote(props.item.id)
     },
     {
@@ -936,7 +936,7 @@ const MenuItem = (props: {
       onClick: () => props.handlePasteAsChild(props.item.id)
     },
     {
-      id: "sep2", 
+      id: "sep2",
       label: "",
       separator: true
     },
