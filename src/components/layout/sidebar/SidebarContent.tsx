@@ -31,6 +31,7 @@ export const SidebarTabs = () => {
   const [backlinksFocusTrigger, setBacklinksFocusTrigger] = createSignal<string | null>(null);
   const [forwardLinksFocusTrigger, setForwardLinksFocusTrigger] = createSignal<string | null>(null);
   const [relatedFocusTrigger, setRelatedFocusTrigger] = createSignal<string | null>(null);
+  const [discussionFocusTrigger, setDiscussionFocusTrigger] = createSignal<string | null>(null);
 
   const tabs = [
     { id: 0, label: "Notes", key: "notes", icon: <Notebook class="w-4 h-4" /> },
@@ -102,6 +103,10 @@ export const SidebarTabs = () => {
         // Related tab - focus list for keybinding navigation
         setRelatedFocusTrigger(triggerId);
         setTimeout(() => setRelatedFocusTrigger(null), 100);
+      } else if (tabId === 6) {
+        // Discussion tab - focus textarea for immediate typing
+        setDiscussionFocusTrigger(triggerId);
+        setTimeout(() => setDiscussionFocusTrigger(null), 100);
       }
     }
   };
@@ -178,7 +183,7 @@ export const SidebarTabs = () => {
             </Show>
 
             <Show when={activeTab() === 6}>
-              <DiscussionTab />
+              <DiscussionTab focusTrigger={discussionFocusTrigger} />
             </Show>
           </div>
         </SlideTransition>

@@ -1,7 +1,8 @@
-import { createSignal, For } from "solid-js";
+import { createSignal, For, createEffect } from "solid-js";
 import X from "lucide-solid/icons/x";
 import Clock from "lucide-solid/icons/clock";
 import CheckCircle from "lucide-solid/icons/check-circle";
+import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 
 interface DiscussionMessage {
   id: string;
@@ -14,6 +15,8 @@ interface DiscussionMessageProps {
   message: DiscussionMessage;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, status: DiscussionMessage["status"]) => void;
+  isFocused?: boolean;
+  onFocus?: () => void;
 }
 
 const DiscussionMessageComponent = (props: DiscussionMessageProps) => {
@@ -39,8 +42,20 @@ const DiscussionMessageComponent = (props: DiscussionMessageProps) => {
     }
   };
 
+  const classList = () => {
+    const classes = [`p-3`, `bg-base-200`, `rounded-lg`, `border-l-4`, getStatusColor()];
+    if (props.isFocused) {
+      classes.push("ring-2", "ring-primary", "ring-inset");
+    }
+    return classes.join(" ");
+  };
+
   return (
-    <div class={`p-3 bg-base-200 rounded-lg border-l-4 ${getStatusColor()}`}>
+    <div 
+      class={classList()}
+      onClick={props.onFocus}
+      tabIndex={props.isFocused ? 0 : -1}
+    >
       <div class="flex items-start justify-between gap-2 mb-2">
         <div class="flex items-center gap-2">
           {getStatusIcon()}
@@ -80,7 +95,11 @@ const DiscussionMessageComponent = (props: DiscussionMessageProps) => {
   );
 };
 
-export default function DiscussionTab() {
+interface DiscussionTabProps {
+  focusTrigger?: () => string | null;
+}
+
+export default function DiscussionTab(props: DiscussionTabProps = {}) {
   const [messages, setMessages] = createSignal<DiscussionMessage[]>([
     {
       id: "1",
@@ -109,6 +128,9 @@ export default function DiscussionTab() {
   ]);
 
   const [newMessage, setNewMessage] = createSignal("");
+  const [focusedMessageIndex, setFocusedMessageIndex] = createSignal(-1);
+  let textareaRef: HTMLTextAreaElement | undefined;
+  let containerRef: HTMLDivElement | undefined;
 
   const addMessage = () => {
     if (newMessage().trim()) {
@@ -133,27 +155,93 @@ export default function DiscussionTab() {
     ));
   };
 
+  // Handle external focus requests
+  createEffect(() => {
+    const trigger = props.focusTrigger?.();
+    if (trigger && textareaRef) {
+      // Focus textarea on next tick after render
+      setTimeout(() => {
+        textareaRef.focus();
+      }, 0);
+    }
+  });
+
+  // Handle keyboard navigation through messages
+  useKeybinding(
+    { key: "ArrowDown" },
+    () => {
+      const currentIndex = focusedMessageIndex();
+      const maxIndex = messages().length - 1;
+      if (currentIndex < maxIndex) {
+        setFocusedMessageIndex(currentIndex + 1);
+      }
+    },
+    { ref: () => containerRef }
+  );
+
+  useKeybinding(
+    { key: "ArrowUp" },
+    () => {
+      const currentIndex = focusedMessageIndex();
+      if (currentIndex > 0) {
+        setFocusedMessageIndex(currentIndex - 1);
+      } else if (currentIndex === 0) {
+        // Return to textarea
+        setFocusedMessageIndex(-1);
+        if (textareaRef) {
+          textareaRef.focus();
+        }
+      }
+    },
+    { ref: () => containerRef }
+  );
+
+  useKeybinding(
+    { key: "Escape" },
+    () => {
+      setFocusedMessageIndex(-1);
+      if (textareaRef) {
+        textareaRef.focus();
+      }
+    },
+    { ref: () => containerRef }
+  );
+
+  // Handle Tab key from textarea to first message
+  const handleTextareaKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Tab" && !e.shiftKey && messages().length > 0) {
+      e.preventDefault();
+      setFocusedMessageIndex(0);
+      if (containerRef) {
+        containerRef.focus();
+      }
+    } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      addMessage();
+    }
+  };
+
   return (
-    <div class="p-4 space-y-4">
+    <div 
+      ref={containerRef}
+      tabIndex={0}
+      class="p-4 space-y-4 outline-none focus:outline-none"
+    >
       {/* Add new message form */}
       <div class="space-y-2">
         <h3 class="text-sm font-medium text-base-content/70">Improvement Notes</h3>
         <div class="space-y-2">
           <textarea
+            ref={textareaRef}
             class="textarea textarea-bordered w-full text-sm"
             placeholder="Add a note about improvements needed for this note..."
             rows="3"
             value={newMessage()}
             onInput={(e) => setNewMessage(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                addMessage();
-              }
-            }}
+            onKeyDown={handleTextareaKeyDown}
           />
           <div class="flex justify-between items-center">
             <span class="text-xs text-base-content/60">
-              Ctrl+Enter to add
+              Ctrl+Enter to add • Tab to navigate messages
             </span>
             <button
               class="btn btn-primary btn-sm"
@@ -174,11 +262,13 @@ export default function DiscussionTab() {
           </div>
         ) : (
           <For each={messages()}>
-            {(message) => (
+            {(message, index) => (
               <DiscussionMessageComponent
                 message={message}
                 onDelete={deleteMessage}
                 onStatusChange={changeStatus}
+                isFocused={focusedMessageIndex() === index()}
+                onFocus={() => setFocusedMessageIndex(index())}
               />
             )}
           </For>

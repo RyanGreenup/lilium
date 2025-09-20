@@ -92,11 +92,16 @@ Logic for getting siblings was wrong.
 ** TODO Syntax Highlighting
 ** TODO Make the whole search result clickable
 ** TODO Auto focus on search
+:LOGBOOK:
+CLOCK: [2025-09-20 Sat 16:07]
+:END:
+** TODO Preserve search on tab navigation
+Just cache the search query and fire it again
 ** TODO Keyboard Navigation on Links
 ** TODO Context Menu on File Nav
 ** TODO Breadcrumbs in Search
 :LOGBOOK:
-CLOCK: [2025-09-20 Sat 13:51]
+CLOCK: [2025-09-20 Sat 13:51]--[2025-09-20 Sat 16:07] =>  2:16
 :END:
 ** TODO follow Mode in sidebar
 ** DONE Add Typst
