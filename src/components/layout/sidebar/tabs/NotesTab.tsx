@@ -16,13 +16,11 @@ import {
 } from "solid-js";
 import NoteBreadcrumbsVertical from "~/components/NoteBreadcrumbsVertical";
 import { useAutoFocus } from "~/lib/hooks/useAutoFocus";
-import { useCurrentNoteChildren } from "~/lib/hooks/useCurrentDirectory";
-import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import {
   useNoteNavigation,
   type NavigationItem,
 } from "~/lib/hooks/useNoteNavigation";
-import { useNoteSiblings } from "~/lib/hooks/useNoteSiblings";
+import { useNoteContext } from "~/lib/hooks/useNoteContext";
 import { Alert } from "~/solid-daisy-components/components/Alert";
 import { Input } from "~/solid-daisy-components/components/Input";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
@@ -295,23 +293,24 @@ function useNoteRenaming(
 
 
 export default function NotesTab() {
-  const { note, noteId, noteExists, noteLoaded } = useCurrentNote();
-  const { children } = useCurrentNoteChildren();
+  const { 
+    note, 
+    noteId, 
+    children, 
+    siblings, 
+    displayItems, 
+    isCurrentNoteFolder 
+  } = useNoteContext();
+  
   const { handleItemClick, navigateToNote, navigateToRoot } =
     useNoteNavigation();
 
   // Create a ref for the tab container to make it focusable
   let tabRef: HTMLDivElement | undefined;
 
-  const siblings = useNoteSiblings(
-    noteId,
-    createMemo(() => note()?.parent_id),
-  );
-
-  const isCurrentNoteFolder = createMemo(() => (children()?.length ?? 0) > 0);
-  const displayItems = createMemo(() =>
-    isCurrentNoteFolder() ? (children() ?? []) : (siblings() ?? []),
-  );
+  // Check if note exists and is loaded (from useCurrentNote)
+  const noteExists = createMemo(() => note() !== null);
+  const noteLoaded = createMemo(() => note() !== undefined);
 
   // Handle up directory navigation
   const handleUpDirectory = () => {
