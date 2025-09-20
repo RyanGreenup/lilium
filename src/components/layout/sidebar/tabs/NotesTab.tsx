@@ -50,7 +50,7 @@ function useNavigationKeybindings(
   handleClearCut: () => void,
   handlePasteNote: () => void,
   handlePasteAsChild: () => void,
-  handleDeleteNote: () => void,
+  handleDeleteNote: (noteId?: string) => void,
   handleDuplicateNote: (id: string) => void,
 ) {
   // Navigation keybindings
@@ -619,30 +619,34 @@ export default function NotesTab(props: NotesTabProps = {}) {
   };
 
   // Handle deleting a note
-  const handleDeleteNote = async () => {
-    const focused = focusedItem();
-    if (!focused) {
+  const handleDeleteNote = async (noteId?: string) => {
+    // Use provided ID or fall back to focused item
+    const targetItem = noteId 
+      ? displayItems().find(item => item.id === noteId)
+      : focusedItem();
+      
+    if (!targetItem) {
       console.log("No note to delete");
       return;
     }
 
     // Check if note has children (is a folder)
-    const isFolder = focused.is_folder;
+    const isFolder = targetItem.is_folder;
     const confirmMessage = isFolder
-      ? `Are you sure you want to delete the folder "${focused.title}" and all its contents? This cannot be undone.`
-      : `Are you sure you want to delete the note "${focused.title}"? This cannot be undone.`;
+      ? `Are you sure you want to delete the folder "${targetItem.title}" and all its contents? This cannot be undone.`
+      : `Are you sure you want to delete the note "${targetItem.title}"? This cannot be undone.`;
 
     if (!confirm(confirmMessage)) {
       return;
     }
 
     try {
-      console.log(`Deleting note: ${focused.title} (${focused.id})`);
+      console.log(`Deleting note: ${targetItem.title} (${targetItem.id})`);
 
       // Store current focus index for repositioning after deletion
       const currentIndex = focusedItemIndex();
 
-      await deleteNoteQuery(focused.id);
+      await deleteNoteQuery(targetItem.id);
 
       // Invalidate relevant caches to show the updated list
       revalidate([
@@ -652,7 +656,7 @@ export default function NotesTab(props: NotesTabProps = {}) {
       ]);
 
       // Clear cut state if the deleted note was cut
-      if (cutNoteId() === focused.id) {
+      if (cutNoteId() === targetItem.id) {
         setCutNoteId(null);
       }
 
@@ -851,7 +855,7 @@ const MenuItem = (props: {
   handleRename: (id: string, newTitle: string) => void;
   onCancelEdit: () => void;
   startEditingItem: (id: string) => void;
-  handleDeleteNote: (id: string) => void;
+  handleDeleteNote: (id?: string) => void;
   handleCutNote: (id: string) => void;
   handleCreateChildNote: (parentId: string) => void;
   handleCreateSiblingNote: () => void;
