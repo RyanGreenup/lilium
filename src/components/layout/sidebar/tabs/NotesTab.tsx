@@ -22,6 +22,8 @@ import {
 import { useNoteContext } from "~/lib/hooks/useNoteContext";
 import { Alert } from "~/solid-daisy-components/components/Alert";
 import { Input } from "~/solid-daisy-components/components/Input";
+import { Toggle } from "~/solid-daisy-components/components/Toggle";
+import { Kbd } from "~/solid-daisy-components/components/Kbd";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import { createNewNote } from "~/lib/db/notes/create";
 import { updateNoteTitle, moveNoteQuery } from "~/lib/db/notes/update";
@@ -44,7 +46,10 @@ function useNavigationKeybindings(
   handleCutNote: () => void,
   handleClearCut: () => void,
   handlePasteNote: () => void,
+  handlePasteAsChild: () => void,
   handleDeleteNote: () => void,
+  followMode: Accessor<boolean>,
+  setFollowMode: (value: boolean) => void,
 ) {
   // Navigation keybindings
   useKeybinding(
@@ -164,12 +169,32 @@ function useNavigationKeybindings(
     { ref: tabRef },
   );
 
+  // Paste as child keybinding
+  useKeybinding(
+    { key: "v", ctrl: true, shift: true },
+    () => {
+      console.log("Pasting note as child...");
+      handlePasteAsChild();
+    },
+    { ref: tabRef },
+  );
+
   // Delete keybinding
   useKeybinding(
     { key: "Delete" },
     () => {
       console.log("Deleting note...");
       handleDeleteNote();
+    },
+    { ref: tabRef },
+  );
+
+  // Follow mode toggle keybinding
+  useKeybinding(
+    { key: "f", ctrl: true },
+    () => {
+      console.log("Toggling follow mode...");
+      setFollowMode(!followMode());
     },
     { ref: tabRef },
   );
@@ -350,6 +375,9 @@ export default function NotesTab(props: NotesTabProps = {}) {
   // Track cut note for clipboard operations
   const [cutNoteId, setCutNoteId] = createSignal<string | null>(null);
 
+  // Follow mode: navigate to notes as user browses
+  const [followMode, setFollowMode] = createSignal(false);
+
 
   // Auto-focus first item when display items change (but content ID stays same)
   createEffect(() => {
@@ -395,6 +423,17 @@ export default function NotesTab(props: NotesTabProps = {}) {
       setTimeout(() => {
         tabRef.focus();
       }, 0);
+    }
+  });
+
+  // Follow mode: navigate to note when focus changes
+  createEffect(() => {
+    if (!followMode()) return;
+    
+    const focused = focusedItem();
+    if (focused && !focused.is_folder) {
+      // Only navigate to regular notes, not folders
+      navigateToNote(focused.id);
     }
   });
 
@@ -497,6 +536,12 @@ export default function NotesTab(props: NotesTabProps = {}) {
         newParentId = currentNote?.parent_id;
       }
 
+      // Prevent setting note as its own parent
+      if (newParentId === cutId) {
+        alert("Cannot move a note inside itself");
+        return;
+      }
+
       console.log(`Pasting note ${cutId} to parent ${newParentId || "root"}`);
 
       await moveNoteQuery(cutId, newParentId);
@@ -519,6 +564,56 @@ export default function NotesTab(props: NotesTabProps = {}) {
       console.error("Failed to paste note:", error);
       alert(
         `Failed to paste note: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  };
+
+  // Handle pasting a cut note as a child of the focused note
+  const handlePasteAsChild = async () => {
+    const cutId = cutNoteId();
+    if (!cutId) {
+      console.log("No note to paste");
+      return;
+    }
+
+    const focused = focusedItem();
+    if (!focused) {
+      console.log("No focused item to paste under");
+      return;
+    }
+
+    try {
+      // Always paste as child of the focused item
+      const newParentId = focused.id;
+
+      // Prevent setting note as its own parent
+      if (newParentId === cutId) {
+        alert("Cannot move a note inside itself");
+        return;
+      }
+
+      console.log(`Pasting note ${cutId} as child of ${focused.title} (${newParentId})`);
+
+      await moveNoteQuery(cutId, newParentId);
+
+      // Invalidate relevant caches to show the moved note
+      revalidate([
+        moveNoteQuery.key,
+        "children-with-folder-status",
+        "note-by-id",
+      ]);
+
+      // Clear the cut state
+      setCutNoteId(null);
+
+      // Track that this note was just moved for refocusing in sidebar
+      setNewlyCreatedNoteId(cutId);
+
+      console.log("Note pasted as child successfully");
+    } catch (error) {
+      console.error("Failed to paste note as child:", error);
+      alert(
+        `Failed to paste note as child: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
   };
@@ -605,7 +700,10 @@ export default function NotesTab(props: NotesTabProps = {}) {
       handleCutNote,
       handleClearCut,
       handlePasteNote,
+      handlePasteAsChild,
       handleDeleteNote,
+      followMode,
+      setFollowMode,
     );
   });
 
@@ -643,6 +741,28 @@ export default function NotesTab(props: NotesTabProps = {}) {
         </div>
 
         <div class="divider"/>
+
+        {/* Follow Mode Toggle */}
+        <div class="px-4 py-2 bg-base-100 rounded-lg border border-base-300">
+          <div class="flex items-center justify-between">
+            <label class="label cursor-pointer p-0">
+              <span class="label-text text-sm font-medium">
+                Follow Mode <Kbd size="xs">Ctrl+F</Kbd>
+              </span>
+            </label>
+            <Toggle
+              size="sm"
+              color="primary"
+              checked={followMode()}
+              onChange={(e) => setFollowMode(e.currentTarget.checked)}
+            />
+          </div>
+          <div class="text-xs text-base-content/60 mt-1">
+            {followMode()
+              ? "Navigate to notes as you browse"
+              : "Navigate only on Enter"}
+          </div>
+        </div>
 
         <div class="w-full h-full bg-base-200 group-focus:bg-base-300  transition-bg duration-300 ease-in-out rounded">
           <Show when={cutNoteId()}>

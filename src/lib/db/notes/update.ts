@@ -104,6 +104,11 @@ export async function moveNote(id: string, newParentId?: string): Promise<Note> 
     throw new Error("Note not found");
   }
   
+  // Prevent setting note as its own parent
+  if (newParentId === id) {
+    throw new Error("Cannot move a note inside itself");
+  }
+  
   // If newParentId is provided, validate that the parent exists and belongs to the user
   if (newParentId) {
     const parentNote = await getNoteById(newParentId);
