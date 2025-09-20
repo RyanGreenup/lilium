@@ -32,6 +32,7 @@ import { Note } from "~/lib/db/types";
 import { Card } from "~/solid-daisy-components/components/Card";
 import { useFollowMode } from "~/lib/hooks/useFollowMode";
 import { FollowModeToggle } from "~/components/shared/FollowModeToggle";
+import { ContextMenu, useContextMenu, type ContextMenuItem } from "~/solid-daisy-components/components/ContextMenu";
 
 // Hook for navigation keybindings
 function useNavigationKeybindings(
@@ -763,6 +764,12 @@ export default function NotesTab(props: NotesTabProps = {}) {
                       handleItemClick={handleItemClickWithDirection}
                       handleRename={handleRenameNote}
                       onCancelEdit={cancelEditing}
+                      startEditingItem={(id) => setEditingItemId(id)}
+                      handleDeleteNote={handleDeleteNote}
+                      handleCutNote={handleCutNote}
+                      handleCreateChildNote={handleCreateChildNote}
+                      handlePasteNote={handlePasteNote}
+                      handlePasteAsChild={handlePasteAsChild}
                     />
                   )}
                 </For>
@@ -799,8 +806,68 @@ const MenuItem = (props: {
   handleItemClick: (item: NavigationItem) => void;
   handleRename: (id: string, newTitle: string) => void;
   onCancelEdit: () => void;
+  startEditingItem: (id: string) => void;
+  handleDeleteNote: (id: string) => void;
+  handleCutNote: (id: string) => void;
+  handleCreateChildNote: (parentId: string) => void;
+  handlePasteNote: () => void;
+  handlePasteAsChild: (parentId: string) => void;
 }) => {
   let inputRef: HTMLInputElement | undefined;
+
+  // Context menu items for this note
+  const contextMenuItems = (): ContextMenuItem[] => [
+    {
+      id: "edit",
+      label: "Rename",
+      keybind: "F2",
+      onClick: () => props.startEditingItem(props.item.id)
+    },
+    {
+      id: "create-child",
+      label: props.item.is_folder ? "New child note" : "Convert to folder & add child",
+      keybind: "Ctrl+N",
+      onClick: () => props.handleCreateChildNote(props.item.id)
+    },
+    {
+      id: "sep1",
+      label: "",
+      separator: true
+    },
+    {
+      id: "cut",
+      label: "Cut",
+      keybind: "Ctrl+X",
+      onClick: () => props.handleCutNote(props.item.id)
+    },
+    {
+      id: "paste",
+      label: "Paste as sibling",
+      keybind: "Ctrl+V",
+      onClick: () => props.handlePasteNote()
+    },
+    {
+      id: "paste-child",
+      label: "Paste as child",
+      keybind: "Ctrl+Shift+V",
+      onClick: () => props.handlePasteAsChild(props.item.id)
+    },
+    {
+      id: "sep2", 
+      label: "",
+      separator: true
+    },
+    {
+      id: "delete",
+      label: "Delete",
+      keybind: "Del",
+      onClick: () => props.handleDeleteNote(props.item.id)
+    }
+  ];
+
+  const contextMenu = useContextMenu({
+    items: contextMenuItems()
+  });
 
   const classList = () => {
     const classes = [];
@@ -832,11 +899,17 @@ const MenuItem = (props: {
   });
 
   return (
-    <li>
-      <a
-        class={classList()}
-        onClick={() => !props.isEditing && props.handleItemClick(props.item)}
-      >
+    <>
+      <li>
+        <a
+          class={classList()}
+          onClick={() => !props.isEditing && props.handleItemClick(props.item)}
+          onContextMenu={contextMenu.open}
+          onDblClick={(e) => {
+            e.preventDefault();
+            contextMenu.open(e as any as MouseEvent);
+          }}
+        >
         <Show when={props.item.is_folder} fallback={<FileText size={16} />}>
           <Folder size={16} />
         </Show>
@@ -860,6 +933,8 @@ const MenuItem = (props: {
         </Show>
       </a>
     </li>
+    <ContextMenu {...contextMenu.contextMenuProps()} />
+    </>
   );
 };
 
