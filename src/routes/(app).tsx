@@ -1,7 +1,7 @@
 import { A, RouteDefinition } from "@solidjs/router";
+import BookOpen from "lucide-solid/icons/book-open";
 
 import Menu from "lucide-solid/icons/menu";
-import Settings from "lucide-solid/icons/settings";
 
 import ToggleLeft from "lucide-solid/icons/toggle-left";
 import { JSXElement } from "solid-js";
@@ -9,6 +9,7 @@ import { SidebarTabs } from "~/components/layout/sidebar/SidebarContent";
 import { Logo } from "~/components/Logo";
 import { UserDropdown } from "~/components/UserDrowDown";
 import { getUser } from "~/lib/auth";
+import { Alert } from "~/solid-daisy-components/components/Alert";
 import {
   BottomDock,
   CheckboxId,
@@ -21,7 +22,6 @@ import {
   SidebarContent,
   ToggleButton,
 } from "~/solid-daisy-components/components/Layouts/ResponsiveDrawer";
-import { Loading } from "~/solid-daisy-components/components/Loading";
 
 // Route Guard
 export const route = {
@@ -44,7 +44,7 @@ export default function MainLayout(props: { children: JSXElement }) {
         </Sidebar>
         <MainContent class="bg-base-100 p-4">{props.children}</MainContent>
         <RightDrawer class="bg-base-200">
-          <div class="flex mt-12 justify-center">TODO</div>
+          <RightDrawerContent />
         </RightDrawer>
       </MainWrapper>
 
@@ -69,7 +69,6 @@ const NavbarContent = () => (
       </A>
     </div>
 
-
     {/*This would be used if the right drawer was included*/}
     <div class="navbar-end">
       <UserDropdown />
@@ -77,7 +76,7 @@ const NavbarContent = () => (
         id={CheckboxId.RIGHT_DRAWER}
         class="btn btn-square btn-ghost"
       >
-        <Settings class="w-5 h-5" />
+        <BookOpen class="w-5 h-5" />
       </ToggleButton>
     </div>
   </>
@@ -108,5 +107,52 @@ const DockContent = () => (
         <span class="dock-label">Navbar</span>
       </div>
     </ToggleButton>
+  </div>
+);
+
+const RightDrawerContent = () => (
+  <div class="flex mt-12 justify-center p-12">
+    <Alert color="info" class="w-full max-w-md">
+      <div class="flex flex-col gap-4">
+        <h3 class="font-semibold text-lg">TODO Today's Journal</h3>
+
+        <div class="space-y-2">
+          <h4 class="font-medium">Quick Tasks</h4>
+          <ul class="list-disc list-inside text-sm space-y-1">
+            <li>
+              <A href="/tasks" class="link">
+                Review daily goals
+              </A>
+            </li>
+            <li>
+              <A href="/notes" class="link">
+                Update project notes
+              </A>
+            </li>
+            <li>
+              <A href="/calendar" class="link">
+                Check upcoming meetings
+              </A>
+            </li>
+          </ul>
+        </div>
+
+        <div class="mt-4">
+          <h4 class="font-medium mb-2">Quick Calendar</h4>
+          <div class="bg-base-100 p-2 rounded text-center text-sm text-base-content">
+            <div class="font-semibold">
+              {new Date().toLocaleDateString("en-US", { weekday: "long" })}
+            </div>
+            <div class="text-2xl font-bold ">{new Date().getDate()}</div>
+            <div>
+              {new Date().toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </Alert>
   </div>
 );
