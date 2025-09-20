@@ -768,6 +768,7 @@ export default function NotesTab(props: NotesTabProps = {}) {
                       handleDeleteNote={handleDeleteNote}
                       handleCutNote={handleCutNote}
                       handleCreateChildNote={handleCreateChildNote}
+                      handleCreateSiblingNote={handleCreateNote}
                       handlePasteNote={handlePasteNote}
                       handlePasteAsChild={handlePasteAsChild}
                     />
@@ -810,6 +811,7 @@ const MenuItem = (props: {
   handleDeleteNote: (id: string) => void;
   handleCutNote: (id: string) => void;
   handleCreateChildNote: (parentId: string) => void;
+  handleCreateSiblingNote: () => void;
   handlePasteNote: () => void;
   handlePasteAsChild: (parentId: string) => void;
 }) => {
@@ -824,9 +826,15 @@ const MenuItem = (props: {
       onClick: () => props.startEditingItem(props.item.id)
     },
     {
+      id: "create-sibling",
+      label: "New sibling note",
+      keybind: "Ctrl+N", 
+      onClick: () => props.handleCreateSiblingNote()
+    },
+    {
       id: "create-child",
-      label: props.item.is_folder ? "New child note" : "Convert to folder & add child",
-      keybind: "Ctrl+N",
+      label: props.item.is_folder ? "New child note" : "New child note",
+      keybind: "Ctrl+Shift+N",
       onClick: () => props.handleCreateChildNote(props.item.id)
     },
     {
