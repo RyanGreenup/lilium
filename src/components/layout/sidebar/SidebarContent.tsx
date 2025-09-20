@@ -28,6 +28,9 @@ export const SidebarTabs = () => {
   // Focus triggers for tabs
   const [notesFocusTrigger, setNotesFocusTrigger] = createSignal<string | null>(null);
   const [searchFocusTrigger, setSearchFocusTrigger] = createSignal<string | null>(null);
+  const [backlinksFocusTrigger, setBacklinksFocusTrigger] = createSignal<string | null>(null);
+  const [forwardLinksFocusTrigger, setForwardLinksFocusTrigger] = createSignal<string | null>(null);
+  const [relatedFocusTrigger, setRelatedFocusTrigger] = createSignal<string | null>(null);
 
   const tabs = [
     { id: 0, label: "Notes", key: "notes", icon: <Notebook class="w-4 h-4" /> },
@@ -87,6 +90,18 @@ export const SidebarTabs = () => {
         // Search tab - focus input for both keybinding and clicks
         setSearchFocusTrigger(triggerId);
         setTimeout(() => setSearchFocusTrigger(null), 100);
+      } else if (tabId === 3) {
+        // Backlinks tab - focus list for keybinding navigation
+        setBacklinksFocusTrigger(triggerId);
+        setTimeout(() => setBacklinksFocusTrigger(null), 100);
+      } else if (tabId === 4) {
+        // Forward links tab - focus list for keybinding navigation
+        setForwardLinksFocusTrigger(triggerId);
+        setTimeout(() => setForwardLinksFocusTrigger(null), 100);
+      } else if (tabId === 5) {
+        // Related tab - focus list for keybinding navigation
+        setRelatedFocusTrigger(triggerId);
+        setTimeout(() => setRelatedFocusTrigger(null), 100);
       }
     }
   };
@@ -151,15 +166,15 @@ export const SidebarTabs = () => {
             </Show>
 
             <Show when={activeTab() === 3}>
-              <BacklinksTab />
+              <BacklinksTab focusTrigger={backlinksFocusTrigger} />
             </Show>
 
             <Show when={activeTab() === 4}>
-              <ForwardLinks />
+              <ForwardLinks focusTrigger={forwardLinksFocusTrigger} />
             </Show>
 
             <Show when={activeTab() === 5}>
-              <RelatedTab />
+              <RelatedTab focusTrigger={relatedFocusTrigger} />
             </Show>
 
             <Show when={activeTab() === 6}>

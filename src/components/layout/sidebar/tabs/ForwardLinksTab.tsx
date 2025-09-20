@@ -1,6 +1,12 @@
 import { ContentList, ContentItemData } from "../shared/ContentItem";
+import { createEffect } from "solid-js";
 
-export default function ForwardLinks() {
+interface ForwardLinksTabProps {
+  focusTrigger?: () => string | null;
+}
+
+export default function ForwardLinks(props: ForwardLinksTabProps = {}) {
+  let containerRef: HTMLDivElement | undefined;
   const forwardLinks: ContentItemData[] = [
     {
       id: "1",
@@ -39,11 +45,24 @@ export default function ForwardLinks() {
     },
   ];
 
+  // Handle external focus requests
+  createEffect(() => {
+    const trigger = props.focusTrigger?.();
+    if (trigger && containerRef) {
+      // Focus on next tick after render
+      setTimeout(() => {
+        containerRef.focus();
+      }, 0);
+    }
+  });
+
   return (
     <ContentList
       items={forwardLinks}
       showPath={true}
       emptyMessage="No forward links found for this note"
+      enableKeyboardNav={true}
+      ref={(el) => containerRef = el}
     />
   );
 }

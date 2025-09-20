@@ -1,6 +1,12 @@
 import { ContentList, ContentItemData } from "../shared/ContentItem";
+import { createEffect } from "solid-js";
 
-export default function BacklinksTab() {
+interface BacklinksTabProps {
+  focusTrigger?: () => string | null;
+}
+
+export default function BacklinksTab(props: BacklinksTabProps = {}) {
+  let containerRef: HTMLDivElement | undefined;
   const backlinks: ContentItemData[] = [
     {
       id: "1",
@@ -32,11 +38,24 @@ export default function BacklinksTab() {
     },
   ];
 
+  // Handle external focus requests
+  createEffect(() => {
+    const trigger = props.focusTrigger?.();
+    if (trigger && containerRef) {
+      // Focus on next tick after render
+      setTimeout(() => {
+        containerRef.focus();
+      }, 0);
+    }
+  });
+
   return (
     <ContentList
       items={backlinks}
       showPath={true}
       emptyMessage="No backlinks found for this note"
+      enableKeyboardNav={true}
+      ref={(el) => containerRef = el}
     />
   );
 }

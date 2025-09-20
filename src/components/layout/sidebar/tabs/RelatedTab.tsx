@@ -1,6 +1,12 @@
 import { ContentList, ContentItemData } from "../shared/ContentItem";
+import { createEffect } from "solid-js";
 
-export default function RelatedTab() {
+interface RelatedTabProps {
+  focusTrigger?: () => string | null;
+}
+
+export default function RelatedTab(props: RelatedTabProps = {}) {
+  let containerRef: HTMLDivElement | undefined;
   const relatedContent: ContentItemData[] = [
     {
       id: "1",
@@ -46,11 +52,24 @@ export default function RelatedTab() {
     },
   ];
 
+  // Handle external focus requests
+  createEffect(() => {
+    const trigger = props.focusTrigger?.();
+    if (trigger && containerRef) {
+      // Focus on next tick after render
+      setTimeout(() => {
+        containerRef.focus();
+      }, 0);
+    }
+  });
+
   return (
     <ContentList
       items={relatedContent}
       showPath={true}
       emptyMessage="No related content found"
+      enableKeyboardNav={true}
+      ref={(el) => containerRef = el}
     />
   );
 }

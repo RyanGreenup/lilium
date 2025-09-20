@@ -87,8 +87,11 @@ Maybe just
 ** TODO Id's for focus instead of auto-focus hook
 ** TODO Remove the Background on Focus
 ** TODO Remove the Animations
-** TODO Visiting a Note ID should move the Sidebar to it's parent id and select that itemkj
+** DONE Visiting a Note ID should move the Sidebar to it's parent id and select that itemkj
+Logic for getting siblings was wrong.
 ** TODO Syntax Highlighting
+** TODO Make the whole search result clickable
+** TODO Auto focus on search
 ** TODO Keyboard Navigation on Links
 ** TODO Context Menu on File Nav
 ** TODO Breadcrumbs in Search

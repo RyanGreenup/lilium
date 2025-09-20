@@ -1,8 +1,9 @@
-import { For, createSignal } from "solid-js";
+import { For, createSignal, createEffect, Accessor } from "solid-js";
 import { tv } from "tailwind-variants";
 import { useNavigate } from "@solidjs/router";
 import { Breadcrumbs } from "~/solid-daisy-components/components/Breadcrumbs";
 import { NoteBreadcrumbsById } from "~/components/NoteBreadcrumbs";
+import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 
 const breadcrumbsVariants = tv({
   base: "text-xs",
@@ -43,6 +44,7 @@ export interface ContentItemData {
 interface ContentItemProps {
   item: ContentItemData;
   showPath?: boolean;
+  isFocused?: boolean;
 }
 
 const parsePathToBreadcrumbs = (path: string) => {
@@ -67,9 +69,17 @@ export const ContentItem = (props: ContentItemProps) => {
       ? parsePathToBreadcrumbs(props.item.path)
       : [];
 
+  const classList = () => {
+    const classes = ["p-3", "bg-base-200", "rounded-lg", "hover:bg-base-300", "cursor-pointer", "transition-colors"];
+    if (props.isFocused) {
+      classes.push("ring-2", "ring-primary", "ring-inset");
+    }
+    return classes.join(" ");
+  };
+
   return (
     <div
-      class="p-3 bg-base-200 rounded-lg hover:bg-base-300 cursor-pointer transition-colors"
+      class={classList()}
       onClick={props.item.onClick}
     >
       <button onclick={() => navigate(`/note/${props.item.id}`)}>
@@ -95,20 +105,108 @@ interface ContentListProps {
   items: ContentItemData[];
   showPath?: boolean;
   emptyMessage?: string;
+  enableKeyboardNav?: boolean;
+  onEscape?: () => void;
+  ref?: (el: HTMLDivElement) => void;
 }
 
-export const ContentList = (props: ContentListProps) => (
-  <div class="p-4 space-y-3">
-    {props.items.length === 0 ? (
-      <div class="text-center text-base-content/60 text-sm py-8">
-        {props.emptyMessage || "No items found"}
-      </div>
-    ) : (
-      <div class="space-y-2">
-        <For each={props.items}>
-          {(item) => <ContentItem item={item} showPath={props.showPath} />}
-        </For>
-      </div>
-    )}
-  </div>
-);
+export const ContentList = (props: ContentListProps) => {
+  const [focusedIndex, setFocusedIndex] = createSignal(-1);
+  const navigate = useNavigate();
+  let containerRef: HTMLDivElement | undefined;
+
+  // Auto-focus first item when items change and keyboard nav is enabled
+  createEffect(() => {
+    const items = props.items;
+    if (props.enableKeyboardNav && items.length > 0 && focusedIndex() === -1) {
+      setFocusedIndex(0);
+    } else if (items.length === 0) {
+      setFocusedIndex(-1);
+    }
+  });
+
+  // Keyboard navigation
+  if (props.enableKeyboardNav) {
+    useKeybinding(
+      { key: "ArrowDown" },
+      () => {
+        const items = props.items;
+        const currentIndex = focusedIndex();
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < items.length) {
+          setFocusedIndex(nextIndex);
+        }
+      },
+      { ref: () => containerRef }
+    );
+
+    useKeybinding(
+      { key: "ArrowUp" },
+      () => {
+        const currentIndex = focusedIndex();
+        const nextIndex = currentIndex - 1;
+        if (nextIndex >= 0) {
+          setFocusedIndex(nextIndex);
+        }
+      },
+      { ref: () => containerRef }
+    );
+
+    useKeybinding(
+      { key: "Enter" },
+      () => {
+        const items = props.items;
+        const currentIndex = focusedIndex();
+        if (currentIndex >= 0 && currentIndex < items.length) {
+          const item = items[currentIndex];
+          if (item.onClick) {
+            item.onClick();
+          } else {
+            // Default navigation
+            navigate(`/note/${item.id}`);
+          }
+        }
+      },
+      { ref: () => containerRef }
+    );
+
+    useKeybinding(
+      { key: "Escape" },
+      () => {
+        if (props.onEscape) {
+          props.onEscape();
+        }
+      },
+      { ref: () => containerRef }
+    );
+  }
+
+  return (
+    <div 
+      ref={(el) => {
+        containerRef = el;
+        if (props.ref) props.ref(el);
+      }}
+      tabIndex={props.enableKeyboardNav ? 0 : undefined}
+      class="p-4 space-y-3 outline-none focus:outline-none"
+    >
+      {props.items.length === 0 ? (
+        <div class="text-center text-base-content/60 text-sm py-8">
+          {props.emptyMessage || "No items found"}
+        </div>
+      ) : (
+        <div class="space-y-2">
+          <For each={props.items}>
+            {(item, index) => (
+              <ContentItem 
+                item={item} 
+                showPath={props.showPath} 
+                isFocused={props.enableKeyboardNav && focusedIndex() === index()}
+              />
+            )}
+          </For>
+        </div>
+      )}
+    </div>
+  );
+};

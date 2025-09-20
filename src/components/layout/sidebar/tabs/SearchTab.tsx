@@ -9,13 +9,15 @@ import {
   Suspense,
   onCleanup,
 } from "solid-js";
+import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import { createAsync } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
 import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
 import { Radio } from "~/solid-daisy-components/components/Radio";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Select } from "~/solid-daisy-components/components/Select";
-import { ContentList, ContentItemData } from "../shared/ContentItem";
+import { ContentItem, ContentItemData } from "../shared/ContentItem";
 import {
   searchNotesQuery,
   searchNotesSimpleQuery,
@@ -28,6 +30,7 @@ interface SidebarSearchContentProps {
 }
 
 export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
+  const navigate = useNavigate();
   const [useFtsSearch, setUseFtsSearch] = createSignal(true);
   const [syntaxFilter, setSyntaxFilter] = createSignal<string>("");
   const [hasAbstractFilter, setHasAbstractFilter] = createSignal<
@@ -38,6 +41,9 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
 
   // Create ref for search input
   let searchInputRef: HTMLInputElement | undefined;
+  
+  // Virtual focus for results navigation (keeps input focused)
+  const [virtualFocusIndex, setVirtualFocusIndex] = createSignal(-1);
 
   // Handle external focus requests
   createEffect(() => {
@@ -47,6 +53,16 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
       setTimeout(() => {
         searchInputRef.focus();
       }, 0);
+    }
+  });
+
+  // Reset virtual focus when results change
+  createEffect(() => {
+    const results = formattedResults();
+    const currentIndex = virtualFocusIndex();
+    // If current index is beyond results, reset
+    if (currentIndex >= results.length) {
+      setVirtualFocusIndex(-1);
     }
   });
 
@@ -126,6 +142,43 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
     const target = e.currentTarget as HTMLInputElement;
     const value = target.value;
     setSearchTerm(value);
+    // Clear virtual focus when user types (reset selection)
+    setVirtualFocusIndex(-1);
+  };
+
+  // Handle navigation keys from search input (virtual focus)
+  const handleSearchKeyDown = (e: KeyboardEvent) => {
+    const results = formattedResults();
+    const hasResults = results.length > 0;
+    
+    if (!hasResults) return;
+    
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const currentIndex = virtualFocusIndex();
+      const nextIndex = currentIndex + 1;
+      if (nextIndex < results.length) {
+        setVirtualFocusIndex(nextIndex);
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const currentIndex = virtualFocusIndex();
+      const nextIndex = currentIndex - 1;
+      if (nextIndex >= 0) {
+        setVirtualFocusIndex(nextIndex);
+      }
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const currentIndex = virtualFocusIndex();
+      if (currentIndex >= 0 && currentIndex < results.length) {
+        const item = results[currentIndex];
+        // Navigate to the selected result
+        navigate(`/note/${item.id}`);
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setVirtualFocusIndex(-1);
+    }
   };
 
   return (
@@ -138,6 +191,7 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
           class="input input-bordered w-full"
           value={searchTerm()}
           onInput={handleSearchInput}
+          onKeyDown={handleSearchKeyDown}
         />
 
         <Collapsible class="p-0" title="Search Settings">
@@ -242,11 +296,25 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
               </div>
             }
           >
-            <ContentList
-              items={formattedResults()}
-              showPath={pathDisplay() !== 2}
-              emptyMessage="No search results found"
-            />
+            <div class="p-4 space-y-3">
+              {formattedResults().length === 0 ? (
+                <div class="text-center text-base-content/60 text-sm py-8">
+                  No search results found
+                </div>
+              ) : (
+                <div class="space-y-2">
+                  <For each={formattedResults()}>
+                    {(item, index) => (
+                      <ContentItem 
+                        item={item} 
+                        showPath={pathDisplay() !== 2} 
+                        isFocused={virtualFocusIndex() === index()}
+                      />
+                    )}
+                  </For>
+                </div>
+              )}
+            </div>
           </Suspense>
         </div>
       </Show>
