@@ -10,7 +10,6 @@ export async function renderWithPandoc(
   content: string,
   fromFormat: string,
   extension: string,
-  embedResources: boolean = true,
 ): Promise<string> {
   if (!content.trim()) return "No notes";
 
@@ -20,7 +19,7 @@ export async function renderWithPandoc(
     writeFileSync(tempFile, content);
 
     const htmlOutput = execSync(
-      `pandoc "${tempFile}" -f ${fromFormat} -t html${embedResources ? " --embed-resources" : ""}`,
+      `pandoc "${tempFile}" -f ${fromFormat} -t html${fromFormat === "ipynb" ? " --embed-resources" : ""}`,
       {
         encoding: "utf-8",
         timeout: 10000,
