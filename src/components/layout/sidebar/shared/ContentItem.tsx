@@ -1,4 +1,4 @@
-import {  For, createSignal } from "solid-js";
+import { For, createSignal } from "solid-js";
 import { tv } from "tailwind-variants";
 import { useNavigate } from "@solidjs/router";
 import { Breadcrumbs } from "~/solid-daisy-components/components/Breadcrumbs";
@@ -72,42 +72,16 @@ export const ContentItem = (props: ContentItemProps) => {
       class="p-3 bg-base-200 rounded-lg hover:bg-base-300 cursor-pointer transition-colors"
       onClick={props.item.onClick}
     >
-      <h4 class="font-medium text-sm text-base-content mb-1 line-clamp-2">
-        {props.item.title}
-      </h4>
+      <button onclick={() => navigate(`/note/${props.item.id}`)}>
+        <h4 class="font-medium text-sm text-base-content mb-1 line-clamp-2">
+          {props.item.title}
+        </h4>
+      </button>
       {props.showPath && (
         <div class="mb-2">
-          {props.item.useNoteBreadcrumbs ? (
-            <div class={breadcrumbsVariants({ wrap: true })}>
-              <NoteBreadcrumbsById noteId={createSignal(props.item.id)[0]} />
-            </div>
-          ) : (
-            props.item.path &&
-            breadcrumbs().length > 0 && (
-              <Breadcrumbs class={breadcrumbsVariants({ wrap: true })}>
-                <For each={breadcrumbs()}>
-                  {(crumb, index) => (
-                    <Breadcrumbs.Item>
-                      <span
-                        class={breadcrumbItemVariants({
-                          isLast: crumb.isLast,
-                          wrap: true,
-                        })}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!crumb.isLast) {
-                            navigate(`/note${crumb.fullPath}`);
-                          }
-                        }}
-                      >
-                        {crumb.label}
-                      </span>
-                    </Breadcrumbs.Item>
-                  )}
-                </For>
-              </Breadcrumbs>
-            )
-          )}
+          <div class={breadcrumbsVariants({ wrap: true })}>
+            <NoteBreadcrumbsById noteId={createSignal(props.item.id)[0]} />
+          </div>
         </div>
       )}
       <p class="text-xs text-base-content/70 line-clamp-3">
