@@ -343,23 +343,26 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
             }
           >
             <div class="p-4 space-y-3">
-              {formattedResults().length === 0 ? (
+              <Show 
+                when={formattedResults().length === 0}
+                fallback={
+                  <div class="space-y-2">
+                    <For each={formattedResults()}>
+                      {(item, index) => (
+                        <ContentItem 
+                          item={item} 
+                          showPath={pathDisplay() !== 2} 
+                          isFocused={virtualFocusIndex() === index()}
+                        />
+                      )}
+                    </For>
+                  </div>
+                }
+              >
                 <div class="text-center text-base-content/60 text-sm py-8">
                   No search results found
                 </div>
-              ) : (
-                <div class="space-y-2">
-                  <For each={formattedResults()}>
-                    {(item, index) => (
-                      <ContentItem 
-                        item={item} 
-                        showPath={pathDisplay() !== 2} 
-                        isFocused={virtualFocusIndex() === index()}
-                      />
-                    )}
-                  </For>
-                </div>
-              )}
+              </Show>
             </div>
           </Suspense>
         </div>
