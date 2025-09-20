@@ -90,11 +90,18 @@ Maybe just
 ** DONE Visiting a Note ID should move the Sidebar to it's parent id and select that itemkj
 Logic for getting siblings was wrong.
 ** TODO Syntax Highlighting
-** TODO Make the whole search result clickable
-** TODO Auto focus on search
+** DONE Auto focus on search
 :LOGBOOK:
-CLOCK: [2025-09-20 Sat 16:07]
+CLOCK: [2025-09-20 Sat 16:07]--[2025-09-20 Sat 16:53] =>  0:46
 :END:
+*** DONE Search
+*** DONE Files
+*** DONE Forward
+*** DONE Back
+*** DONE Related
+** TODO getRecentNotes is not a function
+
+** TODO Root Level Notes are considered as having no siblings
 ** TODO Preserve search on tab navigation
 Just cache the search query and fire it again
 ** TODO Keyboard Navigation on Links
