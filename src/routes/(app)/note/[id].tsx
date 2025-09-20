@@ -11,6 +11,7 @@ import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
 import { Select } from "~/solid-daisy-components/components/Select";
 import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
 import { Textarea } from "~/solid-daisy-components/components/Textarea";
+import { Input } from "~/solid-daisy-components/components/Input";
 import NoteBreadcrumbs from "~/components/NoteBreadcrumbs";
 
 export default function NoteEditor() {
@@ -96,39 +97,43 @@ export default function NoteEditor() {
               <Show
                 when={!metadataExpanded()}
                 fallback={
-                  <Fieldset class="bg-base-100 border-base-300 rounded-lg border p-4 space-y-3">
-                    <Fieldset.Legend>Note Metadata</Fieldset.Legend>
+                  <Fieldset class="bg-base-100 border-base-300 rounded-lg border">
+                    <Fieldset.Legend class="px-3 text-sm font-medium text-base-content">
+                      Note Metadata
+                    </Fieldset.Legend>
 
-                    <div>
-                      <label class="label py-1">
-                        <span class="label-text text-sm font-medium">
+                    <div class="p-6 space-y-6">
+                      <div class="space-y-2">
+                        <label class="block text-sm font-medium text-base-content">
                           Title
-                        </span>
-                      </label>
-                      <input
-                        type="text"
-                        value={currentNote()?.title || ""}
-                        onInput={(e) =>
-                          updateNote("title", e.currentTarget.value)
-                        }
-                        class="input input-bordered w-full input-sm"
-                        placeholder="Note title..."
-                      />
-                    </div>
+                        </label>
+                        <Input
+                          type="text"
+                          value={currentNote()?.title || ""}
+                          onInput={(e) =>
+                            updateNote("title", e.currentTarget.value)
+                          }
+                          size="sm"
+                          placeholder="Note title..."
+                          class="w-full"
+                        />
+                      </div>
 
-                    <div>
-                      <label class="label py-1">
-                        <span class="label-text text-sm font-medium">
+                      <div class="space-y-2">
+                        <label class="block text-sm font-medium text-base-content">
                           Abstract
-                        </span>
-                      </label>
-                      <Textarea
-                        value={currentNote()?.abstract || ""}
-                        onInput={(e) =>
-                          updateNote("abstract", e.currentTarget.value)
-                        }
-                        placeholder="Brief description of the note content..."
-                      />
+                        </label>
+                        <Textarea
+                          value={currentNote()?.abstract || ""}
+                          onInput={(e) =>
+                            updateNote("abstract", e.currentTarget.value)
+                          }
+                          placeholder="Brief description of the note content..."
+                          size="sm"
+                          rows={3}
+                          class="w-full resize-none"
+                        />
+                      </div>
                     </div>
                   </Fieldset>
                 }
