@@ -75,18 +75,17 @@ export const SidebarTabs = () => {
       setSearchParams({ sidebar: tab.key });
     }
 
-    // Trigger focus only when switching via keybinding
-    if (fromKeybinding) {
+    // Trigger focus for keybindings and search tab clicks
+    const shouldFocus = fromKeybinding || tabId === 2;
+    if (shouldFocus) {
       const triggerId = Date.now().toString();
       if (tabId === 0) {
         // Notes tab
         setNotesFocusTrigger(triggerId);
-        // Clear trigger after a short delay
         setTimeout(() => setNotesFocusTrigger(null), 100);
       } else if (tabId === 2) {
-        // Search tab
+        // Search tab - focus input for both keybinding and clicks
         setSearchFocusTrigger(triggerId);
-        // Clear trigger after a short delay
         setTimeout(() => setSearchFocusTrigger(null), 100);
       }
     }
