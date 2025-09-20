@@ -48,6 +48,10 @@ export async function renderLatex(latexContent: string): Promise<string> {
   return renderWithPandoc(latexContent, "latex", "tex");
 }
 
+export async function renderTypst(typstContent: string): Promise<string> {
+  return renderWithPandoc(typstContent, "typst", "typ");
+}
+
 export const renderOrgModeQuery = query(async (orgContent: string) => {
   "use server";
   return await renderOrgMode(orgContent);
@@ -72,3 +76,8 @@ export const renderLatexQuery = query(async (latexContent: string) => {
   "use server";
   return await renderLatex(latexContent);
 }, "render-latex");
+
+export const renderTypstQuery = query(async (typstContent: string) => {
+  "use server";
+  return await renderTypst(typstContent);
+}, "render-typst");

@@ -1,4 +1,4 @@
-export type NoteSyntax = "markdown" | "org" | "html" | "jsx" | "ipynb" | "dokuwiki" | "mediawiki" | "latex";
+export type NoteSyntax = "markdown" | "org" | "html" | "jsx" | "ipynb" | "dokuwiki" | "mediawiki" | "latex" | "typst";
 
 export interface NoteSyntaxOption {
   value: NoteSyntax;
@@ -15,6 +15,7 @@ export const SYNTAX_OPTIONS: NoteSyntaxOption[] = [
   { value: "dokuwiki", label: "DokuWiki", extension: ".wiki" },
   { value: "mediawiki", label: "MediaWiki", extension: ".wiki" },
   { value: "latex", label: "LaTeX", extension: ".tex" },
+  { value: "typst", label: "Typst", extension: ".typ" },
 ];
 
 export interface Note {
