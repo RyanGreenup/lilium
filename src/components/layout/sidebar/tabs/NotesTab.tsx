@@ -292,12 +292,21 @@ function useNoteRenaming(
     }
   };
 
-  // Start editing mode for focused item
-  const startEditingFocusedItem = () => {
-    const focused = focusedItem();
-    if (focused) {
-      setEditingItemId(focused.id);
+  // Start editing mode for specified or focused item
+  const startEditingItem = (noteId?: string) => {
+    if (noteId) {
+      setEditingItemId(noteId);
+    } else {
+      const focused = focusedItem();
+      if (focused) {
+        setEditingItemId(focused.id);
+      }
     }
+  };
+
+  // Start editing mode for focused item (for keyboard shortcut)
+  const startEditingFocusedItem = () => {
+    startEditingItem();
   };
 
   // Cancel editing and restore focus
@@ -314,7 +323,9 @@ function useNoteRenaming(
 
   return {
     editingItemId,
+    setEditingItemId,
     handleRenameNote,
+    startEditingItem,
     startEditingFocusedItem,
     cancelEditing,
     setNewlyCreatedNoteId,
@@ -414,7 +425,9 @@ export default function NotesTab(props: NotesTabProps = {}) {
   // Use renaming hook
   const {
     editingItemId,
+    setEditingItemId,
     handleRenameNote,
+    startEditingItem,
     startEditingFocusedItem,
     cancelEditing,
     setNewlyCreatedNoteId,
@@ -818,7 +831,7 @@ export default function NotesTab(props: NotesTabProps = {}) {
                       handleItemClick={handleItemClickWithDirection}
                       handleRename={handleRenameNote}
                       onCancelEdit={cancelEditing}
-                      startEditingItem={(id) => setEditingItemId(id)}
+                      startEditingItem={startEditingItem}
                       handleDeleteNote={handleDeleteNote}
                       handleCutNote={handleCutNote}
                       handleCreateChildNote={handleCreateChildNote}
@@ -862,7 +875,7 @@ const MenuItem = (props: {
   handleItemClick: (item: NavigationItem) => void;
   handleRename: (id: string, newTitle: string) => void;
   onCancelEdit: () => void;
-  startEditingItem: (id: string) => void;
+  startEditingItem: (id?: string) => void;
   handleDeleteNote: (id?: string) => void;
   handleCutNote: (id?: string) => void;
   handleCreateChildNote: (parentId: string) => void;
