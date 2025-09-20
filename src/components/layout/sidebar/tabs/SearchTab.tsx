@@ -113,22 +113,7 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
   const [searchQuery, setSearchQuery] = createSignal("");
   const [searchResults, setSearchResults] = createSignal<Note[]>([]);
 
-  // Update URL params (debounced) - separate from search execution
-  createEffect(() => {
-    const term = searchTerm();
-    
-    const timeoutId = setTimeout(() => {
-      if (term && term.length >= 2) {
-        setSearchParams({ q: term }, { replace: true });
-      } else if (searchParams.q) {
-        setSearchParams({ q: undefined }, { replace: true });
-      }
-    }, 500); // Longer delay for URL updates
-
-    onCleanup(() => clearTimeout(timeoutId));
-  });
-
-  // Debounced search execution
+  // Debounced search effect
   createEffect(() => {
     const term = searchTerm();
     
@@ -158,14 +143,6 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
     } catch (error) {
       console.error("Search error:", error);
       setSearchResults([]);
-    }
-  });
-
-  // Handle URL search param changes (when user navigates with URL)
-  createEffect(() => {
-    const urlQuery = searchParams.q;
-    if (urlQuery && urlQuery !== searchTerm()) {
-      setSearchTerm(urlQuery);
     }
   });
 
