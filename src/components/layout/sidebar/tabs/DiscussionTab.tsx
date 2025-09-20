@@ -75,20 +75,23 @@ const DiscussionMessageComponent = (props: DiscussionMessageProps) => {
         <button
           class={`btn btn-xs ${props.message.status === "pending" ? "btn-neutral" : "btn-ghost"}`}
           onClick={() => props.onStatusChange(props.message.id, "pending")}
+          title="Press 1 to set as Todo"
         >
-          Todo
+          <span class={props.isFocused ? "underline" : ""}>1</span> Todo
         </button>
         <button
           class={`btn btn-xs ${props.message.status === "in_progress" ? "btn-warning" : "btn-ghost"}`}
           onClick={() => props.onStatusChange(props.message.id, "in_progress")}
+          title="Press 2 to set as Working"
         >
-          Working
+          <span class={props.isFocused ? "underline" : ""}>2</span> Working
         </button>
         <button
           class={`btn btn-xs ${props.message.status === "resolved" ? "btn-success" : "btn-ghost"}`}
           onClick={() => props.onStatusChange(props.message.id, "resolved")}
+          title="Press 3 to set as Done"
         >
-          Done
+          <span class={props.isFocused ? "underline" : ""}>3</span> Done
         </button>
       </div>
     </div>
@@ -207,6 +210,75 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
     { ref: () => containerRef }
   );
 
+  // Status toggle keybindings for focused message
+  useKeybinding(
+    { key: "1" },
+    () => {
+      const currentIndex = focusedMessageIndex();
+      if (currentIndex >= 0) {
+        const message = messages()[currentIndex];
+        if (message) {
+          changeStatus(message.id, "pending");
+        }
+      }
+    },
+    { ref: () => containerRef }
+  );
+
+  useKeybinding(
+    { key: "2" },
+    () => {
+      const currentIndex = focusedMessageIndex();
+      if (currentIndex >= 0) {
+        const message = messages()[currentIndex];
+        if (message) {
+          changeStatus(message.id, "in_progress");
+        }
+      }
+    },
+    { ref: () => containerRef }
+  );
+
+  useKeybinding(
+    { key: "3" },
+    () => {
+      const currentIndex = focusedMessageIndex();
+      if (currentIndex >= 0) {
+        const message = messages()[currentIndex];
+        if (message) {
+          changeStatus(message.id, "resolved");
+        }
+      }
+    },
+    { ref: () => containerRef }
+  );
+
+  // Delete focused message
+  useKeybinding(
+    { key: "Delete" },
+    () => {
+      const currentIndex = focusedMessageIndex();
+      if (currentIndex >= 0) {
+        const message = messages()[currentIndex];
+        if (message) {
+          deleteMessage(message.id);
+          // Adjust focus after deletion
+          const newMessages = messages().filter(m => m.id !== message.id);
+          if (newMessages.length === 0) {
+            setFocusedMessageIndex(-1);
+            if (textareaRef) {
+              textareaRef.focus();
+            }
+          } else if (currentIndex >= newMessages.length) {
+            setFocusedMessageIndex(newMessages.length - 1);
+          }
+          // else keep current index (next message moves into position)
+        }
+      }
+    },
+    { ref: () => containerRef }
+  );
+
   // Handle Tab key from textarea to first message
   const handleTextareaKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Tab" && !e.shiftKey && messages().length > 0) {
@@ -241,7 +313,7 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
           />
           <div class="flex justify-between items-center">
             <span class="text-xs text-base-content/60">
-              Ctrl+Enter to add • Tab to navigate messages
+              Ctrl+Enter to add • Tab to navigate • 1/2/3 to change status • Del to delete
             </span>
             <button
               class="btn btn-primary btn-sm"
