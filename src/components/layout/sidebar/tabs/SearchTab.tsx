@@ -8,6 +8,8 @@ import {
   Show,
   Suspense,
   onCleanup,
+  Accessor,
+  Setter,
 } from "solid-js";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import { createAsync } from "@solidjs/router";
@@ -27,6 +29,8 @@ import type { Note } from "~/lib/db/types";
 
 interface SidebarSearchContentProps {
   focusTrigger?: () => string | null;
+  searchTerm?: Accessor<string>;
+  setSearchTerm?: Setter<string>;
 }
 
 export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
@@ -37,7 +41,11 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
     boolean | undefined
   >(undefined);
   const [pathDisplay, setPathDisplay] = createSignal(0); // 0: Absolute, 1: Relative, 2: Title
-  const [searchTerm, setSearchTerm] = createSignal("");
+  
+  // Use external search term if provided, otherwise local state
+  const localSearchSignal = createSignal("");
+  const searchTerm = props.searchTerm || localSearchSignal[0];
+  const setSearchTerm = props.setSearchTerm || localSearchSignal[1];
 
   // Create ref for search input
   let searchInputRef: HTMLInputElement | undefined;

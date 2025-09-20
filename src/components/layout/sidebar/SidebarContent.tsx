@@ -32,6 +32,9 @@ export const SidebarTabs = () => {
   const [backlinksFocusTrigger, setBacklinksFocusTrigger] = createSignal<string | null>(null);
   const [forwardLinksFocusTrigger, setForwardLinksFocusTrigger] = createSignal<string | null>(null);
 
+  // Persistent search state across tab navigation
+  const [searchTerm, setSearchTerm] = createSignal("");
+
   const tabs = [
     { id: 0, label: "Notes", key: "notes", icon: <Notebook class="w-4 h-4" /> },
     { id: 1, label: "Recent", key: "recent", icon: <Clock class="w-4 h-4" /> },
@@ -170,7 +173,11 @@ export const SidebarTabs = () => {
             </Show>
 
             <Show when={activeTab() === 2}>
-              <SidebarSearchContent focusTrigger={searchFocusTrigger} />
+              <SidebarSearchContent 
+                focusTrigger={searchFocusTrigger}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+              />
             </Show>
 
             <Show when={activeTab() === 3}>
