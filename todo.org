@@ -88,6 +88,13 @@ Maybe just
 ** TODO Remove the Background on Focus
 ** TODO Remove the Animations
 ** TODO Visiting a Note ID should move the Sidebar to it's parent id and select that itemkj
+** TODO Syntax Highlighting
+** TODO Keyboard Navigation on Links
+** TODO Context Menu on File Nav
+** TODO Breadcrumbs in Search
+:LOGBOOK:
+CLOCK: [2025-09-20 Sat 13:51]
+:END:
 ** TODO follow Mode in sidebar
 ** DONE Add Typst
 ** DONE Add Transclusion
