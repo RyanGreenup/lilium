@@ -1,5 +1,5 @@
 import { createAsync, useSearchParams, useNavigate } from "@solidjs/router";
-import { Suspense, Show, For } from "solid-js";
+import { Suspense, Show, For, createEffect } from "solid-js";
 import { ContentList, ContentItemData } from "../shared/ContentItem";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { useNoteParents } from "~/lib/hooks/useNoteParents";
@@ -11,7 +11,12 @@ const getRecentNotesData = async () => {
   return await getRecentNotes(10);
 };
 
-export default function RecentNotesTab() {
+interface RecentNotesTabProps {
+  focusTrigger?: () => string | null;
+}
+
+export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
+  let containerRef: HTMLDivElement | undefined;
   const { note, noteId } = useCurrentNote();
   const parents = useNoteParents(noteId);
   const [searchParams] = useSearchParams();
@@ -59,6 +64,17 @@ export default function RecentNotesTab() {
     }));
   };
 
+  // Handle external focus requests
+  createEffect(() => {
+    const trigger = props.focusTrigger?.();
+    if (trigger && containerRef) {
+      // Focus on next tick after render
+      setTimeout(() => {
+        containerRef.focus();
+      }, 0);
+    }
+  });
+
   return (
     <div class="space-y-4">
       {/* Current Note Info */}
@@ -95,6 +111,8 @@ export default function RecentNotesTab() {
               items={transformedNotes()}
               showPath={false}
               emptyMessage="No recent notes found"
+              enableKeyboardNav={true}
+              ref={(el) => containerRef = el}
             />
           </Show>
         </Suspense>

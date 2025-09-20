@@ -27,11 +27,10 @@ export const SidebarTabs = () => {
 
   // Focus triggers for tabs
   const [notesFocusTrigger, setNotesFocusTrigger] = createSignal<string | null>(null);
+  const [recentFocusTrigger, setRecentFocusTrigger] = createSignal<string | null>(null);
   const [searchFocusTrigger, setSearchFocusTrigger] = createSignal<string | null>(null);
   const [backlinksFocusTrigger, setBacklinksFocusTrigger] = createSignal<string | null>(null);
   const [forwardLinksFocusTrigger, setForwardLinksFocusTrigger] = createSignal<string | null>(null);
-  const [relatedFocusTrigger, setRelatedFocusTrigger] = createSignal<string | null>(null);
-  const [discussionFocusTrigger, setDiscussionFocusTrigger] = createSignal<string | null>(null);
 
   const tabs = [
     { id: 0, label: "Notes", key: "notes", icon: <Notebook class="w-4 h-4" /> },
@@ -87,6 +86,10 @@ export const SidebarTabs = () => {
         // Notes tab
         setNotesFocusTrigger(triggerId);
         setTimeout(() => setNotesFocusTrigger(null), 100);
+      } else if (tabId === 1) {
+        // Recent tab - focus list for keybinding navigation
+        setRecentFocusTrigger(triggerId);
+        setTimeout(() => setRecentFocusTrigger(null), 100);
       } else if (tabId === 2) {
         // Search tab - focus input for both keybinding and clicks
         setSearchFocusTrigger(triggerId);
@@ -163,7 +166,7 @@ export const SidebarTabs = () => {
             </Show>
 
             <Show when={activeTab() === 1}>
-              <RecentNotesTab />
+              <RecentNotesTab focusTrigger={recentFocusTrigger} />
             </Show>
 
             <Show when={activeTab() === 2}>
