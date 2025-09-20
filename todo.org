@@ -87,6 +87,9 @@ Maybe just
 ** TODO Id's for focus instead of auto-focus hook
 ** TODO Remove the Background on Focus
 ** TODO Remove the Animations
+** TODO Visiting a Note ID should move the Sidebar to it's parent id and select that itemkj
+** TODO Add Typst
+** TODO Add Transclusion
 * Exemplar
 Some writing
 
