@@ -73,5 +73,76 @@ This will conflict with our need to preserve the `?sidebar=` searchParam (which 
 ** TODO Move the Sql into CRUD folders
 ** TODO Create associated.ts files with the server side function
 ** TODO Command Palette
-** TODO Breadcrumbs in the Navbar
+*** TODO Links
+*** TODO Fzf Notes
+**** TODO Root
+**** TODO Below
+** TODO Vertical Breadcrumbs in the Menu
+** TODO Journal in Sidebar
+*** TODO Journal
+*** TODO Tasks
+** TODO Connect Discussion
 ** TODO Context Menu
+Maybe just
+** TODO Id's for focus instead of auto-focus hook
+** TODO Remove the Background on Focus
+** TODO Remove the Animations
+** DONE Visiting a Note ID should move the Sidebar to it's parent id and select that itemkj
+Logic for getting siblings was wrong.
+** TODO Syntax Highlighting
+** TODO Make the whole search result clickable
+** DONE Auto focus on search
+:LOGBOOK:
+CLOCK: [2025-09-20 Sat 16:07]--[2025-09-20 Sat 16:53] =>  0:46
+:END:
+*** DONE Search
+*** DONE Files
+*** DONE Forward
+*** DONE Back
+*** DONE Related
+** DONE getRecentNotes is not a function
+:LOGBOOK:
+CLOCK: [2025-09-20 Sat 17:00]--[2025-09-20 Sat 17:50] =>  0:50
+:END:
+
+Implement from scratch using
+
+getRecentNotesQuery
+
+** TODO Root Level Notes are considered as having no siblings
+** TODO Preserve search on tab navigation
+Just cache the search query and fire it again
+** TODO Keyboard Navigation on Links
+** TODO Context Menu on File Nav
+** TODO Breadcrumbs in Search
+:LOGBOOK:
+CLOCK: [2025-09-20 Sat 13:51]--[2025-09-20 Sat 16:07] =>  2:16
+:END:
+** TODO follow Mode in sidebar
+** DONE Add Typst
+** DONE Add Transclusion
+nope. Don't wanna deal with the rendering. Unless I can do it in SQL?
+* Exemplar
+Some writing
+
+A list:
+
+- foo
+- bar
+  - baz
+  - bar
+    - baz
+      #+begin_src python results: output
+def add(x: int) -> int:
+    return x + 1
+
+print(add(33))
+      #+end_src
+
+      #+RESULTS:
+      : 33
+
+  - bar
+    - baz
+- bar
+  - baz

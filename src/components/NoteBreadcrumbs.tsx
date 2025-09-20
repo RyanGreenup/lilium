@@ -1,11 +1,12 @@
-import Home from "lucide-solid/icons/home";
-import { For, Show, Accessor } from "solid-js";
 import { createAsync } from "@solidjs/router";
-import { Breadcrumbs } from "~/solid-daisy-components/components/Breadcrumbs";
+import { Accessor, For, Show } from "solid-js";
+import { getNoteByIdQuery } from "~/lib/db/notes/read";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { useNoteNavigation } from "~/lib/hooks/useNoteNavigation";
 import { useNoteParents } from "~/lib/hooks/useNoteParents";
-import { getNoteByIdQuery } from "~/lib/db/notes/read";
+import { Breadcrumbs } from "~/solid-daisy-components/components/Breadcrumbs";
+
+const MAX_LENGTH = 2;
 
 interface NoteBreadcrumbsByIdProps {
   noteId: Accessor<string | undefined>;
@@ -24,12 +25,12 @@ export function NoteBreadcrumbsById(props: NoteBreadcrumbsByIdProps) {
     <Show when={note()}>
       <Breadcrumbs>
         <Breadcrumbs.Item>
-          <a onClick={navigateToRoot} class="hover:text-primary cursor-pointer">
-            <Home size={16} />
-            Home
+          <a onClick={navigateToRoot} class="hover:text-primary cursor-pointer p-2">
+            <HomeIconBreadcrumbs/>
           </a>
         </Breadcrumbs.Item>
 
+        {/*All the parents are Links*/}
         <For each={parents()}>
           {(parent) => (
             <Breadcrumbs.Item>
@@ -43,6 +44,7 @@ export function NoteBreadcrumbsById(props: NoteBreadcrumbsByIdProps) {
           )}
         </For>
 
+        {/*Don't link the leaf*/}
         <Breadcrumbs.Item>
           <span class="text-base-content/70">{note()!.title}</span>
         </Breadcrumbs.Item>
@@ -55,3 +57,13 @@ export default function NoteBreadcrumbs() {
   const { noteId } = useCurrentNote();
   return <NoteBreadcrumbsById noteId={noteId} />;
 }
+
+
+
+/**
+A Simple orb to represent home in breadcrumbs
+*/
+export const HomeIconBreadcrumbs = () => (
+  
+  <div class="w-2.5 h-2.5 bg-primary rounded-full opacity-70" />
+);
