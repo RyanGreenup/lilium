@@ -4,8 +4,11 @@ import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 import { updateNoteQuery } from "~/lib/db/notes/update";
 import { SYNTAX_OPTIONS, type Note } from "~/lib/db/types";
-import { Save, Eye, FileText, ChevronUp, NotebookPen } from "lucide-solid";
-import { Tabs } from "~/solid-daisy-components/components/Tabs";
+import Save from "lucide-solid/icons/save";
+import Eye from "lucide-solid/icons/eye";
+import ChevronUp from "lucide-solid/icons/chevron-up";
+import NotebookPen from "lucide-solid/icons/notebook-pen";
+
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
 import { Select } from "~/solid-daisy-components/components/Select";
