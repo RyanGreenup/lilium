@@ -19,6 +19,7 @@ import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
 import { Radio } from "~/solid-daisy-components/components/Radio";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Select } from "~/solid-daisy-components/components/Select";
+import { Kbd } from "~/solid-daisy-components/components/Kbd";
 import { ContentItem, ContentItemData } from "../shared/ContentItem";
 import {
   searchNotesQuery,
@@ -41,6 +42,8 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
     boolean | undefined
   >(undefined);
   const [pathDisplay, setPathDisplay] = createSignal(0); // 0: Absolute, 1: Relative, 2: Title
+  const [followMode, setFollowMode] = createSignal(false);
+  const [settingsExpanded, setSettingsExpanded] = createSignal(false);
   
   // Use external search term if provided, otherwise local state
   const localSearchSignal = createSignal("");
@@ -71,6 +74,19 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
     // If current index is beyond results, reset
     if (currentIndex >= results.length) {
       setVirtualFocusIndex(-1);
+    }
+  });
+
+  // Follow mode: navigate to note when virtual focus changes
+  createEffect(() => {
+    if (!followMode()) return;
+    
+    const currentIndex = virtualFocusIndex();
+    const results = formattedResults();
+    
+    if (currentIndex >= 0 && currentIndex < results.length) {
+      const item = results[currentIndex];
+      navigate(`/note/${item.id}`);
     }
   });
 
@@ -186,6 +202,13 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
     } else if (e.key === "Escape") {
       e.preventDefault();
       setVirtualFocusIndex(-1);
+    } else if (e.key === "f" && e.ctrlKey) {
+      e.preventDefault();
+      setFollowMode(!followMode());
+    } else if (e.key === "," && e.ctrlKey) {
+      e.preventDefault();
+      console.log("Toggling settings:", !settingsExpanded());
+      setSettingsExpanded(!settingsExpanded());
     }
   };
 
@@ -202,7 +225,12 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
           onKeyDown={handleSearchKeyDown}
         />
 
-        <Collapsible class="p-0" title="Search Settings">
+        <Collapsible 
+          class="p-0" 
+          title={<>Search Settings <Kbd size="xs">Ctrl+,</Kbd></>}
+          expanded={settingsExpanded()}
+          onToggle={setSettingsExpanded}
+        >
           <Fieldset class="bg-base-200 border-base-300 rounded-box border p-4 space-y-3">
             <Fieldset.Legend>Search Type</Fieldset.Legend>
 
@@ -217,6 +245,20 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
                 {useFtsSearch()
                   ? "Full-text search with ranking"
                   : "Simple LIKE search"}
+              </span>
+            </VStack>
+
+            <VStack label={<>Follow Mode <Kbd size="xs">Ctrl+F</Kbd></>}>
+              <Toggle
+                size="sm"
+                color="primary"
+                checked={followMode()}
+                onChange={(e) => setFollowMode(e.currentTarget.checked)}
+              />
+              <span class="text-xs text-base-content/60 mt-1">
+                {followMode()
+                  ? "Navigate to notes as you browse results"
+                  : "Navigate only on Enter"}
               </span>
             </VStack>
           </Fieldset>
