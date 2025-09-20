@@ -1,5 +1,15 @@
-import { ContentList, ContentItemData } from "../shared/ContentItem";
-import { createEffect } from "solid-js";
+import { createAsync, useSearchParams, useNavigate } from "@solidjs/router";
+import { Suspense, Show, For } from "solid-js";
+import { ContentItem, ContentItemData } from "../shared/ContentItem";
+import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
+import { useKeyboardNavigation } from "~/lib/hooks/useKeyboardNavigation";
+
+// Server function to get backlinks
+const getBacklinksData = async (noteId: string) => {
+  "use server";
+  const { getBacklinks } = await import("~/lib/db/notes/search");
+  return await getBacklinks(noteId);
+};
 
 interface BacklinksTabProps {
   focusTrigger?: () => string | null;
@@ -7,56 +17,111 @@ interface BacklinksTabProps {
 
 export default function BacklinksTab(props: BacklinksTabProps = {}) {
   let containerRef: HTMLDivElement | undefined;
-  const backlinks: ContentItemData[] = [
-    {
-      id: "1",
-      title: "Machine Learning Fundamentals",
-      abstract:
-        "Comprehensive overview of machine learning concepts, algorithms, and applications. Covers supervised and unsupervised learning approaches with practical examples.",
-      path: "/notes/computer-science/ai/ml-fundamentals.md",
-    },
-    {
-      id: "2",
-      title: "Data Structures and Algorithms",
-      abstract:
-        "Essential data structures including arrays, linked lists, trees, and graphs. Analysis of time and space complexity for common algorithms.",
-      path: "/notes/computer-science/algorithms/data-structures.md",
-    },
-    {
-      id: "3",
-      title: "Linear Algebra Applications",
-      abstract:
-        "Mathematical foundations for computer graphics, machine learning, and data analysis. Covers vector spaces, matrices, and eigenvalues.",
-      path: "/notes/mathematics/linear-algebra/applications.md",
-    },
-    {
-      id: "4",
-      title: "Python Programming Best Practices",
-      abstract:
-        "Guidelines for writing clean, maintainable Python code. Includes design patterns, testing strategies, and performance optimization techniques.",
-      path: "/notes/programming/python/best-practices.md",
-    },
-  ];
-
-  // Handle external focus requests
-  createEffect(() => {
-    const trigger = props.focusTrigger?.();
-    if (trigger && containerRef) {
-      // Focus on next tick after render
-      setTimeout(() => {
-        containerRef.focus();
-      }, 0);
+  const { noteId } = useCurrentNote();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  
+  // Get backlinks from the database
+  const backlinksData = createAsync(async () => {
+    const currentNoteId = noteId();
+    if (!currentNoteId) return [];
+    
+    try {
+      return await getBacklinksData(currentNoteId);
+    } catch (error) {
+      console.error("Failed to fetch backlinks:", error);
+      return [];
     }
   });
 
+  // Function to navigate while preserving search params
+  const navigateToNote = (noteId: string) => {
+    const currentParams = new URLSearchParams();
+    
+    // Preserve all current search parameters
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach(v => currentParams.append(key, v));
+      } else if (value !== undefined) {
+        currentParams.set(key, value);
+      }
+    });
+    
+    const searchString = currentParams.toString();
+    const url = `/note/${noteId}${searchString ? `?${searchString}` : ''}`;
+    navigate(url);
+  };
+
+  // Transform database notes to ContentItemData format
+  const transformedBacklinks = () => {
+    const notes = backlinksData();
+    if (!notes) return [];
+    
+    return notes.map((note): ContentItemData => ({
+      id: note.id,
+      title: note.title,
+      abstract: note.abstract || "",
+      path: `/note/${note.id}`,
+      onClick: () => navigateToNote(note.id)
+    }));
+  };
+
+  // Use keyboard navigation hook
+  const { focusedItemIndex } = useKeyboardNavigation({
+    items: transformedBacklinks,
+    containerRef: () => containerRef,
+    onEnter: (item) => navigateToNote(item.id),
+    focusTrigger: props.focusTrigger,
+  });
+
   return (
-    <ContentList
-      items={backlinks}
-      showPath={true}
-      emptyMessage="No backlinks found for this note"
-      enableKeyboardNav={true}
-      showFollowMode={true}
-      ref={(el) => containerRef = el}
-    />
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      class="flex flex-col h-full outline-none focus:outline-none"
+      role="list"
+      aria-label="Backlinks to current note"
+    >
+      <div class="space-y-4">
+        <div>
+          <h4 class="text-sm font-medium text-base-content/70 mb-2">
+            Backlinks
+            <Show when={transformedBacklinks().length > 0}>
+              <span class="text-xs text-base-content/50 ml-2">
+                ({transformedBacklinks().length})
+              </span>
+            </Show>
+          </h4>
+          
+          <Suspense fallback={<div class="loading loading-spinner loading-sm"></div>}>
+            <Show 
+              when={backlinksData()} 
+              fallback={<div class="text-sm text-base-content/60">Loading backlinks...</div>}
+            >
+              <Show 
+                when={transformedBacklinks().length > 0}
+                fallback={
+                  <div class="text-center text-base-content/60 text-sm py-8">
+                    No backlinks found for this note
+                  </div>
+                }
+              >
+                <div class="p-4 space-y-2">
+                  <For each={transformedBacklinks()}>
+                    {(item, index) => (
+                      <ContentItem
+                        item={item}
+                        showPath={true}
+                        isFocused={focusedItemIndex() === index()}
+                      />
+                    )}
+                  </For>
+                </div>
+              </Show>
+            </Show>
+          </Suspense>
+        </div>
+      </div>
+    </div>
   );
 }

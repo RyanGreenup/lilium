@@ -214,7 +214,9 @@ export const ContentList = (props: ContentListProps) => {
       <div
         ref={(el) => {
           containerRef = el;
-          if (props.ref) props.ref(el);
+          if (props.ref) {
+            props.ref(el);
+          }
         }}
         tabIndex={props.enableKeyboardNav ? 0 : undefined}
         class="p-4 space-y-3 outline-none focus:outline-none"
