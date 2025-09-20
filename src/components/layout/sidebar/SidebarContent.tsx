@@ -13,7 +13,7 @@ import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import BacklinksTab from "./tabs/BacklinksTab";
 import DiscussionTab from "./tabs/DiscussionTab";
-import ForwardLinks from "./tabs/ForwardLinksTab";
+import ForwardLinksTab from "./tabs/ForwardLinksTab";
 import NotesTab from "./tabs/NotesTab";
 import RecentNotesTab from "./tabs/RecentNotesTab";
 import RelatedTab from "./tabs/RelatedTab";
@@ -186,7 +186,7 @@ export const SidebarTabs = () => {
             </Show>
 
             <Show when={activeTab() === 4}>
-              <ForwardLinks focusTrigger={forwardLinksFocusTrigger} />
+              <ForwardLinksTab focusTrigger={forwardLinksFocusTrigger} />
             </Show>
 
             <Show when={activeTab() === 5}>
