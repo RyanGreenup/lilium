@@ -98,6 +98,81 @@ export async function getRecentNotes(limit: number = 10): Promise<Note[]> {
 }
 
 /**
+ * Get backlinks - notes that reference the specified note ID in their content
+ */
+export async function getBacklinks(noteId: string): Promise<Note[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  const stmt = db.prepare(`
+    SELECT * FROM notes
+    WHERE user_id = ? AND id != ? AND (
+      title LIKE ? OR
+      content LIKE ? OR
+      abstract LIKE ?
+    )
+    ORDER BY updated_at DESC
+  `);
+
+  const searchTerm = `%${noteId}%`;
+  return stmt.all(user.id, noteId, searchTerm, searchTerm, searchTerm) as Note[];
+}
+
+/**
+ * Get forward links - notes that the current note references in its content
+ * This extracts note IDs from the current note's content and finds those notes
+ */
+export async function getForwardLinks(noteId: string): Promise<Note[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  // First, get the current note's content
+  const currentNoteStmt = db.prepare(`
+    SELECT title, content, abstract FROM notes 
+    WHERE id = ? AND user_id = ?
+  `);
+  const currentNote = currentNoteStmt.get(noteId, user.id) as Note | undefined;
+  
+  if (!currentNote) {
+    return [];
+  }
+
+  // Extract potential note IDs from content using regex
+  // Look for 32-character hex strings (our note ID format)
+  const noteIdRegex = /\b[a-fA-F0-9]{32}\b/g;
+  const content = [currentNote.title, currentNote.content, currentNote.abstract]
+    .filter(Boolean)
+    .join(' ');
+  
+  const foundIds = content.match(noteIdRegex) || [];
+  
+  if (foundIds.length === 0) {
+    return [];
+  }
+
+  // Remove duplicates and filter out the current note's ID
+  const uniqueIds = [...new Set(foundIds)].filter(id => id !== noteId);
+  
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  // Build query to find all referenced notes that exist
+  const placeholders = uniqueIds.map(() => '?').join(',');
+  const forwardLinksStmt = db.prepare(`
+    SELECT * FROM notes
+    WHERE user_id = ? AND id IN (${placeholders})
+    ORDER BY updated_at DESC
+  `);
+
+  return forwardLinksStmt.all(user.id, ...uniqueIds) as Note[];
+}
+
+/**
  * Advanced search with filters
  */
 export async function searchNotesAdvanced(options: {
@@ -187,6 +262,22 @@ export const getRecentNotesQuery = query(async (limit?: number) => {
   "use server";
   return await getRecentNotes(limit);
 }, "recent-notes");
+
+/**
+ * Query function to get backlinks (for client-side use)
+ */
+export const getBacklinksQuery = query(async (noteId: string) => {
+  "use server";
+  return await getBacklinks(noteId);
+}, "backlinks");
+
+/**
+ * Query function to get forward links (for client-side use)
+ */
+export const getForwardLinksQuery = query(async (noteId: string) => {
+  "use server";
+  return await getForwardLinks(noteId);
+}, "forward-links");
 
 /**
  * Query function for advanced search (for client-side use)

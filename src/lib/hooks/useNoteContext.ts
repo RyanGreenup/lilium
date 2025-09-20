@@ -13,12 +13,12 @@ export function useNoteContext() {
   // Get children of current note
   const children = createAsync(() => getChildrenWithFolderStatusQuery(noteId()));
   
-  // Get siblings by fetching children of parent
+  // Get siblings by fetching children of parent, or root items if no parent
   const siblings = createAsync(() => {
     const currentNote = note();
     const parentId = currentNote?.parent_id;
-    // Only fetch if we have a parent (not root note)
-    return parentId ? getChildrenWithFolderStatusQuery(parentId) : Promise.resolve([]);
+    // Fetch children of parent, or root items (null parent would be a root level item)
+    return getChildrenWithFolderStatusQuery(parentId ?? null);
   });
 
   // Determine if current note is a folder (has children)
