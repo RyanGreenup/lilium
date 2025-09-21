@@ -2,6 +2,7 @@ import { createSignal, createEffect, type Accessor, Suspense, Switch, Match } fr
 import { createAsync } from "@solidjs/router";
 import { renderOrgModeQuery, renderJupyterNotebookQuery, renderDokuWikiQuery, renderMediaWikiQuery, renderLatexQuery, renderTypstQuery } from "~/lib/pandoc";
 import { CodeBlockEnhancer } from "./CodeBlockCopy";
+import { isPandocSyntax, isClientRenderedSyntax, isPassthroughSyntax } from "~/lib/db/types";
 
 const renderMarkdownClient = async (markdownContent: string): Promise<string> => {
   if (!markdownContent.trim()) return "No notes";
@@ -15,48 +16,48 @@ const renderMarkdownClient = async (markdownContent: string): Promise<string> =>
   }
 };
 
-export const MarkdownRenderer = (props: { 
-  content: Accessor<string>; 
-  syntax?: Accessor<string>; 
+export const MarkdownRenderer = (props: {
+  content: Accessor<string>;
+  syntax?: Accessor<string>;
 }) => {
   const [markdownHtml, setMarkdownHtml] = createSignal<string>("");
   const [isLoadingMarkdown, setIsLoadingMarkdown] = createSignal(false);
 
   // Server-side Pandoc rendering
   const pandocHtml = createAsync(async () => {
-    const syntax = props.syntax?.() || "markdown";
+    const syntax = props.syntax?.() || "md";
     const content = props.content();
-    
+
     if (!content.trim()) return "";
-    
+
     try {
       if (syntax === "org") {
         return await renderOrgModeQuery(content);
       } else if (syntax === "ipynb") {
         return await renderJupyterNotebookQuery(content);
-      } else if (syntax === "dokuwiki") {
+      } else if (syntax === "dw") {
         return await renderDokuWikiQuery(content);
-      } else if (syntax === "mediawiki") {
+      } else if (syntax === "mw") {
         return await renderMediaWikiQuery(content);
-      } else if (syntax === "latex") {
+      } else if (syntax === "tex") {
         return await renderLatexQuery(content);
-      } else if (syntax === "typst") {
+      } else if (syntax === "typ") {
         return await renderTypstQuery(content);
       }
     } catch (error) {
       console.error(`${syntax} rendering failed:`, error);
       return `<pre class="error">${syntax} rendering failed: ${error}</pre>`;
     }
-    
+
     return "";
   });
 
   // Client-side markdown rendering
   createEffect(async () => {
     const content = props.content();
-    const syntax = props.syntax?.() || "markdown";
-    
-    if (syntax === "markdown") {
+    const syntax = props.syntax?.() || "md";
+
+    if (isClientRenderedSyntax(syntax)) {
       setIsLoadingMarkdown(true);
       try {
         const html = await renderMarkdownClient(content);
@@ -74,8 +75,8 @@ export const MarkdownRenderer = (props: {
     <CodeBlockEnhancer>
       <div class="prose prose-sm max-w-none dark:prose-invert">
         <Switch>
-          <Match when={["org", "ipynb", "dokuwiki", "mediawiki", "latex", "typst"].includes(props.syntax?.() || "")}>
-            <Suspense 
+          <Match when={isPandocSyntax(props.syntax?.() || "")}>
+            <Suspense
               fallback={
                 <div class="flex items-center justify-center p-4">
                   <div class="loading loading-spinner loading-sm"></div>
@@ -86,8 +87,8 @@ export const MarkdownRenderer = (props: {
               <div innerHTML={pandocHtml()} />
             </Suspense>
           </Match>
-          
-          <Match when={props.syntax?.() === "markdown"}>
+
+          <Match when={isClientRenderedSyntax(props.syntax?.() || "")}>
             {isLoadingMarkdown() ? (
               <div class="flex items-center justify-center p-4">
                 <div class="loading loading-spinner loading-sm"></div>
@@ -97,11 +98,11 @@ export const MarkdownRenderer = (props: {
               <div innerHTML={markdownHtml()} />
             )}
           </Match>
-          
-          <Match when={props.syntax?.() === "html"}>
+
+          <Match when={isPassthroughSyntax(props.syntax?.() || "")}>
             <div innerHTML={props.content() || "No content"} />
           </Match>
-          
+
           <Match when={true}>
             <pre><code>{props.content() || "No content"}</code></pre>
           </Match>

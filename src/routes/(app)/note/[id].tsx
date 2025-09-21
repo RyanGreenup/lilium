@@ -3,7 +3,7 @@ import { createSignal, createEffect, Show, Suspense } from "solid-js";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 import { updateNoteQuery } from "~/lib/db/notes/update";
-import { SYNTAX_OPTIONS, type Note } from "~/lib/db/types";
+import { SYNTAX_OPTIONS, type Note, type NoteSyntax } from "~/lib/db/types";
 import Save from "lucide-solid/icons/save";
 import Eye from "lucide-solid/icons/eye";
 import ChevronUp from "lucide-solid/icons/chevron-up";
@@ -37,6 +37,7 @@ export default function NoteEditor() {
   const currentNote = () => localNote() || note();
 
   const syntaxOptions = SYNTAX_OPTIONS;
+  const defaultSyntax: NoteSyntax = "md";
 
   const updateNote = (field: keyof Note, value: any) => {
     setLocalNote((prev) => prev ? ({ ...prev, [field]: value }) : null);
@@ -183,7 +184,7 @@ export default function NoteEditor() {
                 <span class="text-base-content/60">Syntax:</span>
 
                 <Select
-                  value={currentNote()?.syntax || "markdown"}
+                  value={currentNote()?.syntax || defaultSyntax}
                   onChange={(e) => updateNote("syntax", e.currentTarget.value)}
                 >
                   {syntaxOptions.map((option) => (
@@ -210,7 +211,7 @@ export default function NoteEditor() {
             >
               <Select
                 size="xs"
-                value={currentNote()?.syntax || "markdown"}
+                value={currentNote()?.syntax || defaultSyntax}
                 onChange={(e) => updateNote("syntax", e.currentTarget.value)}
               >
                 {syntaxOptions.map((option) => (
@@ -269,7 +270,7 @@ export default function NoteEditor() {
                 <Show when={currentNote()?.content} fallback={<div class="text-center text-base-content/60 p-8">No content</div>}>
                   <MarkdownRenderer 
                     content={() => currentNote()?.content || ""} 
-                    syntax={() => currentNote()?.syntax || "markdown"}
+                    syntax={() => currentNote()?.syntax || defaultSyntax}
                   />
                 </Show>
               </div>
