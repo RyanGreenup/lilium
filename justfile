@@ -18,3 +18,12 @@ build:
 admin:
     SUDO_MODE="true" \
     just dev
+
+
+dir := "fuse_notes"
+fuse:
+    @echo {{dir}}
+    doas umount -l {{dir}} || true
+    cp -r .data .data.bak.$(date +%s)
+    @echo mount on local machine with 'sshfs -o Cipher=none   -o compression=no user@vidar:/media/Applications/Javascript/lilium/{{dir}} {{dir}}'
+    lilium_fuse .data/notes.sqlite {{dir}}
