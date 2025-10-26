@@ -20,7 +20,14 @@ admin:
     just dev
 
 
-dir := "fuse_notes"
+dir := "$HOME/Notes/fuse_notes"
+remote-fuse:
+    @echo {{dir}}
+    doas umount -l {{dir}} || true
+    cp -r .data .data.bak.$(date +%s)
+    @echo mount on local machine with 'sshfs -o Cipher=none   -o compression=no user@vidar:/media/Applications/Javascript/lilium/{{dir}} {{dir}}'
+    lilium_fuse .data/notes.sqlite {{dir}}
+
 fuse:
     @echo {{dir}}
     doas umount -l {{dir}} || true
