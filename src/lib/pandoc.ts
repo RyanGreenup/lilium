@@ -46,11 +46,11 @@ export async function renderJupyterNotebook(
 }
 
 export async function renderDokuWiki(wikiContent: string): Promise<string> {
-  return renderWithPandoc(wikiContent, "dokuwiki", "wiki");
+  return renderWithPandoc(wikiContent, "dokuwiki", "dw");
 }
 
 export async function renderMediaWiki(wikiContent: string): Promise<string> {
-  return renderWithPandoc(wikiContent, "mediawiki", "wiki");
+  return renderWithPandoc(wikiContent, "mediawiki", ".mw");
 }
 
 export async function renderLatex(latexContent: string): Promise<string> {
