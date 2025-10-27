@@ -16,6 +16,7 @@ import { Select } from "~/solid-daisy-components/components/Select";
 import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
 import { Textarea } from "~/solid-daisy-components/components/Textarea";
 import { Input } from "~/solid-daisy-components/components/Input";
+import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import NoteBreadcrumbs from "~/components/NoteBreadcrumbs";
 
 export default function NoteEditor() {
@@ -141,6 +142,29 @@ export default function NoteEditor() {
     };
     input.click();
   };
+
+  // Modular keybinding functions
+  const toggleEditMode = () => {
+    setIsEditing(!isEditing());
+  };
+
+  const focusTextarea = () => {
+    if (isEditing() && textareaRef) {
+      textareaRef.focus();
+    }
+  };
+
+  const handleUploadKeybind = () => {
+    if (isEditing()) {
+      triggerFileUpload();
+    }
+  };
+
+  // Global keybindings
+  useKeybinding({ key: "e", ctrl: true }, toggleEditMode);
+  useKeybinding({ key: "s", ctrl: true }, saveNote);
+  useKeybinding({ key: "/", ctrl: true }, focusTextarea);
+  useKeybinding({ key: "u", ctrl: true }, handleUploadKeybind);
 
   return (
     <Show
