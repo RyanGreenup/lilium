@@ -1,15 +1,50 @@
-import { createSignal, createEffect, type Accessor, Suspense, Switch, Match } from "solid-js";
+import {
+  createSignal,
+  createEffect,
+  type Accessor,
+  Suspense,
+  Switch,
+  Match,
+} from "solid-js";
 import { createAsync } from "@solidjs/router";
-import { renderJupyterNotebookQuery, renderTypstQuery, convertOrgToMarkdownQuery, convertDokuWikiToMarkdownQuery, convertMediaWikiToMarkdownQuery, convertLatexToMarkdownQuery } from "~/lib/pandoc";
+import {
+  renderJupyterNotebookQuery,
+  renderTypstQuery,
+  convertOrgToMarkdownQuery,
+  convertDokuWikiToMarkdownQuery,
+  convertMediaWikiToMarkdownQuery,
+  convertLatexToMarkdownQuery,
+} from "~/lib/pandoc";
 import { CodeBlockEnhancer } from "./CodeBlockCopy";
-import { isPandocSyntax, isMarkdownConvertibleSyntax, isClientRenderedSyntax, isPassthroughSyntax } from "~/lib/db/types";
+import {
+  isPandocSyntax,
+  isMarkdownConvertibleSyntax,
+  isClientRenderedSyntax,
+  isPassthroughSyntax,
+} from "~/lib/db/types";
 
-const renderMarkdownClient = async (markdownContent: string): Promise<string> => {
+const renderMarkdownClient = async (
+  markdownContent: string,
+): Promise<string> => {
   if (!markdownContent.trim()) return "No notes";
 
   try {
-    const { marked } = await import("marked");
-    return marked(markdownContent);
+    const { Marked } = await import("marked");
+    const { markedHighlight } = await import("marked-highlight");
+    const hljs = await import("highlight.js");
+
+    const marked = new Marked(
+      markedHighlight({
+        emptyLangClass: "hljs",
+        langPrefix: "hljs language-",
+        highlight(code, lang, info) {
+          const language = hljs.default.getLanguage(lang) ? lang : "plaintext";
+          return hljs.default.highlight(code, { language }).value;
+        },
+      }),
+    );
+
+    return marked.parse(markdownContent);
   } catch (error) {
     console.error("Failed to render markdown:", error);
     return markdownContent;
@@ -77,7 +112,7 @@ export const MarkdownRenderer = (props: {
       setIsLoadingMarkdown(true);
       try {
         let markdownContent: string;
-        
+
         if (syntax === "md") {
           markdownContent = props.content();
         } else if (isMarkdownConvertibleSyntax(syntax)) {
@@ -106,7 +141,9 @@ export const MarkdownRenderer = (props: {
               fallback={
                 <div class="flex items-center justify-center p-4">
                   <div class="loading loading-spinner loading-sm"></div>
-                  <span class="ml-2 text-sm text-base-content/60">Rendering {props.syntax?.()}...</span>
+                  <span class="ml-2 text-sm text-base-content/60">
+                    Rendering {props.syntax?.()}...
+                  </span>
                 </div>
               }
             >
@@ -119,8 +156,8 @@ export const MarkdownRenderer = (props: {
               <div class="flex items-center justify-center p-4">
                 <div class="loading loading-spinner loading-sm"></div>
                 <span class="ml-2 text-sm text-base-content/60">
-                  {isMarkdownConvertibleSyntax(props.syntax?.() || "") 
-                    ? `Converting ${props.syntax?.()} to Markdown...` 
+                  {isMarkdownConvertibleSyntax(props.syntax?.() || "")
+                    ? `Converting ${props.syntax?.()} to Markdown...`
                     : "Rendering Markdown..."}
                 </span>
               </div>
@@ -134,7 +171,9 @@ export const MarkdownRenderer = (props: {
           </Match>
 
           <Match when={true}>
-            <pre><code>{props.content() || "No content"}</code></pre>
+            <pre>
+              <code>{props.content() || "No content"}</code>
+            </pre>
           </Match>
         </Switch>
       </div>
