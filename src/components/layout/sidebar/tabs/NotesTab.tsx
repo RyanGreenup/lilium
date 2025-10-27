@@ -57,6 +57,7 @@ function useNavigationKeybindings(
   handlePasteAsChild: (parentId?: string) => void,
   handleDeleteNote: (noteId?: string) => void,
   handleDuplicateNote: (id: string) => void,
+  handleCopyLink: (noteId?: string) => void,
 ) {
   // Navigation keybindings
   useKeybinding(
@@ -205,6 +206,16 @@ function useNavigationKeybindings(
     () => {
       console.log("Deleting note...");
       handleDeleteNote();
+    },
+    { ref: tabRef },
+  );
+
+  // Copy link keybinding
+  useKeybinding(
+    { key: "y" },
+    () => {
+      console.log("Copying note link...");
+      handleCopyLink();
     },
     { ref: tabRef },
   );
@@ -783,6 +794,31 @@ function NotesTabContent(props: NotesTabProps = {}) {
     }
   };
 
+  // Handle copying note link (for keyboard shortcut)
+  const handleCopyLink = (noteId?: string) => {
+    // Use provided ID or fall back to focused item
+    const targetItem = noteId
+      ? displayItems().find((item) => item.id === noteId)
+      : focusedItem();
+
+    if (targetItem) {
+      const noteLink = `[${targetItem.title}](${targetItem.id})`;
+      
+      navigator.clipboard.writeText(noteLink).then(() => {
+        console.log(`Copied note link: ${noteLink}`);
+      }).catch((error) => {
+        console.error("Failed to copy note link:", error);
+        // Fallback for browsers that don't support clipboard API
+        const textArea = document.createElement("textarea");
+        textArea.value = noteLink;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      });
+    }
+  };
+
   // Use navigation keybindings hook
   onMount(() => {
     useNavigationKeybindings(
@@ -803,6 +839,7 @@ function NotesTabContent(props: NotesTabProps = {}) {
       handlePasteAsChild,
       handleDeleteNote,
       handleDuplicateNote,
+      handleCopyLink,
     );
   });
 
@@ -941,17 +978,24 @@ const MenuItem = (props: {
 }) => {
   let inputRef: HTMLInputElement | undefined;
 
+  // Create a markdown link for a note
+  const createNoteLink = (id: string, title: string) => {
+    return `[${title}](${id})`;
+  };
+
   // Handle copying note ID to clipboard
   const handleCopyId = async (noteId: string) => {
+    const noteLink = createNoteLink(noteId, props.item.title);
+
     try {
       // NOTE requires HTTPS
-      await navigator.clipboard.writeText(noteId);
-      console.log(`Copied note ID: ${noteId}`);
+      await navigator.clipboard.writeText(noteLink);
+      console.log(`Copied note link: ${noteLink}`);
     } catch (error) {
-      console.error("Failed to copy note ID:", error);
+      console.error("Failed to copy note link:", error);
       // Fallback for browsers that don't support clipboard API
       const textArea = document.createElement("textarea");
-      textArea.value = noteId;
+      textArea.value = noteLink;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand("copy");
@@ -985,8 +1029,9 @@ const MenuItem = (props: {
       separator: true,
     },
     {
-      id: "copy-id",
-      label: "Copy ID",
+      id: "copy-link",
+      label: "Copy Link",
+      keybind: "y",
       onClick: () => handleCopyId(props.item.id),
     },
     {
