@@ -1,8 +1,8 @@
 import { createSignal, createEffect, type Accessor, Suspense, Switch, Match } from "solid-js";
 import { createAsync } from "@solidjs/router";
-import { renderOrgModeQuery, renderJupyterNotebookQuery, renderDokuWikiQuery, renderMediaWikiQuery, renderLatexQuery, renderTypstQuery } from "~/lib/pandoc";
+import { renderJupyterNotebookQuery, renderTypstQuery, convertOrgToMarkdownQuery, convertDokuWikiToMarkdownQuery, convertMediaWikiToMarkdownQuery, convertLatexToMarkdownQuery } from "~/lib/pandoc";
 import { CodeBlockEnhancer } from "./CodeBlockCopy";
-import { isPandocSyntax, isClientRenderedSyntax, isPassthroughSyntax } from "~/lib/db/types";
+import { isPandocSyntax, isMarkdownConvertibleSyntax, isClientRenderedSyntax, isPassthroughSyntax } from "~/lib/db/types";
 
 const renderMarkdownClient = async (markdownContent: string): Promise<string> => {
   if (!markdownContent.trim()) return "No notes";
@@ -23,7 +23,7 @@ export const MarkdownRenderer = (props: {
   const [markdownHtml, setMarkdownHtml] = createSignal<string>("");
   const [isLoadingMarkdown, setIsLoadingMarkdown] = createSignal(false);
 
-  // Server-side Pandoc rendering
+  // Server-side Pandoc rendering (only for ipynb and typ)
   const pandocHtml = createAsync(async () => {
     const syntax = props.syntax?.() || "md";
     const content = props.content();
@@ -31,16 +31,8 @@ export const MarkdownRenderer = (props: {
     if (!content.trim()) return "";
 
     try {
-      if (syntax === "org") {
-        return await renderOrgModeQuery(content);
-      } else if (syntax === "ipynb") {
+      if (syntax === "ipynb") {
         return await renderJupyterNotebookQuery(content);
-      } else if (syntax === "dw") {
-        return await renderDokuWikiQuery(content);
-      } else if (syntax === "mw") {
-        return await renderMediaWikiQuery(content);
-      } else if (syntax === "tex") {
-        return await renderLatexQuery(content);
       } else if (syntax === "typ") {
         return await renderTypstQuery(content);
       }
@@ -52,19 +44,53 @@ export const MarkdownRenderer = (props: {
     return "";
   });
 
+  // Server-side markdown conversion (for org, dw, mw, tex)
+  const convertedMarkdown = createAsync(async () => {
+    const syntax = props.syntax?.() || "md";
+    const content = props.content();
+
+    if (!content.trim()) return "";
+
+    try {
+      if (syntax === "org") {
+        return await convertOrgToMarkdownQuery(content);
+      } else if (syntax === "dw") {
+        return await convertDokuWikiToMarkdownQuery(content);
+      } else if (syntax === "mw") {
+        return await convertMediaWikiToMarkdownQuery(content);
+      } else if (syntax === "tex") {
+        return await convertLatexToMarkdownQuery(content);
+      }
+    } catch (error) {
+      console.error(`${syntax} to markdown conversion failed:`, error);
+      return content;
+    }
+
+    return "";
+  });
+
   // Client-side markdown rendering
   createEffect(async () => {
-    const content = props.content();
     const syntax = props.syntax?.() || "md";
 
     if (isClientRenderedSyntax(syntax)) {
       setIsLoadingMarkdown(true);
       try {
-        const html = await renderMarkdownClient(content);
+        let markdownContent: string;
+        
+        if (syntax === "md") {
+          markdownContent = props.content();
+        } else if (isMarkdownConvertibleSyntax(syntax)) {
+          markdownContent = convertedMarkdown() || props.content();
+        } else {
+          markdownContent = props.content();
+        }
+
+        const html = await renderMarkdownClient(markdownContent);
         setMarkdownHtml(html);
       } catch (error) {
         console.error("Markdown rendering error:", error);
-        setMarkdownHtml(`<pre>${content}</pre>`);
+        setMarkdownHtml(`<pre>${props.content()}</pre>`);
       } finally {
         setIsLoadingMarkdown(false);
       }
@@ -92,7 +118,11 @@ export const MarkdownRenderer = (props: {
             {isLoadingMarkdown() ? (
               <div class="flex items-center justify-center p-4">
                 <div class="loading loading-spinner loading-sm"></div>
-                <span class="ml-2 text-sm text-base-content/60">Rendering Markdown...</span>
+                <span class="ml-2 text-sm text-base-content/60">
+                  {isMarkdownConvertibleSyntax(props.syntax?.() || "") 
+                    ? `Converting ${props.syntax?.()} to Markdown...` 
+                    : "Rendering Markdown..."}
+                </span>
               </div>
             ) : (
               <div innerHTML={markdownHtml()} />

@@ -35,6 +35,35 @@ export async function renderWithPandoc(
   }
 }
 
+export async function convertToMarkdown(
+  content: string,
+  fromFormat: string,
+  extension: string,
+): Promise<string> {
+  if (!content.trim()) return "";
+
+  try {
+    const tempFile = join(tmpdir(), `note-${Date.now()}.${extension}`);
+
+    writeFileSync(tempFile, content);
+
+    const markdownOutput = execSync(
+      `pandoc "${tempFile}" -f ${fromFormat} -t markdown`,
+      {
+        encoding: "utf-8",
+        timeout: 10000,
+      },
+    );
+
+    unlinkSync(tempFile);
+
+    return markdownOutput;
+  } catch (error) {
+    console.error(`Failed to convert ${fromFormat} to markdown:`, error);
+    return content;
+  }
+}
+
 export async function renderOrgMode(orgContent: string): Promise<string> {
   return renderWithPandoc(orgContent, "org", "org");
 }
@@ -59,6 +88,22 @@ export async function renderLatex(latexContent: string): Promise<string> {
 
 export async function renderTypst(typstContent: string): Promise<string> {
   return renderWithPandoc(typstContent, "typst", "typ");
+}
+
+export async function convertOrgToMarkdown(orgContent: string): Promise<string> {
+  return convertToMarkdown(orgContent, "org", "org");
+}
+
+export async function convertDokuWikiToMarkdown(wikiContent: string): Promise<string> {
+  return convertToMarkdown(wikiContent, "dokuwiki", "dw");
+}
+
+export async function convertMediaWikiToMarkdown(wikiContent: string): Promise<string> {
+  return convertToMarkdown(wikiContent, "mediawiki", "mw");
+}
+
+export async function convertLatexToMarkdown(latexContent: string): Promise<string> {
+  return convertToMarkdown(latexContent, "latex", "tex");
 }
 
 export const renderOrgModeQuery = query(async (orgContent: string) => {
@@ -93,3 +138,23 @@ export const renderTypstQuery = query(async (typstContent: string) => {
   "use server";
   return await renderTypst(typstContent);
 }, "render-typst");
+
+export const convertOrgToMarkdownQuery = query(async (orgContent: string) => {
+  "use server";
+  return await convertOrgToMarkdown(orgContent);
+}, "convert-org-to-markdown");
+
+export const convertDokuWikiToMarkdownQuery = query(async (wikiContent: string) => {
+  "use server";
+  return await convertDokuWikiToMarkdown(wikiContent);
+}, "convert-dokuwiki-to-markdown");
+
+export const convertMediaWikiToMarkdownQuery = query(async (wikiContent: string) => {
+  "use server";
+  return await convertMediaWikiToMarkdown(wikiContent);
+}, "convert-mediawiki-to-markdown");
+
+export const convertLatexToMarkdownQuery = query(async (latexContent: string) => {
+  "use server";
+  return await convertLatexToMarkdown(latexContent);
+}, "convert-latex-to-markdown");
