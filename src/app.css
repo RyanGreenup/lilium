@@ -61,3 +61,10 @@
   @apply text-red-700 dark:text-red-300;
 }
 
+.markdown-carousel {
+  @apply carousel carousel-center bg-neutral rounded-box max-w-md space-x-4 p-4;
+}
+
+.markdown-carousel-item {
+  @apply carousel-item;
+}

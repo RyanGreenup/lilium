@@ -26,7 +26,7 @@ export default function NoteEditor() {
   const [metadataExpanded, setMetadataExpanded] = createSignal(false);
   const [localNote, setLocalNote] = createSignal<Note | null>(null);
   const [uploading, setUploading] = createSignal(false);
-  
+
   let textareaRef: HTMLTextAreaElement | undefined;
 
   // Initialize local note when note loads
@@ -44,7 +44,7 @@ export default function NoteEditor() {
   const defaultSyntax: NoteSyntax = "md";
 
   const updateNote = (field: keyof Note, value: any) => {
-    setLocalNote((prev) => prev ? ({ ...prev, [field]: value }) : null);
+    setLocalNote((prev) => (prev ? { ...prev, [field]: value } : null));
     setUnsavedChanges(true);
   };
 
@@ -52,16 +52,17 @@ export default function NoteEditor() {
     const id = noteId();
     const local = localNote();
     const original = note();
-    
+
     if (!id || !local || !original) return;
-    
+
     try {
       const updates: any = {};
       if (local.title !== original.title) updates.title = local.title;
-      if (local.abstract !== original.abstract) updates.abstract = local.abstract;
+      if (local.abstract !== original.abstract)
+        updates.abstract = local.abstract;
       if (local.content !== original.content) updates.content = local.content;
       if (local.syntax !== original.syntax) updates.syntax = local.syntax;
-      
+
       if (Object.keys(updates).length > 0) {
         await updateNoteQuery(id, updates);
         setUnsavedChanges(false);
@@ -77,33 +78,33 @@ export default function NoteEditor() {
 
   const handleFileUpload = async (file: File) => {
     if (!file) return;
-    
+
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      
-      const response = await fetch('/api/upload', {
-        method: 'POST',
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
         body: formData,
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         // Insert the appropriate markdown at cursor position
-        const markdownText = file.type.startsWith('image/') 
+        const markdownText = file.type.startsWith("image/")
           ? `![${result.originalName}](${result.url})`
           : `[${result.originalName}](${result.url})`;
-        
+
         insertTextAtCursor(markdownText);
       } else {
-        console.error('Upload failed:', result.error);
+        console.error("Upload failed:", result.error);
         alert(`Upload failed: ${result.error}`);
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      alert('Upload failed: Network error');
+      console.error("Upload error:", error);
+      alert("Upload failed: Network error");
     } finally {
       setUploading(false);
     }
@@ -112,14 +113,15 @@ export default function NoteEditor() {
   const insertTextAtCursor = (text: string) => {
     const textarea = textareaRef;
     if (!textarea) return;
-    
+
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const currentContent = currentNote()?.content || "";
-    
-    const newContent = currentContent.substring(0, start) + text + currentContent.substring(end);
+
+    const newContent =
+      currentContent.substring(0, start) + text + currentContent.substring(end);
     updateNote("content", newContent);
-    
+
     // Set cursor position after inserted text
     setTimeout(() => {
       textarea.focus();
@@ -128,8 +130,8 @@ export default function NoteEditor() {
   };
 
   const triggerFileUpload = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
+    const input = document.createElement("input");
+    input.type = "file";
     // Accept all file types - users are trusted developers
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
@@ -141,266 +143,291 @@ export default function NoteEditor() {
   };
 
   return (
-    <Show 
-      when={noteLoaded()} 
+    <Show
+      when={noteLoaded()}
       fallback={
         <div class="h-full flex items-center justify-center">
           <div class="loading loading-spinner loading-lg"></div>
         </div>
       }
     >
-      <Show 
-        when={noteExists()} 
+      <Show
+        when={noteExists()}
         fallback={
           <div class="h-full flex items-center justify-center">
             <div class="text-center">
-              <h1 class="text-2xl font-bold text-base-content/60 mb-2">Note Not Found</h1>
-              <p class="text-base-content/40">The requested note could not be found.</p>
+              <h1 class="text-2xl font-bold text-base-content/60 mb-2">
+                Note Not Found
+              </h1>
+              <p class="text-base-content/40">
+                The requested note could not be found.
+              </p>
             </div>
           </div>
         }
       >
         <div class="h-full flex flex-col">
-      {/* Header */}
-      <div class="border-b border-base-300 bg-base-200">
-        {/* Title Section */}
-        <div class="px-4 pt-4 pb-3">
-          <div class="flex items-start gap-3">
-            <div class="flex-1 min-w-0">
-              <Show
-                when={!metadataExpanded()}
-                fallback={
-                  <Fieldset class="bg-base-100 border-base-300 rounded-lg border">
-                    <Fieldset.Legend class="px-3 text-sm font-medium text-base-content">
-                      Note Metadata
-                    </Fieldset.Legend>
+          {/* Header */}
+          <div class="border-b border-base-300 bg-base-200">
+            {/* Title Section */}
+            <div class="px-4 pt-4 pb-3">
+              <div class="flex items-start gap-3">
+                <div class="flex-1 min-w-0">
+                  <Show
+                    when={!metadataExpanded()}
+                    fallback={
+                      <Fieldset class="bg-base-100 border-base-300 rounded-lg border">
+                        <Fieldset.Legend class="px-3 text-sm font-medium text-base-content">
+                          Note Metadata
+                        </Fieldset.Legend>
 
-                    <div class="p-6 space-y-6">
-                      <div class="space-y-2">
-                        <label class="block text-sm font-medium text-base-content">
-                          Title
-                        </label>
-                        <Input
-                          type="text"
-                          value={currentNote()?.title || ""}
-                          onInput={(e) =>
-                            updateNote("title", e.currentTarget.value)
-                          }
-                          size="sm"
-                          placeholder="Note title..."
-                          class="w-full"
-                        />
-                      </div>
+                        <div class="p-6 space-y-6">
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-base-content">
+                              Title
+                            </label>
+                            <Input
+                              type="text"
+                              value={currentNote()?.title || ""}
+                              onInput={(e) =>
+                                updateNote("title", e.currentTarget.value)
+                              }
+                              size="sm"
+                              placeholder="Note title..."
+                              class="w-full"
+                            />
+                          </div>
 
-                      <div class="space-y-2">
-                        <label class="block text-sm font-medium text-base-content">
-                          Abstract
-                        </label>
-                        <Textarea
-                          value={currentNote()?.abstract || ""}
-                          onInput={(e) =>
-                            updateNote("abstract", e.currentTarget.value)
-                          }
-                          placeholder="Brief description of the note content..."
-                          size="sm"
-                          rows={3}
-                          class="w-full resize-none"
-                        />
-                      </div>
+                          <div class="space-y-2">
+                            <label class="block text-sm font-medium text-base-content">
+                              Abstract
+                            </label>
+                            <Textarea
+                              value={currentNote()?.abstract || ""}
+                              onInput={(e) =>
+                                updateNote("abstract", e.currentTarget.value)
+                              }
+                              placeholder="Brief description of the note content..."
+                              size="sm"
+                              rows={3}
+                              class="w-full resize-none"
+                            />
+                          </div>
+                        </div>
+                      </Fieldset>
+                    }
+                  >
+                    <div>
+                      <h1
+                        class="text-lg font-semibold break-words"
+                        title={currentNote()?.title || ""}
+                      >
+                        {currentNote()?.title || "Untitled"}
+                      </h1>
+
+                      <p
+                        class="text-sm text-base-content/60 truncate mt-1"
+                        title={currentNote()?.abstract || ""}
+                      >
+                        {currentNote()?.abstract || "No description"}
+                      </p>
                     </div>
-                  </Fieldset>
-                }
-              >
-                <div>
-                  <h1
-                    class="text-lg font-semibold break-words"
-                    title={currentNote()?.title || ""}
-                  >
-                    {currentNote()?.title || "Untitled"}
-                  </h1>
+                  </Show>
+                </div>
+                <button
+                  onClick={() => setMetadataExpanded(!metadataExpanded())}
+                  class="btn btn-ghost btn-sm btn-circle flex-shrink-0"
+                  title={
+                    metadataExpanded() ? "Collapse metadata" : "Edit metadata"
+                  }
+                >
+                  {metadataExpanded() ? (
+                    <ChevronUp class="w-4 h-4" />
+                  ) : (
+                    <NotebookPen class="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
 
-                  <p
-                    class="text-sm text-base-content/60 truncate mt-1"
-                    title={currentNote()?.abstract || ""}
-                  >
-                    {currentNote()?.abstract || "No description"}
-                  </p>
+            {/* Controls Bar */}
+            {/* TODO Consider Fieldset */}
+
+            <div class="px-4 pb-3">
+              <Show when={metadataExpanded()}>
+                <div class="flex flex-wrap gap-2 sm:gap-3 mb-3 pt-3 border-t border-base-300/50">
+                  {/* Mobile: Syntax and Edit controls in metadata */}
+                  <div class="flex items-center gap-1 text-xs">
+                    <span class="text-base-content/60">Syntax:</span>
+
+                    <Select
+                      value={currentNote()?.syntax || defaultSyntax}
+                      onChange={(e) =>
+                        updateNote("syntax", e.currentTarget.value)
+                      }
+                    >
+                      {syntaxOptions.map((option) => (
+                        <option value={option.value}>{option.label}</option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div class="flex items-center gap-1 text-xs">
+                    <span class="text-base-content/60">Edit mode:</span>
+                    <Toggle
+                      size="sm"
+                      checked={isEditing()}
+                      onChange={(e) => setIsEditing(e.currentTarget.checked)}
+                    />
+                  </div>
                 </div>
               </Show>
-            </div>
-            <button
-              onClick={() => setMetadataExpanded(!metadataExpanded())}
-              class="btn btn-ghost btn-sm btn-circle flex-shrink-0"
-              title={metadataExpanded() ? "Collapse metadata" : "Edit metadata"}
-            >
-              {metadataExpanded() ? (
-                <ChevronUp class="w-4 h-4" />
-              ) : (
-                <NotebookPen class="w-4 h-4" />
-              )}
-            </button>
-          </div>
-        </div>
 
-        {/* Controls Bar */}
-        {/* TODO Consider Fieldset */}
-
-        <div class="px-4 pb-3">
-          <Show when={metadataExpanded()}>
-            <div class="flex flex-wrap gap-2 sm:gap-3 mb-3 pt-3 border-t border-base-300/50">
-              {/* Mobile: Syntax and Edit controls in metadata */}
-              <div class="flex items-center gap-1 text-xs">
-                <span class="text-base-content/60">Syntax:</span>
-
-                <Select
-                  value={currentNote()?.syntax || defaultSyntax}
-                  onChange={(e) => updateNote("syntax", e.currentTarget.value)}
+              <div class="flex items-center justify-between">
+                {/* Left: Syntax selector (hidden when metadata expanded) */}
+                <div
+                  class={`flex items-center ${metadataExpanded() ? "invisible" : ""}`}
                 >
-                  {syntaxOptions.map((option) => (
-                    <option value={option.value}>{option.label}</option>
-                  ))}
-                </Select>
-              </div>
+                  <Select
+                    size="xs"
+                    value={currentNote()?.syntax || defaultSyntax}
+                    onChange={(e) =>
+                      updateNote("syntax", e.currentTarget.value)
+                    }
+                  >
+                    {syntaxOptions.map((option) => (
+                      <option value={option.value}>{option.label}</option>
+                    ))}
+                  </Select>
+                </div>
 
-              <div class="flex items-center gap-1 text-xs">
-                <span class="text-base-content/60">Edit mode:</span>
-                <Toggle
-                  size="sm"
-                  checked={isEditing()}
-                  onChange={(e) => setIsEditing(e.currentTarget.checked)}
-                />
-              </div>
-            </div>
-          </Show>
-
-          <div class="flex items-center justify-between">
-            {/* Left: Syntax selector (hidden when metadata expanded) */}
-            <div
-              class={`flex items-center ${metadataExpanded() ? "invisible" : ""}`}
-            >
-              <Select
-                size="xs"
-                value={currentNote()?.syntax || defaultSyntax}
-                onChange={(e) => updateNote("syntax", e.currentTarget.value)}
-              >
-                {syntaxOptions.map((option) => (
-                  <option value={option.value}>{option.label}</option>
-                ))}
-              </Select>
-            </div>
-
-            {/* Right: Primary actions */}
-            <div class="flex items-center gap-2">
-              {/* Edit Toggle (hidden when metadata expanded) */}
-              <div
-                class={`flex items-center gap-1 px-2 py-1 rounded hover:bg-base-300/50 transition-colors ${metadataExpanded() ? "hidden" : "flex"}`}
-              >
-                <Eye class="w-3.5 h-3.5 text-base-content/60" />
-                <Toggle
-                  size="sm"
-                  checked={isEditing()}
-                  onChange={(e) => setIsEditing(e.currentTarget.checked)}
-                />
-              </div>
-              {/* Upload Button (only when editing) */}
-              <Show when={isEditing()}>
-                <button
-                  onClick={triggerFileUpload}
-                  class={`btn btn-sm btn-ghost gap-1 h-8 min-h-8 ${uploading() ? "loading" : ""}`}
-                  disabled={uploading()}
-                  title="Upload file"
-                >
-                  <Show when={!uploading()}>
-                    <Upload class="w-3.5 h-3.5" />
+                {/* Right: Primary actions */}
+                <div class="flex items-center gap-2">
+                  {/* Upload Button (only when editing) */}
+                  <Show when={isEditing()}>
+                    <button
+                      onClick={triggerFileUpload}
+                      class={`btn btn-sm btn-ghost gap-1 h-8 min-h-8 ${uploading() ? "loading" : ""}`}
+                      disabled={uploading()}
+                      title="Upload file"
+                    >
+                      <Show when={!uploading()}>
+                        <Upload class="w-3.5 h-3.5" />
+                      </Show>
+                      <span class="hidden sm:inline text-xs">
+                        {uploading() ? "Uploading..." : "Upload"}
+                      </span>
+                    </button>
                   </Show>
-                  <span class="hidden sm:inline text-xs">
-                    {uploading() ? "Uploading..." : "Upload"}
-                  </span>
-                </button>
-              </Show>
-              
-              {/* Save Button */}
-              <button
-                onClick={saveNote}
-                class={`btn btn-sm ${unsavedChanges() ? "btn-primary" : "btn-ghost"} gap-1 h-8 min-h-8`}
-                disabled={!unsavedChanges()}
-              >
-                <Save class="w-3.5 h-3.5" />
-                <span class="hidden sm:inline text-xs">
-                  {unsavedChanges() ? "Save" : "Saved"}
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Metadata */}
-      <div class="px-4 py-2 bg-base-100 border-b border-base-300">
-        <div class="flex items-center justify-between text-xs text-base-content/60">
-          <span class="font-mono truncate mr-4">{currentNote()?.path || ""}</span>
-          <span class="whitespace-nowrap text-xs">
-            Modified {currentNote()?.updated_at ? formatDate(currentNote()!.updated_at) : "Unknown"}
-          </span>
-        </div>
-      </div>
+                  {/* Edit Toggle (hidden when metadata expanded) */}
+                  <div
+                    class={`flex items-center gap-1 px-2 py-1 rounded hover:bg-base-300/50 transition-colors ${metadataExpanded() ? "hidden" : "flex"}`}
+                  >
+                    <Eye class="w-3.5 h-3.5 text-base-content/60" />
+                    <Toggle
+                      size="sm"
+                      checked={isEditing()}
+                      onChange={(e) => setIsEditing(e.currentTarget.checked)}
+                    />
+                  </div>
 
-      {/* Content Area */}
-      <div class="flex-1 flex">
-        <Show
-          when={isEditing()}
-          fallback={
-            <div class="flex-1 p-6 overflow-auto">
-              <div class="prose prose-sm max-w-none">
-                <Show when={currentNote()?.content} fallback={<div class="text-center text-base-content/60 p-8">No content</div>}>
-                  <MarkdownRenderer 
-                    content={() => currentNote()?.content || ""} 
-                    syntax={() => currentNote()?.syntax || defaultSyntax}
-                  />
-                </Show>
+                  {/* Save Button */}
+                  <button
+                    onClick={saveNote}
+                    class={`btn btn-sm ${unsavedChanges() ? "btn-primary" : "btn-ghost"} gap-1 h-8 min-h-8`}
+                    disabled={!unsavedChanges()}
+                  >
+                    <Save class="w-3.5 h-3.5" />
+                    <span class="hidden sm:inline text-xs">
+                      {unsavedChanges() ? "Save" : "Saved"}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
-          }
-        >
-          <textarea
-            ref={textareaRef}
-            value={currentNote()?.content || ""}
-            onInput={(e) => updateNote("content", e.currentTarget.value)}
-            class="flex-1 p-6 textarea textarea-ghost resize-none border-none focus:outline-none text-sm font-mono leading-relaxed"
-            placeholder="Start writing your note..."
-            style={{ "field-sizing": "content" }}
-          />
-        </Show>
-      </div>
+          </div>
 
-      {/* Status Bar */}
-      <div class="px-4 py-2 bg-base-200 border-t border-base-300 text-xs text-base-content/60">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-4">
-            <span>{currentNote()?.content?.split("\n").length || 0}L</span>
-            <span>{currentNote()?.content?.length || 0}C</span>
-            <span>
-              {
-                currentNote()
-                  ?.content?.split(/\s+/)
-                  .filter((w) => w.length > 0).length || 0
-              }
-              W
-            </span>
-          </div>
-          <div class="flex items-center gap-3">
-            {unsavedChanges() && (
-              <span class="text-warning flex items-center gap-1">
-                <span class="w-1.5 h-1.5 bg-warning rounded-full"></span>
-                <span class="hidden sm:inline">Unsaved</span>
+          {/* Metadata */}
+          <div class="px-4 py-2 bg-base-100 border-b border-base-300">
+            <div class="flex items-center justify-between text-xs text-base-content/60">
+              <span class="font-mono truncate mr-4">
+                {currentNote()?.path || ""}
               </span>
-            )}
-            <span class="text-base-content/40">
-              {syntaxOptions.find((opt) => opt.value === currentNote()?.syntax)?.label}
-            </span>
+              <span class="whitespace-nowrap text-xs">
+                Modified{" "}
+                {currentNote()?.updated_at
+                  ? formatDate(currentNote()!.updated_at)
+                  : "Unknown"}
+              </span>
+            </div>
           </div>
-        </div>
-      </div>
+
+          {/* Content Area */}
+          <div class="flex-1 flex">
+            <Show
+              when={isEditing()}
+              fallback={
+                <div class="flex-1 p-6 overflow-auto">
+                  <div class="prose prose-sm max-w-none">
+                    <Show
+                      when={currentNote()?.content}
+                      fallback={
+                        <div class="text-center text-base-content/60 p-8">
+                          No content
+                        </div>
+                      }
+                    >
+                      <MarkdownRenderer
+                        content={() => currentNote()?.content || ""}
+                        syntax={() => currentNote()?.syntax || defaultSyntax}
+                      />
+                    </Show>
+                  </div>
+                </div>
+              }
+            >
+              <textarea
+                ref={textareaRef}
+                value={currentNote()?.content || ""}
+                onInput={(e) => updateNote("content", e.currentTarget.value)}
+                class="flex-1 p-6 textarea textarea-ghost resize-none border-none focus:outline-none text-sm font-mono leading-relaxed"
+                placeholder="Start writing your note..."
+                style={{ "field-sizing": "content" }}
+              />
+            </Show>
+          </div>
+
+          {/* Status Bar */}
+          <div class="px-4 py-2 bg-base-200 border-t border-base-300 text-xs text-base-content/60">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <span>{currentNote()?.content?.split("\n").length || 0}L</span>
+                <span>{currentNote()?.content?.length || 0}C</span>
+                <span>
+                  {currentNote()
+                    ?.content?.split(/\s+/)
+                    .filter((w) => w.length > 0).length || 0}
+                  W
+                </span>
+              </div>
+              <div class="flex items-center gap-3">
+                {unsavedChanges() && (
+                  <span class="text-warning flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 bg-warning rounded-full"></span>
+                    <span class="hidden sm:inline">Unsaved</span>
+                  </span>
+                )}
+                <span class="text-base-content/40">
+                  {
+                    syntaxOptions.find(
+                      (opt) => opt.value === currentNote()?.syntax,
+                    )?.label
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </Show>
     </Show>
