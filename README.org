@@ -1,0 +1,3 @@
+* Lilium
+** Introduction
+This is a note-taking and documentation tool.
