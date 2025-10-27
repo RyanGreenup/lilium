@@ -1,5 +1,8 @@
 set dotenv-load
 dev:
+    # NOTE
+    # echo 1024 | doas tee /proc/sys/fs/inotify/max_user_instances
+    # doas sysctl fs.inotify.max_user_watches=10000000
     # Requires SESSION_SECRET in .env file
     mkdir -p .data && \
     npm run dev -- --host
