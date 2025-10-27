@@ -56,6 +56,10 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
   
   // Virtual focus for results navigation (keeps input focused)
   const [virtualFocusIndex, setVirtualFocusIndex] = createSignal(-1);
+  
+  // Refs for scroll management
+  let resultsContainerRef: HTMLDivElement | undefined;
+  const itemRefs: (HTMLDivElement | undefined)[] = [];
 
   // Follow mode hook
   const { followMode, setFollowMode } = useFollowMode({
@@ -85,6 +89,33 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
     // If current index is beyond results, reset
     if (currentIndex >= results.length) {
       setVirtualFocusIndex(-1);
+    }
+  });
+
+  // Scroll focused item into view
+  createEffect(() => {
+    const focusIndex = virtualFocusIndex();
+    if (focusIndex >= 0 && itemRefs[focusIndex] && resultsContainerRef) {
+      const focusedElement = itemRefs[focusIndex];
+      const container = resultsContainerRef;
+      
+      if (focusedElement) {
+        // Calculate if element is visible
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = focusedElement.getBoundingClientRect();
+        
+        // Check if element is outside the visible area
+        const isAboveViewport = elementRect.top < containerRect.top;
+        const isBelowViewport = elementRect.bottom > containerRect.bottom;
+        
+        if (isAboveViewport || isBelowViewport) {
+          focusedElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'nearest'
+          });
+        }
+      }
     }
   });
 
@@ -342,18 +373,20 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
               </div>
             }
           >
-            <div class="p-4 space-y-3">
+            <div ref={resultsContainerRef} class="p-4 space-y-3 max-h-96 overflow-y-auto">
               <Show 
                 when={formattedResults().length === 0}
                 fallback={
                   <div class="space-y-2">
                     <For each={formattedResults()}>
                       {(item, index) => (
-                        <ContentItem 
-                          item={item} 
-                          showPath={pathDisplay() !== 2} 
-                          isFocused={virtualFocusIndex() === index()}
-                        />
+                        <div ref={(el) => itemRefs[index()] = el}>
+                          <ContentItem 
+                            item={item} 
+                            showPath={pathDisplay() !== 2} 
+                            isFocused={virtualFocusIndex() === index()}
+                          />
+                        </div>
                       )}
                     </For>
                   </div>
