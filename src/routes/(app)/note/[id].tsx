@@ -8,6 +8,7 @@ import Save from "lucide-solid/icons/save";
 import Eye from "lucide-solid/icons/eye";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import NotebookPen from "lucide-solid/icons/notebook-pen";
+import Upload from "lucide-solid/icons/upload";
 
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
@@ -24,6 +25,9 @@ export default function NoteEditor() {
   const [unsavedChanges, setUnsavedChanges] = createSignal(false);
   const [metadataExpanded, setMetadataExpanded] = createSignal(false);
   const [localNote, setLocalNote] = createSignal<Note | null>(null);
+  const [uploading, setUploading] = createSignal(false);
+  
+  let textareaRef: HTMLTextAreaElement | undefined;
 
   // Initialize local note when note loads
   createEffect(() => {
@@ -69,6 +73,71 @@ export default function NoteEditor() {
 
   const formatDate = (isoString: string) => {
     return new Date(isoString).toLocaleString();
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
+    
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Insert the appropriate markdown at cursor position
+        const markdownText = file.type.startsWith('image/') 
+          ? `![${result.originalName}](${result.url})`
+          : `[${result.originalName}](${result.url})`;
+        
+        insertTextAtCursor(markdownText);
+      } else {
+        console.error('Upload failed:', result.error);
+        alert(`Upload failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Upload failed: Network error');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const insertTextAtCursor = (text: string) => {
+    const textarea = textareaRef;
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentContent = currentNote()?.content || "";
+    
+    const newContent = currentContent.substring(0, start) + text + currentContent.substring(end);
+    updateNote("content", newContent);
+    
+    // Set cursor position after inserted text
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + text.length, start + text.length);
+    }, 0);
+  };
+
+  const triggerFileUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    // Accept all file types - users are trusted developers
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        handleFileUpload(file);
+      }
+    };
+    input.click();
   };
 
   return (
@@ -233,7 +302,23 @@ export default function NoteEditor() {
                   onChange={(e) => setIsEditing(e.currentTarget.checked)}
                 />
               </div>
-
+              {/* Upload Button (only when editing) */}
+              <Show when={isEditing()}>
+                <button
+                  onClick={triggerFileUpload}
+                  class={`btn btn-sm btn-ghost gap-1 h-8 min-h-8 ${uploading() ? "loading" : ""}`}
+                  disabled={uploading()}
+                  title="Upload file"
+                >
+                  <Show when={!uploading()}>
+                    <Upload class="w-3.5 h-3.5" />
+                  </Show>
+                  <span class="hidden sm:inline text-xs">
+                    {uploading() ? "Uploading..." : "Upload"}
+                  </span>
+                </button>
+              </Show>
+              
               {/* Save Button */}
               <button
                 onClick={saveNote}
@@ -278,6 +363,7 @@ export default function NoteEditor() {
           }
         >
           <textarea
+            ref={textareaRef}
             value={currentNote()?.content || ""}
             onInput={(e) => updateNote("content", e.currentTarget.value)}
             class="flex-1 p-6 textarea textarea-ghost resize-none border-none focus:outline-none text-sm font-mono leading-relaxed"
