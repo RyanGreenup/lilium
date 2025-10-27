@@ -1,5 +1,5 @@
 import { ContentList, ContentItemData } from "../shared/ContentItem";
-import { createEffect } from "solid-js";
+import { createEffect, Suspense } from "solid-js";
 
 interface RelatedTabProps {
   focusTrigger?: () => string | null;
@@ -64,13 +64,21 @@ export default function RelatedTab(props: RelatedTabProps = {}) {
   });
 
   return (
-    <ContentList
-      items={relatedContent}
-      showPath={true}
-      emptyMessage="No related content found"
-      enableKeyboardNav={true}
-      showFollowMode={true}
-      ref={(el) => containerRef = el}
-    />
+    <Suspense
+      fallback={
+        <div class="w-full h-full bg-base-200 rounded flex items-center justify-center">
+          <div class="loading loading-spinner loading-md"></div>
+        </div>
+      }
+    >
+      <ContentList
+        items={relatedContent}
+        showPath={true}
+        emptyMessage="No related content found"
+        enableKeyboardNav={true}
+        showFollowMode={true}
+        ref={(el) => (containerRef = el)}
+      />
+    </Suspense>
   );
 }

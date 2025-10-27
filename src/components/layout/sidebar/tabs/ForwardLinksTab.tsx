@@ -25,7 +25,7 @@ export default function ForwardLinksTab(props: ForwardLinksTabProps = {}) {
   const forwardLinksData = createAsync(async () => {
     const currentNoteId = noteId();
     if (!currentNoteId) return [];
-    
+
     try {
       return await getForwardLinksData(currentNoteId);
     } catch (error) {
@@ -37,18 +37,18 @@ export default function ForwardLinksTab(props: ForwardLinksTabProps = {}) {
   // Function to navigate while preserving search params
   const navigateToNote = (noteId: string) => {
     const currentParams = new URLSearchParams();
-    
+
     // Preserve all current search parameters
     Object.entries(searchParams).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        value.forEach(v => currentParams.append(key, v));
+        value.forEach((v) => currentParams.append(key, v));
       } else if (value !== undefined) {
         currentParams.set(key, value);
       }
     });
-    
+
     const searchString = currentParams.toString();
-    const url = `/note/${noteId}${searchString ? `?${searchString}` : ''}`;
+    const url = `/note/${noteId}${searchString ? `?${searchString}` : ""}`;
     navigate(url);
   };
 
@@ -56,14 +56,16 @@ export default function ForwardLinksTab(props: ForwardLinksTabProps = {}) {
   const transformedForwardLinks = () => {
     const notes = forwardLinksData();
     if (!notes) return [];
-    
-    return notes.map((note): ContentItemData => ({
-      id: note.id,
-      title: note.title,
-      abstract: note.abstract || "",
-      path: `/note/${note.id}`,
-      onClick: () => navigateToNote(note.id)
-    }));
+
+    return notes.map(
+      (note): ContentItemData => ({
+        id: note.id,
+        title: note.title,
+        abstract: note.abstract || "",
+        path: `/note/${note.id}`,
+        onClick: () => navigateToNote(note.id),
+      }),
+    );
   };
 
   // Use keyboard navigation hook
@@ -84,21 +86,27 @@ export default function ForwardLinksTab(props: ForwardLinksTabProps = {}) {
     >
       <div class="space-y-4">
         <div>
-          <h4 class="text-sm font-medium text-base-content/70 mb-2">
-            Forward Links
-            <Show when={transformedForwardLinks().length > 0}>
-              <span class="text-xs text-base-content/50 ml-2">
-                ({transformedForwardLinks().length})
-              </span>
-            </Show>
-          </h4>
-          
-          <Suspense fallback={<div class="loading loading-spinner loading-sm"></div>}>
-            <Show 
-              when={forwardLinksData()} 
-              fallback={<div class="text-sm text-base-content/60">Loading forward links...</div>}
+          <Suspense
+            fallback={<div class="loading loading-spinner loading-sm"></div>}
+          >
+            <h4 class="text-sm font-medium text-base-content/70 mb-2">
+              Forward Links
+              <Show when={transformedForwardLinks().length > 0}>
+                <span class="text-xs text-base-content/50 ml-2">
+                  ({transformedForwardLinks().length})
+                </span>
+              </Show>
+            </h4>
+
+            <Show
+              when={forwardLinksData()}
+              fallback={
+                <div class="text-sm text-base-content/60">
+                  Loading forward links...
+                </div>
+              }
             >
-              <Show 
+              <Show
                 when={transformedForwardLinks().length > 0}
                 fallback={
                   <div class="text-center text-base-content/60 text-sm py-8">
