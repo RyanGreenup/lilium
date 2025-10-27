@@ -1,4 +1,4 @@
-import { AccessorWithLatest, revalidate} from "@solidjs/router";
+import { AccessorWithLatest, revalidate } from "@solidjs/router";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
@@ -13,6 +13,7 @@ import {
   For,
   onMount,
   Show,
+  Suspense,
 } from "solid-js";
 import NoteBreadcrumbsVertical from "~/components/NoteBreadcrumbsVertical";
 import {
@@ -32,7 +33,11 @@ import { Note } from "~/lib/db/types";
 import { Card } from "~/solid-daisy-components/components/Card";
 import { useFollowMode } from "~/lib/hooks/useFollowMode";
 import { FollowModeToggle } from "~/components/shared/FollowModeToggle";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "~/solid-daisy-components/components/ContextMenu";
+import {
+  ContextMenu,
+  useContextMenu,
+  type ContextMenuItem,
+} from "~/solid-daisy-components/components/ContextMenu";
 
 // Hook for navigation keybindings
 function useNavigationKeybindings(
@@ -203,7 +208,6 @@ function useNavigationKeybindings(
     },
     { ref: tabRef },
   );
-
 }
 
 // Hook for note renaming and creation functionality
@@ -332,19 +336,34 @@ function useNoteRenaming(
   };
 }
 
-
 interface NotesTabProps {
   focusTrigger?: () => string | null;
 }
 
+// Main component wrapper
 export default function NotesTab(props: NotesTabProps = {}) {
+  return (
+    <Suspense
+      fallback={
+        <div class="w-full h-full bg-base-200 rounded flex items-center justify-center">
+          <div class="loading loading-spinner loading-md"></div>
+        </div>
+      }
+    >
+      <NotesTabContent focusTrigger={props.focusTrigger} />
+    </Suspense>
+  );
+}
+
+// Component that contains all async-dependent logic
+function NotesTabContent(props: NotesTabProps = {}) {
   const {
     note,
     noteId,
     children,
     siblings,
     displayItems,
-    isCurrentNoteFolder
+    isCurrentNoteFolder,
   } = useNoteContext();
 
   const { handleItemClick, navigateToNote, navigateToRoot } =
@@ -391,7 +410,6 @@ export default function NotesTab(props: NotesTabProps = {}) {
 
   // Track cut note for clipboard operations
   const [cutNoteId, setCutNoteId] = createSignal<string | null>(null);
-
 
   // Auto-focus first item when display items change (but content ID stays same)
   createEffect(() => {
@@ -448,7 +466,6 @@ export default function NotesTab(props: NotesTabProps = {}) {
       }, 0);
     }
   });
-
 
   // Handle creating a new note
   const handleCreateNote = async () => {
@@ -516,7 +533,7 @@ export default function NotesTab(props: NotesTabProps = {}) {
   const handleCutNote = (noteId?: string) => {
     // Use provided ID or fall back to focused item
     const targetItem = noteId
-      ? displayItems().find(item => item.id === noteId)
+      ? displayItems().find((item) => item.id === noteId)
       : focusedItem();
 
     if (targetItem) {
@@ -595,7 +612,7 @@ export default function NotesTab(props: NotesTabProps = {}) {
 
     // Use provided parentId or fall back to focused item
     const targetItem = parentId
-      ? displayItems().find(item => item.id === parentId)
+      ? displayItems().find((item) => item.id === parentId)
       : focusedItem();
 
     if (!targetItem) {
@@ -613,7 +630,9 @@ export default function NotesTab(props: NotesTabProps = {}) {
         return;
       }
 
-      console.log(`Pasting note ${cutId} as child of ${targetItem.title} (${newParentId})`);
+      console.log(
+        `Pasting note ${cutId} as child of ${targetItem.title} (${newParentId})`,
+      );
 
       await moveNoteQuery(cutId, newParentId);
 
@@ -643,7 +662,7 @@ export default function NotesTab(props: NotesTabProps = {}) {
   const handleDeleteNote = async (noteId?: string) => {
     // Use provided ID or fall back to focused item
     const targetItem = noteId
-      ? displayItems().find(item => item.id === noteId)
+      ? displayItems().find((item) => item.id === noteId)
       : focusedItem();
 
     if (!targetItem) {
@@ -712,7 +731,7 @@ export default function NotesTab(props: NotesTabProps = {}) {
   const handleDuplicateNote = async (noteId: string) => {
     try {
       // Get the note to duplicate
-      const noteToClone = displayItems().find(item => item.id === noteId);
+      const noteToClone = displayItems().find((item) => item.id === noteId);
       if (!noteToClone) return;
 
       // Create a new title with (copy) suffix
@@ -791,7 +810,7 @@ export default function NotesTab(props: NotesTabProps = {}) {
           <NoteBreadcrumbsVertical />
         </div>
 
-        <div class="divider"/>
+        <div class="divider" />
 
         {/* Follow Mode Toggle */}
         <FollowModeToggle
@@ -803,8 +822,8 @@ export default function NotesTab(props: NotesTabProps = {}) {
           <Show when={cutNoteId()}>
             <CutIndicator
               noteTitle={
-                displayItems().find((item) => item.id === cutNoteId())?.title ||
-                "Unknown"
+                displayItems().find((item) => item.id === cutNoteId())
+                  ?.title || "Unknown"
               }
               onClearCut={handleClearCut}
             />
@@ -892,64 +911,64 @@ const MenuItem = (props: {
       id: "edit",
       label: "Rename",
       keybind: "F2",
-      onClick: () => props.startEditingItem(props.item.id)
+      onClick: () => props.startEditingItem(props.item.id),
     },
     {
       id: "create-sibling",
       label: "New sibling note",
       keybind: "Ctrl+N",
-      onClick: () => props.handleCreateSiblingNote()
+      onClick: () => props.handleCreateSiblingNote(),
     },
     {
       id: "create-child",
       label: props.item.is_folder ? "New child note" : "New child note",
       keybind: "Shift+N",
-      onClick: () => props.handleCreateChildNote(props.item.id)
+      onClick: () => props.handleCreateChildNote(props.item.id),
     },
     {
       id: "sep1",
       label: "",
-      separator: true
+      separator: true,
     },
     {
       id: "duplicate",
       label: "Duplicate",
       keybind: "Ctrl+D",
-      onClick: () => props.handleDuplicateNote(props.item.id)
+      onClick: () => props.handleDuplicateNote(props.item.id),
     },
     {
       id: "cut",
       label: "Cut",
       keybind: "Ctrl+X",
-      onClick: () => props.handleCutNote(props.item.id)
+      onClick: () => props.handleCutNote(props.item.id),
     },
     {
       id: "paste",
       label: "Paste as sibling",
       keybind: "Ctrl+V",
-      onClick: () => props.handlePasteNote()
+      onClick: () => props.handlePasteNote(),
     },
     {
       id: "paste-child",
       label: "Paste as child",
       keybind: "Ctrl+Shift+V",
-      onClick: () => props.handlePasteAsChild(props.item.id)
+      onClick: () => props.handlePasteAsChild(props.item.id),
     },
     {
       id: "sep2",
       label: "",
-      separator: true
+      separator: true,
     },
     {
       id: "delete",
       label: "Delete",
       keybind: "Del",
-      onClick: () => props.handleDeleteNote(props.item.id)
-    }
+      onClick: () => props.handleDeleteNote(props.item.id),
+    },
   ];
 
   const contextMenu = useContextMenu({
-    items: contextMenuItems()
+    items: contextMenuItems(),
   });
 
   const classList = () => {
@@ -993,30 +1012,30 @@ const MenuItem = (props: {
             contextMenu.open(e as any as MouseEvent);
           }}
         >
-        <Show when={props.item.is_folder} fallback={<FileText size={16} />}>
-          <Folder size={16} />
-        </Show>
+          <Show when={props.item.is_folder} fallback={<FileText size={16} />}>
+            <Folder size={16} />
+          </Show>
 
-        <Show
-          when={props.isEditing}
-          fallback={<span class="flex-1">{props.item.title}</span>}
-        >
-          <Input
-            ref={inputRef}
-            value={props.item.title}
-            size="sm"
-            class="flex-1 min-w-0"
-            onKeyDown={handleKeyDown}
-            onBlur={handleBlur}
-          />
-        </Show>
+          <Show
+            when={props.isEditing}
+            fallback={<span class="flex-1">{props.item.title}</span>}
+          >
+            <Input
+              ref={inputRef}
+              value={props.item.title}
+              size="sm"
+              class="flex-1 min-w-0"
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+            />
+          </Show>
 
-        <Show when={props.item.is_folder && !props.isEditing}>
-          <ChevronRight size={14} class="text-base-content/40" />
-        </Show>
-      </a>
-    </li>
-    <ContextMenu {...contextMenu.contextMenuProps()} />
+          <Show when={props.item.is_folder && !props.isEditing}>
+            <ChevronRight size={14} class="text-base-content/40" />
+          </Show>
+        </a>
+      </li>
+      <ContextMenu {...contextMenu.contextMenuProps()} />
     </>
   );
 };
