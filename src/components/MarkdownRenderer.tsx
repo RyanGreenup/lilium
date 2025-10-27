@@ -23,6 +23,7 @@ import {
   isPassthroughSyntax,
 } from "~/lib/db/types";
 import markedFootnote from "marked-footnote";
+import markedAlert from "marked-alert";
 
 const renderMarkdownClient = async (
   markdownContent: string,
@@ -43,7 +44,9 @@ const renderMarkdownClient = async (
           return hljs.default.highlight(code, { language }).value;
         },
       }),
-    ).use(markedFootnote());
+    )
+      .use(markedAlert())
+      .use(markedFootnote());
     return marked.parse(markdownContent);
   } catch (error) {
     console.error("Failed to render markdown:", error);
