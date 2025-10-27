@@ -371,6 +371,8 @@ function NotesTabContent(props: NotesTabProps = {}) {
 
   // Create a ref for the tab container to make it focusable
   let tabRef: HTMLDivElement | undefined;
+  let menuContainerRef: HTMLUListElement | undefined;
+  const itemRefs: (HTMLLIElement | undefined)[] = [];
 
   // Check if note exists and is loaded (from useCurrentNote)
   const noteExists = createMemo(() => note() !== null);
@@ -423,6 +425,33 @@ function NotesTabContent(props: NotesTabProps = {}) {
     // If focused index is beyond available items, reset to first or -1
     else if (currentFocus >= items.length) {
       setFocusedItemIndex(items.length > 0 ? 0 : -1);
+    }
+  });
+
+  // Scroll focused item into view
+  createEffect(() => {
+    const focusIndex = focusedItemIndex();
+    if (focusIndex >= 0 && itemRefs[focusIndex] && menuContainerRef) {
+      const focusedElement = itemRefs[focusIndex];
+      const container = menuContainerRef;
+
+      if (focusedElement) {
+        // Calculate if element is visible
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = focusedElement.getBoundingClientRect();
+
+        // Check if element is outside the visible area
+        const isAboveViewport = elementRect.top < containerRect.top;
+        const isBelowViewport = elementRect.bottom > containerRect.bottom;
+
+        if (isAboveViewport || isBelowViewport) {
+          focusedElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'nearest'
+          });
+        }
+      }
     }
   });
 
@@ -828,12 +857,15 @@ function NotesTabContent(props: NotesTabProps = {}) {
               onClearCut={handleClearCut}
             />
           </Show>
-          <ul class="menu  rounded-box w-full relative overflow-hidden">
+
             <Show when={showUpButton()}>
               <UpDirectoryButton onClick={handleUpDirectory} />
             </Show>
+            {/*TODO Reconsider the height so that it can fill the space, e.g. flex-1*/}
+          <ul ref={menuContainerRef} class="menu rounded-box w-full relative max-h-96 overflow-y-auto">
 
             <div>
+
               <Show
                 when={displayItems().length > 0}
                 fallback={
@@ -843,6 +875,7 @@ function NotesTabContent(props: NotesTabProps = {}) {
                 <For each={displayItems()}>
                   {(item: NavigationItem, index) => (
                     <MenuItem
+                      ref={(el) => itemRefs[index()] = el}
                       item={item}
                       isActive={noteId() === item.id}
                       isFocused={focusedItemIndex() === index()}
@@ -887,6 +920,7 @@ const CutIndicator = (props: { noteTitle: string; onClearCut: () => void }) => {
 };
 
 const MenuItem = (props: {
+  ref?: (el: HTMLLIElement) => void;
   item: NavigationItem;
   isActive: boolean;
   isFocused: boolean;
@@ -1002,7 +1036,7 @@ const MenuItem = (props: {
 
   return (
     <>
-      <li>
+      <li ref={props.ref}>
         <a
           class={classList()}
           onClick={() => !props.isEditing && props.handleItemClick(props.item)}
@@ -1041,6 +1075,7 @@ const MenuItem = (props: {
 };
 
 const UpDirectoryButton = (props: { onClick: () => void }) => (
+    <ul class="menu rounded-box w-full relative overflow-hidden">
   <li class="border-b border-base-300 mb-2 pb-2">
     <a
       onClick={props.onClick}
@@ -1050,6 +1085,7 @@ const UpDirectoryButton = (props: { onClick: () => void }) => (
       <span class="flex-1">.. Parent Directory</span>
     </a>
   </li>
+  </ul>
 );
 
 const EmptyMessage = (props: {
