@@ -834,6 +834,7 @@ function NotesTabContent(props: NotesTabProps = {}) {
     >
       <div class="flex-1 space-y-4">
         {/*TODO Down the line we'll have to use context provider for keybindings to focus elements*/}
+        {/*TODO The scrolling here doesn't make much sense, There's outer inner and breadcrumbs etc. However Zellie is Crying and putting on a song and dance so I won't be able to look at this for the next few days*/}
 
         {/* Follow Mode Toggle */}
         <FollowModeToggle
