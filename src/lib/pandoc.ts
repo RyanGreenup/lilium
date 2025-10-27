@@ -48,7 +48,7 @@ export async function convertToMarkdown(
     writeFileSync(tempFile, content);
 
     const markdownOutput = execSync(
-      `pandoc "${tempFile}" -f ${fromFormat} -t markdown`,
+      `pandoc "${tempFile}" -f ${fromFormat} -t gfm`,
       {
         encoding: "utf-8",
         timeout: 10000,
