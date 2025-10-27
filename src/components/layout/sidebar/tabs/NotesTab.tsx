@@ -920,6 +920,7 @@ const CutIndicator = (props: { noteTitle: string; onClearCut: () => void }) => {
   );
 };
 
+
 const MenuItem = (props: {
   ref?: (el: HTMLLIElement) => void;
   item: NavigationItem;
@@ -939,6 +940,24 @@ const MenuItem = (props: {
   handlePasteAsChild: (parentId?: string) => void;
 }) => {
   let inputRef: HTMLInputElement | undefined;
+
+  // Handle copying note ID to clipboard
+  const handleCopyId = async (noteId: string) => {
+    try {
+      // NOTE requires HTTPS
+      await navigator.clipboard.writeText(noteId);
+      console.log(`Copied note ID: ${noteId}`);
+    } catch (error) {
+      console.error("Failed to copy note ID:", error);
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement("textarea");
+      textArea.value = noteId;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+    }
+  };
 
   // Context menu items for this note
   const contextMenuItems = (): ContextMenuItem[] => [
@@ -964,6 +983,11 @@ const MenuItem = (props: {
       id: "sep1",
       label: "",
       separator: true,
+    },
+    {
+      id: "copy-id",
+      label: "Copy ID",
+      onClick: () => handleCopyId(props.item.id),
     },
     {
       id: "duplicate",
