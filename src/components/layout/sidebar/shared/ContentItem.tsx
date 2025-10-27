@@ -121,6 +121,7 @@ export const ContentList = (props: ContentListProps) => {
   const [focusedIndex, setFocusedIndex] = createSignal(-1);
   const navigate = useNavigate();
   let containerRef: HTMLDivElement | undefined;
+  const itemRefs: (HTMLDivElement | undefined)[] = [];
 
   // Follow mode hook (only if showFollowMode is true)
   const followModeHook = props.showFollowMode
@@ -142,6 +143,35 @@ export const ContentList = (props: ContentListProps) => {
       setFocusedIndex(0);
     } else if (items.length === 0) {
       setFocusedIndex(-1);
+    }
+  });
+
+  // Scroll focused item into view
+  createEffect(() => {
+    if (!props.enableKeyboardNav) return;
+    
+    const focusIndex = focusedIndex();
+    if (focusIndex >= 0 && itemRefs[focusIndex] && containerRef) {
+      const focusedElement = itemRefs[focusIndex];
+      const container = containerRef;
+      
+      if (focusedElement) {
+        // Calculate if element is visible
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = focusedElement.getBoundingClientRect();
+        
+        // Check if element is outside the visible area
+        const isAboveViewport = elementRect.top < containerRect.top;
+        const isBelowViewport = elementRect.bottom > containerRect.bottom;
+        
+        if (isAboveViewport || isBelowViewport) {
+          focusedElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'nearest'
+          });
+        }
+      }
     }
   });
 
@@ -219,7 +249,7 @@ export const ContentList = (props: ContentListProps) => {
           }
         }}
         tabIndex={props.enableKeyboardNav ? 0 : undefined}
-        class="p-4 space-y-3 outline-none focus:outline-none"
+        class="p-4 space-y-3 outline-none focus:outline-none max-h-96 overflow-y-auto"
       >
         {props.items.length === 0 ? (
           <div class="text-center text-base-content/60 text-sm py-8">
@@ -229,13 +259,15 @@ export const ContentList = (props: ContentListProps) => {
           <div class="space-y-2">
             <For each={props.items}>
               {(item, index) => (
-                <ContentItem
-                  item={item}
-                  showPath={props.showPath}
-                  isFocused={
-                    props.enableKeyboardNav && focusedIndex() === index()
-                  }
-                />
+                <div ref={(el) => itemRefs[index()] = el}>
+                  <ContentItem
+                    item={item}
+                    showPath={props.showPath}
+                    isFocused={
+                      props.enableKeyboardNav && focusedIndex() === index()
+                    }
+                  />
+                </div>
               )}
             </For>
           </div>
