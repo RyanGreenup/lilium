@@ -76,36 +76,40 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
   });
 
   return (
-    <div class="space-y-4">
-      {/* Current Note Info */}
-      <Show when={note()}>
-        {(currentNote) => (
-          <div class="bg-base-200 rounded-box p-3">
-            <h4 class="text-sm font-medium text-base-content/70 mb-1">Current Note</h4>
-            <p class="text-sm font-semibold">{currentNote().title}</p>
-            <Show when={parents() && parents()!.length > 0}>
-              <div class="text-xs text-base-content/60 mt-1">
-                <span>Path: </span>
-                <For each={parents()}>
-                  {(parent, index) => (
-                    <>
-                      {index() > 0 && " / "}
-                      <span>{parent.title}</span>
-                    </>
-                  )}
-                </For>
-                {parents()!.length > 0 && " / "}
-                <span class="font-medium">{currentNote().title}</span>
-              </div>
-            </Show>
-          </div>
-        )}
-      </Show>
+    <Suspense fallback={
+      <div class="w-full h-full bg-base-200 rounded flex items-center justify-center">
+        <div class="loading loading-spinner loading-md"></div>
+      </div>
+    }>
+      <div class="space-y-4">
+        {/* Current Note Info */}
+        <Show when={note()}>
+          {(currentNote) => (
+            <div class="bg-base-200 rounded-box p-3">
+              <h4 class="text-sm font-medium text-base-content/70 mb-1">Current Note</h4>
+              <p class="text-sm font-semibold">{currentNote().title}</p>
+              <Show when={parents() && parents()!.length > 0}>
+                <div class="text-xs text-base-content/60 mt-1">
+                  <span>Path: </span>
+                  <For each={parents()}>
+                    {(parent, index) => (
+                      <>
+                        {index() > 0 && " / "}
+                        <span>{parent.title}</span>
+                      </>
+                    )}
+                  </For>
+                  {parents()!.length > 0 && " / "}
+                  <span class="font-medium">{currentNote().title}</span>
+                </div>
+              </Show>
+            </div>
+          )}
+        </Show>
 
-      {/* Recent Notes List */}
-      <div>
-        <h4 class="text-sm font-medium text-base-content/70 mb-2">Recent Notes</h4>
-        <Suspense fallback={<div class="loading loading-spinner loading-sm"></div>}>
+        {/* Recent Notes List */}
+        <div>
+          <h4 class="text-sm font-medium text-base-content/70 mb-2">Recent Notes</h4>
           <Show when={recentNotesData()} fallback={<div class="text-sm text-base-content/60">Loading recent notes...</div>}>
             <ContentList 
               items={transformedNotes()}
@@ -115,8 +119,8 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
               ref={(el) => containerRef = el}
             />
           </Show>
-        </Suspense>
+        </div>
       </div>
-    </div>
+    </Suspense>
   );
 }
