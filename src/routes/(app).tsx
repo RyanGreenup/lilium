@@ -4,7 +4,7 @@ import BookOpen from "lucide-solid/icons/book-open";
 import Menu from "lucide-solid/icons/menu";
 
 import ToggleLeft from "lucide-solid/icons/toggle-left";
-import { JSXElement } from "solid-js";
+import { JSXElement, Show } from "solid-js";
 import { SidebarTabs } from "~/components/layout/sidebar/SidebarContent";
 import { Logo } from "~/components/Logo";
 import { UserDropdown } from "~/components/UserDrowDown";
@@ -22,6 +22,8 @@ import {
   SidebarContent,
   ToggleButton,
 } from "~/solid-daisy-components/components/Layouts/ResponsiveDrawer";
+
+const SHOW_HOME = false;
 
 // Route Guard
 export const route = {
@@ -61,12 +63,14 @@ const NavbarContent = () => (
       <div class="dropdown">
         <SidebarToggle />
       </div>
+      <Show when={SHOW_HOME}>
       <A href="/" class="btn btn-ghost text-xl">
         <div class="flex items-center gap-2">
           <Logo class="h-8 w-8" />
           {/*<span>Lilium</span>*/}
         </div>
       </A>
+      </Show>
     </div>
 
     {/*This would be used if the right drawer was included*/}
