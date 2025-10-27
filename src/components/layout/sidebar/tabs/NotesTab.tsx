@@ -446,9 +446,9 @@ function NotesTabContent(props: NotesTabProps = {}) {
 
         if (isAboveViewport || isBelowViewport) {
           focusedElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'nearest',
-            inline: 'nearest'
+            behavior: "smooth",
+            block: "nearest",
+            inline: "nearest",
           });
         }
       }
@@ -835,12 +835,6 @@ function NotesTabContent(props: NotesTabProps = {}) {
       <div class="flex-1 space-y-4">
         {/*TODO Down the line we'll have to use context provider for keybindings to focus elements*/}
 
-        <div class="mb-4">
-          <NoteBreadcrumbsVertical />
-        </div>
-
-        <div class="divider" />
-
         {/* Follow Mode Toggle */}
         <FollowModeToggle
           followMode={followMode}
@@ -851,21 +845,22 @@ function NotesTabContent(props: NotesTabProps = {}) {
           <Show when={cutNoteId()}>
             <CutIndicator
               noteTitle={
-                displayItems().find((item) => item.id === cutNoteId())
-                  ?.title || "Unknown"
+                displayItems().find((item) => item.id === cutNoteId())?.title ||
+                "Unknown"
               }
               onClearCut={handleClearCut}
             />
           </Show>
 
-            <Show when={showUpButton()}>
-              <UpDirectoryButton onClick={handleUpDirectory} />
-            </Show>
-            {/*TODO Reconsider the height so that it can fill the space, e.g. flex-1*/}
-          <ul ref={menuContainerRef} class="menu rounded-box w-full relative max-h-96 overflow-y-auto">
-
+          <Show when={showUpButton()}>
+            <UpDirectoryButton onClick={handleUpDirectory} />
+          </Show>
+          {/*TODO Reconsider the height so that it can fill the space, e.g. flex-1*/}
+          <ul
+            ref={menuContainerRef}
+            class="menu rounded-box w-full relative max-h-96 overflow-y-auto"
+          >
             <div>
-
               <Show
                 when={displayItems().length > 0}
                 fallback={
@@ -875,7 +870,7 @@ function NotesTabContent(props: NotesTabProps = {}) {
                 <For each={displayItems()}>
                   {(item: NavigationItem, index) => (
                     <MenuItem
-                      ref={(el) => itemRefs[index()] = el}
+                      ref={(el) => (itemRefs[index()] = el)}
                       item={item}
                       isActive={noteId() === item.id}
                       isFocused={focusedItemIndex() === index()}
@@ -897,6 +892,11 @@ function NotesTabContent(props: NotesTabProps = {}) {
               </Show>
             </div>
           </ul>
+        </div>
+
+        <div class="divider" />
+        <div class="mb-4">
+          <NoteBreadcrumbsVertical />
         </div>
       </div>
     </div>
@@ -1075,16 +1075,16 @@ const MenuItem = (props: {
 };
 
 const UpDirectoryButton = (props: { onClick: () => void }) => (
-    <ul class="menu rounded-box w-full relative overflow-hidden">
-  <li class="border-b border-base-300 mb-2 pb-2">
-    <a
-      onClick={props.onClick}
-      class="text-base-content/80 hover:text-base-content hover:bg-base-300 rounded-lg font-medium transition-colors"
-    >
-      <FolderUp size={16} class="text-primary" />
-      <span class="flex-1">.. Parent Directory</span>
-    </a>
-  </li>
+  <ul class="menu rounded-box w-full relative overflow-hidden">
+    <li class="border-b border-base-300 mb-2 pb-2">
+      <a
+        onClick={props.onClick}
+        class="text-base-content/80 hover:text-base-content hover:bg-base-300 rounded-lg font-medium transition-colors"
+      >
+        <FolderUp size={16} class="text-primary" />
+        <span class="flex-1">.. Parent Directory</span>
+      </a>
+    </li>
   </ul>
 );
 
