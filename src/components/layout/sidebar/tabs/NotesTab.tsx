@@ -38,16 +38,25 @@ import {
   useContextMenu,
   type ContextMenuItem,
 } from "~/solid-daisy-components/components/ContextMenu";
+import { getChildrenWithFolderStatusQuery } from "~/lib/db/notes/read";
+
+// Server function to fetch children for a specific folder
+const fetchFolderChildren = async (folderId: string) => {
+  "use server";
+  return await getChildrenWithFolderStatusQuery(folderId);
+};
 
 // Hook for navigation keybindings
 function useNavigationKeybindings(
   tabRef: () => HTMLElement,
-  displayItems: Accessor<NavigationItem[]>,
+  displayItems: Accessor<TreeNavigationItem[]>,
   focusedItemIndex: Accessor<number>,
   setFocusedItemIndex: (index: number) => void,
-  focusedItem: Accessor<NavigationItem | null>,
+  focusedItem: Accessor<TreeNavigationItem | null>,
   handleUpDirectory: () => void,
-  handleItemClickWithDirection: (item: NavigationItem) => void,
+  expandFolder: (folderId: string) => void,
+  collapseFolder: (folderId: string) => void,
+  handleNavigateToItem: (item: TreeNavigationItem) => void,
   handleCreateNote: () => void,
   handleCreateChildNote: () => void,
   startEditingFocusedItem: () => void,
@@ -58,6 +67,7 @@ function useNavigationKeybindings(
   handleDeleteNote: (noteId?: string) => void,
   handleDuplicateNote: (id: string) => void,
   handleCopyLink: (noteId?: string) => void,
+  followMode: Accessor<boolean>,
 ) {
   // Navigation keybindings
   useKeybinding(
@@ -88,8 +98,21 @@ function useNavigationKeybindings(
   useKeybinding(
     { key: "ArrowLeft" },
     () => {
-      // Go up a directory
-      handleUpDirectory();
+      const focused = focusedItem();
+      if (focused?.is_folder && focused.isExpanded) {
+        // Collapse the focused folder
+        collapseFolder(focused.id);
+      } else if (focused?.parentId) {
+        // Move focus to parent item
+        const items = displayItems();
+        const parentIndex = items.findIndex(item => item.id === focused.parentId);
+        if (parentIndex !== -1) {
+          setFocusedItemIndex(parentIndex);
+        }
+      } else {
+        // Go up a directory if at root level
+        handleUpDirectory();
+      }
     },
     { ref: tabRef },
   );
@@ -99,20 +122,29 @@ function useNavigationKeybindings(
     () => {
       const focused = focusedItem();
       if (focused?.is_folder) {
-        // Navigate into the folder
-        handleItemClickWithDirection(focused);
+        if (focused.isExpanded) {
+          // If already expanded, move focus to first child
+          const items = displayItems();
+          const currentIndex = focusedItemIndex();
+          if (currentIndex + 1 < items.length && items[currentIndex + 1].depth > focused.depth) {
+            setFocusedItemIndex(currentIndex + 1);
+          }
+        } else {
+          // Expand the folder
+          expandFolder(focused.id);
+        }
       }
     },
     { ref: tabRef },
   );
 
-  // Enter key to select current item
+  // Enter key to navigate to current item
   useKeybinding(
     { key: "Enter" },
     () => {
       const focused = focusedItem();
       if (focused) {
-        handleItemClickWithDirection(focused);
+        handleNavigateToItem(focused);
       }
     },
     { ref: tabRef },
@@ -366,6 +398,13 @@ export default function NotesTab(props: NotesTabProps = {}) {
   );
 }
 
+// Extended navigation item with tree structure
+interface TreeNavigationItem extends NavigationItem {
+  depth: number;
+  isExpanded?: boolean;
+  parentId?: string | null;
+}
+
 // Component that contains all async-dependent logic
 function NotesTabContent(props: NotesTabProps = {}) {
   const {
@@ -373,12 +412,119 @@ function NotesTabContent(props: NotesTabProps = {}) {
     noteId,
     children,
     siblings,
-    displayItems,
+    displayItems: baseDisplayItems,
     isCurrentNoteFolder,
   } = useNoteContext();
 
   const { handleItemClick, navigateToNote, navigateToRoot } =
     useNoteNavigation();
+
+  // Track which folders are expanded
+  const [expandedFolders, setExpandedFolders] = createSignal<Set<string>>(
+    new Set()
+  );
+
+  // Store async resources for each expanded folder
+  const [folderChildrenCache, setFolderChildrenCache] = createSignal<Map<string, NavigationItem[]>>(new Map());
+
+  // Fetch children when folders are expanded
+  createEffect(() => {
+    const expanded = expandedFolders();
+    const cache = folderChildrenCache();
+
+    // Fetch children for newly expanded folders
+    for (const folderId of expanded) {
+      if (!cache.has(folderId)) {
+        // Fetch children for this folder
+        fetchFolderChildren(folderId).then((children) => {
+          if (children) {
+            setFolderChildrenCache((prev) => {
+              const next = new Map(prev);
+              next.set(folderId, children);
+              return next;
+            });
+          }
+        });
+      }
+    }
+
+    // Clean up cache for collapsed folders (optional, to save memory)
+    const newCache = new Map(cache);
+    for (const [folderId] of newCache) {
+      if (!expanded.has(folderId)) {
+        newCache.delete(folderId);
+      }
+    }
+    if (newCache.size !== cache.size) {
+      setFolderChildrenCache(newCache);
+    }
+  });
+
+  // Build tree structure with expanded folders
+  const displayItems = createMemo<TreeNavigationItem[]>(() => {
+    const base = baseDisplayItems() ?? [];
+    const expanded = expandedFolders();
+    const childrenMap = folderChildrenCache();
+    const result: TreeNavigationItem[] = [];
+
+    const buildTree = (
+      items: NavigationItem[],
+      depth: number = 0,
+      parentId?: string | null
+    ) => {
+      for (const item of items) {
+        const isExpanded = expanded.has(item.id);
+        result.push({
+          ...item,
+          depth,
+          isExpanded,
+          parentId,
+        });
+
+        // If this folder is expanded, include its children
+        if (isExpanded && item.is_folder) {
+          const children = childrenMap.get(item.id);
+          if (children && children.length > 0) {
+            buildTree(children, depth + 1, item.id);
+          }
+        }
+      }
+    };
+
+    buildTree(base);
+    return result;
+  });
+
+  // Toggle folder expansion
+  const toggleFolderExpansion = (folderId: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+      return next;
+    });
+  };
+
+  // Expand a folder
+  const expandFolder = (folderId: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      next.add(folderId);
+      return next;
+    });
+  };
+
+  // Collapse a folder
+  const collapseFolder = (folderId: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      next.delete(folderId);
+      return next;
+    });
+  };
 
   // Create a ref for the tab container to make it focusable
   let tabRef: HTMLDivElement | undefined;
@@ -399,10 +545,11 @@ function NotesTabContent(props: NotesTabProps = {}) {
     }
   };
 
-  // Enhanced item click handler with direction tracking
-  // TODO remove this
-  const handleItemClickWithDirection = (item: NavigationItem) => {
-    handleItemClick(item);
+  // Navigate to an item (respects follow mode for keyboard, always works for clicks)
+  const handleNavigateToItem = (item: TreeNavigationItem, forceNavigate: boolean = false) => {
+    // For folders, navigate to show their children
+    // For regular notes, navigate to show the note
+    navigateToNote(item.id);
   };
 
   // Show up button only when there's actually a parent to navigate to
@@ -477,7 +624,11 @@ function NotesTabContent(props: NotesTabProps = {}) {
   const { followMode, setFollowMode } = useFollowMode({
     getFocusedItem: focusedItem,
     keyBindingRef: () => tabRef,
-    shouldNavigate: (item) => !item.is_folder, // Don't navigate to folders
+    shouldNavigate: (item) => {
+      // In follow mode, navigate to regular notes but not folders
+      // We expand/collapse folders instead
+      return !item.is_folder;
+    },
   });
 
   // Use renaming hook
@@ -829,7 +980,9 @@ function NotesTabContent(props: NotesTabProps = {}) {
       setFocusedItemIndex,
       focusedItem,
       handleUpDirectory,
-      handleItemClickWithDirection,
+      expandFolder,
+      collapseFolder,
+      handleNavigateToItem,
       handleCreateNote,
       handleCreateChildNote,
       startEditingFocusedItem,
@@ -840,6 +993,7 @@ function NotesTabContent(props: NotesTabProps = {}) {
       handleDeleteNote,
       handleDuplicateNote,
       handleCopyLink,
+      followMode,
     );
   });
 
@@ -906,14 +1060,14 @@ function NotesTabContent(props: NotesTabProps = {}) {
                 }
               >
                 <For each={displayItems()}>
-                  {(item: NavigationItem, index) => (
+                  {(item: TreeNavigationItem, index) => (
                     <MenuItem
                       ref={(el) => (itemRefs[index()] = el)}
                       item={item}
                       isActive={noteId() === item.id}
                       isFocused={focusedItemIndex() === index()}
                       isEditing={editingItemId() === item.id}
-                      handleItemClick={handleItemClickWithDirection}
+                      handleItemClick={(item) => handleNavigateToItem(item, true)}
                       handleRename={handleRenameNote}
                       onCancelEdit={cancelEditing}
                       startEditingItem={startEditingItem}
@@ -960,11 +1114,11 @@ const CutIndicator = (props: { noteTitle: string; onClearCut: () => void }) => {
 
 const MenuItem = (props: {
   ref?: (el: HTMLLIElement) => void;
-  item: NavigationItem;
+  item: TreeNavigationItem;
   isActive: boolean;
   isFocused: boolean;
   isEditing: boolean;
-  handleItemClick: (item: NavigationItem) => void;
+  handleItemClick: (item: TreeNavigationItem) => void;
   handleRename: (id: string, newTitle: string) => void;
   onCancelEdit: () => void;
   startEditingItem: (id?: string) => void;
@@ -1115,9 +1269,14 @@ const MenuItem = (props: {
             e.preventDefault();
             contextMenu.open(e as any as MouseEvent);
           }}
+          style={{
+            "padding-left": `${props.item.depth * 1.5 + 1}rem`,
+          }}
         >
           <Show when={props.item.is_folder} fallback={<FileText size={16} />}>
-            <Folder size={16} />
+            <Show when={props.item.isExpanded} fallback={<ChevronRight size={16} class="text-base-content/60" />}>
+              <ChevronRight size={16} class="text-base-content/60 transform rotate-90 transition-transform" />
+            </Show>
           </Show>
 
           <Show
@@ -1132,10 +1291,6 @@ const MenuItem = (props: {
               onKeyDown={handleKeyDown}
               onBlur={handleBlur}
             />
-          </Show>
-
-          <Show when={props.item.is_folder && !props.isEditing}>
-            <ChevronRight size={14} class="text-base-content/40" />
           </Show>
         </a>
       </li>
