@@ -1,8 +1,7 @@
 import { createAsync, useSearchParams, useNavigate } from "@solidjs/router";
-import { Suspense, Show, For } from "solid-js";
-import { ContentItem, ContentItemData } from "../shared/ContentItem";
+import { Suspense, Show } from "solid-js";
+import { ContentList, ContentItemData } from "../shared/ContentItem";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
-import { useKeyboardNavigation } from "~/lib/hooks/useKeyboardNavigation";
 
 // Server function to get backlinks
 const getBacklinksData = async (noteId: string) => {
@@ -16,7 +15,6 @@ interface BacklinksTabProps {
 }
 
 export default function BacklinksTab(props: BacklinksTabProps = {}) {
-  let containerRef: HTMLDivElement | undefined;
   const { noteId } = useCurrentNote();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -68,68 +66,27 @@ export default function BacklinksTab(props: BacklinksTabProps = {}) {
     );
   };
 
-  // Use keyboard navigation hook
-  const { focusedItemIndex } = useKeyboardNavigation({
-    items: transformedBacklinks,
-    containerRef: () => containerRef,
-    onEnter: (item) => navigateToNote(item.id),
-    focusTrigger: props.focusTrigger,
-  });
-
   return (
-    <div
-      ref={containerRef}
-      tabIndex={0}
-      class="flex flex-col h-full outline-none focus:outline-none"
-      role="list"
-      aria-label="Backlinks to current note"
-    >
-      <div class="space-y-4">
-        <div>
-          <Suspense
-            fallback={<div class="loading loading-spinner loading-sm"></div>}
-          >
-            <h4 class="text-sm font-medium text-base-content/70 mb-2">
-              Backlinks
-              <Show when={transformedBacklinks().length > 0}>
-                <span class="text-xs text-base-content/50 ml-2">
-                  ({transformedBacklinks().length})
-                </span>
-              </Show>
-            </h4>
-
-            <Show
-              when={backlinksData()}
-              fallback={
-                <div class="text-sm text-base-content/60">
-                  Loading backlinks...
-                </div>
-              }
-            >
-              <Show
-                when={transformedBacklinks().length > 0}
-                fallback={
-                  <div class="text-center text-base-content/60 text-sm py-8">
-                    No backlinks found for this note
-                  </div>
-                }
-              >
-                <div class="p-4 space-y-2">
-                  <For each={transformedBacklinks()}>
-                    {(item, index) => (
-                      <ContentItem
-                        item={item}
-                        showPath={true}
-                        isFocused={focusedItemIndex() === index()}
-                      />
-                    )}
-                  </For>
-                </div>
-              </Show>
-            </Show>
-          </Suspense>
-        </div>
+    <Suspense fallback={<div class="loading loading-spinner loading-sm"></div>}>
+      <div>
+        <h4 class="text-sm font-medium text-base-content/70 mb-2">
+          Backlinks
+          <Show when={transformedBacklinks().length > 0}>
+            <span class="text-xs text-base-content/50 ml-2">
+              ({transformedBacklinks().length})
+            </span>
+          </Show>
+        </h4>
+        
+        <ContentList
+          items={transformedBacklinks()}
+          showPath={true}
+          enableKeyboardNav={true}
+          focusTrigger={props.focusTrigger}
+          emptyMessage="No backlinks found for this note"
+          showFollowMode={false}
+        />
       </div>
-    </div>
+    </Suspense>
   );
 }
