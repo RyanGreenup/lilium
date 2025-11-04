@@ -1,8 +1,8 @@
 import type { APIEvent } from "@solidjs/start/server";
-import { requireUser } from "~/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import { join, extname } from "path";
 import { randomBytes } from "crypto";
+import { mkdir, writeFile } from "fs/promises";
+import { extname, join } from "path";
+import { requireUser } from "~/lib/auth";
 
 // Get assets directory from environment or use default
 const ASSETS_DIR = process.env.ASSETS_DIR || "./.data/uploads";
@@ -10,7 +10,7 @@ const ASSETS_DIR = process.env.ASSETS_DIR || "./.data/uploads";
 // Maximum file size: 200MB
 const MAX_FILE_SIZE = 200 * 1024 * 1024;
 
-// No file type restrictions - users are trusted developers who self-host
+// NOTE -- no file type restrictions, assume trusted users
 
 export const POST = async ({ request }: APIEvent) => {
   try {
@@ -19,21 +19,26 @@ export const POST = async ({ request }: APIEvent) => {
 
     // Parse form data
     const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const file = formData.get("file") as File;
 
     if (!file || file.size === 0) {
       return new Response(JSON.stringify({ error: "No file uploaded" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       });
     }
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      return new Response(JSON.stringify({ error: "File too large (max 200MB)" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" }
-      });
+      return new Response(
+        JSON.stringify({
+          error: `File too large (max ${Math.round(MAX_FILE_SIZE / (1024 * 1024))}MB)`,
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
 
     // No file type validation - users are trusted developers
@@ -48,12 +53,15 @@ export const POST = async ({ request }: APIEvent) => {
     try {
       await mkdir(userDir, { recursive: true, mode: 0o755 });
     } catch (error) {
-      if (error.code !== 'EEXIST') {
+      if (error.code !== "EEXIST") {
         console.error("Failed to create user directory:", error);
-        return new Response(JSON.stringify({ error: "Failed to create user directory" }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" }
-        });
+        return new Response(
+          JSON.stringify({ error: "Failed to create user directory" }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
     }
 
@@ -66,17 +74,19 @@ export const POST = async ({ request }: APIEvent) => {
     await writeFile(filePath, buffer);
 
     // Return success response with file info
-    return new Response(JSON.stringify({
-      success: true,
-      fileName,
-      originalName: file.name,
-      size: file.size,
-      type: file.type,
-      url: `/api/assets/${fileName}`
-    }), {
-      headers: { "Content-Type": "application/json" }
-    });
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        fileName,
+        originalName: file.name,
+        size: file.size,
+        type: file.type,
+        url: `/api/assets/${fileName}`,
+      }),
+      {
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error("Error uploading file:", error);
 
@@ -87,7 +97,7 @@ export const POST = async ({ request }: APIEvent) => {
 
     return new Response(JSON.stringify({ error: "Upload failed" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json" },
     });
   }
 };
