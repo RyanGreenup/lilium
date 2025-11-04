@@ -242,7 +242,7 @@ export const ContentList = (props: ContentListProps) => {
   }
 
   return (
-    <div class="space-y-4">
+    <div class="flex flex-col h-full space-y-4">
       {/* Follow Mode Toggle */}
       {props.showFollowMode && (
         <FollowModeToggle
@@ -259,7 +259,7 @@ export const ContentList = (props: ContentListProps) => {
           }
         }}
         tabIndex={props.enableKeyboardNav ? 0 : undefined}
-        class="p-4 space-y-3 outline-none focus:outline-none max-h-96 overflow-y-auto"
+        class="p-4 space-y-3 outline-none focus:outline-none flex-1 overflow-y-auto min-h-0"
       >
         {props.items.length === 0 ? (
           <div class="text-center text-base-content/60 text-sm py-8">

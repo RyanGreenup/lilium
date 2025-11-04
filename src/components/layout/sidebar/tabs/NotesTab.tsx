@@ -869,34 +869,35 @@ function NotesTabContent(props: NotesTabProps = {}) {
       tabIndex={0}
       class="flex flex-col h-full outline-none focus:outline-none group"
     >
-      <div class="flex-1 space-y-4">
-        {/*TODO Down the line we'll have to use context provider for keybindings to focus elements*/}
-        {/*TODO The scrolling here doesn't make much sense, There's outer inner and breadcrumbs etc. However Zellie is Crying and putting on a song and dance so I won't be able to look at this for the next few days*/}
-
+      <div class="flex flex-col h-full space-y-4">
         {/* Follow Mode Toggle */}
-        <FollowModeToggle
-          followMode={followMode}
-          setFollowMode={setFollowMode}
-        />
+        <div class="flex-shrink-0">
+          <FollowModeToggle
+            followMode={followMode}
+            setFollowMode={setFollowMode}
+          />
+        </div>
 
-        <div class="w-full h-full bg-base-200 group-focus:bg-base-300  transition-bg duration-300 ease-in-out rounded">
-          <Show when={cutNoteId()}>
-            <CutIndicator
-              noteTitle={
-                displayItems().find((item) => item.id === cutNoteId())?.title ||
-                "Unknown"
-              }
-              onClearCut={handleClearCut}
-            />
-          </Show>
+        <div class="flex flex-col flex-1 min-h-0 bg-base-200 group-focus:bg-base-300 transition-bg duration-300 ease-in-out rounded">
+          <div class="flex-shrink-0">
+            <Show when={cutNoteId()}>
+              <CutIndicator
+                noteTitle={
+                  displayItems().find((item) => item.id === cutNoteId())?.title ||
+                  "Unknown"
+                }
+                onClearCut={handleClearCut}
+              />
+            </Show>
 
-          <Show when={showUpButton()}>
-            <UpDirectoryButton onClick={handleUpDirectory} />
-          </Show>
-          {/*TODO Reconsider the height so that it can fill the space, e.g. flex-1*/}
+            <Show when={showUpButton()}>
+              <UpDirectoryButton onClick={handleUpDirectory} />
+            </Show>
+          </div>
+
           <ul
             ref={menuContainerRef}
-            class="menu rounded-box w-full relative max-h-96 overflow-y-auto"
+            class="menu rounded-box w-full relative flex-1 overflow-y-auto min-h-0"
           >
             <div>
               <Show
@@ -932,9 +933,11 @@ function NotesTabContent(props: NotesTabProps = {}) {
           </ul>
         </div>
 
-        <div class="divider" />
-        <div class="mb-4">
-          <NoteBreadcrumbsVertical />
+        <div class="flex-shrink-0">
+          <div class="divider" />
+          <div class="mb-4">
+            <NoteBreadcrumbsVertical />
+          </div>
         </div>
       </div>
     </div>

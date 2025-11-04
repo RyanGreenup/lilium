@@ -145,7 +145,7 @@ export const SidebarTabs = () => {
   });
 
   return (
-    <>
+    <div class="flex flex-col h-full">
       <Tabs style="lift">
         <For each={tabs}>
           {(tab) => (
@@ -159,12 +159,12 @@ export const SidebarTabs = () => {
         </For>
       </Tabs>
 
-      <div class="mt-4 relative overflow-hidden">
+      <div class="mt-4 relative overflow-hidden flex-1 min-h-0">
         <SlideTransition
           isGoingDeeper={isGoingDeeper}
           contentId={`tab-${activeTab()}`}
         >
-          <div>
+          <div class="h-full">
             <Show when={activeTab() === 0}>
               <NotesTab focusTrigger={notesFocusTrigger} />
             </Show>
@@ -199,6 +199,6 @@ export const SidebarTabs = () => {
           </div>
         </SlideTransition>
       </div>
-    </>
+    </div>
   );
 };

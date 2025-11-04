@@ -65,15 +65,15 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
     );
   };
 
-  return (
-    <div class="space-y-4">
 
+  return (
+    <div class="flex flex-col h-full space-y-4">
       {/* Recent Notes List */}
       <Suspense
         fallback={<div class="loading loading-spinner loading-sm"></div>}
       >
-        <div>
-          <h4 class="text-sm font-medium text-base-content/70 mb-2">
+        <div class="flex flex-col flex-1 min-h-0">
+          <h4 class="text-sm font-medium text-base-content/70 mb-2 flex-shrink-0">
             Recent Notes
             <Show when={transformedRecentNotes().length > 0}>
               <span class="text-xs text-base-content/50 ml-2">
