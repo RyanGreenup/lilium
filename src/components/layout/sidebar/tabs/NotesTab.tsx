@@ -36,7 +36,6 @@ import { deleteNoteQuery } from "~/lib/db/notes/delete";
 import { Note } from "~/lib/db/types";
 import { Card } from "~/solid-daisy-components/components/Card";
 import { useFollowMode } from "~/lib/hooks/useFollowMode";
-import { FollowModeToggle } from "~/components/shared/FollowModeToggle";
 import {
   ContextMenu,
   useContextMenu,
@@ -350,6 +349,41 @@ function useNoteRenaming(
     setNewlyCreatedNoteId,
   };
 }
+
+// Compact header that combines up directory and follow mode toggle
+const CompactHeader = (props: {
+  showUpButton: boolean;
+  onUpClick: () => void;
+  followMode: Accessor<boolean>;
+  setFollowMode: (value: boolean) => void;
+}) => (
+  <div class="flex items-center justify-between p-2 bg-base-100 border-b border-base-300">
+    <div class="flex items-center space-x-2">
+      <Show when={props.showUpButton}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={props.onUpClick}
+          class="px-2 py-1 h-7"
+          title="Go to parent directory"
+        >
+          <FolderUp size={14} />
+        </Button>
+      </Show>
+    </div>
+    
+    <div class="flex items-center space-x-2">
+      <span class="text-xs text-base-content/60">Follow</span>
+      <Toggle
+        size="sm"
+        color="primary"
+        checked={props.followMode()}
+        onChange={(e) => props.setFollowMode(e.currentTarget.checked)}
+        title="Follow Mode (Ctrl+F)"
+      />
+    </div>
+  </div>
+);
 
 interface NotesTabProps {
   focusTrigger?: () => string | null;
@@ -876,17 +910,16 @@ function NotesTabContent(props: NotesTabProps = {}) {
       tabIndex={0}
       class="flex flex-col h-full outline-none focus:outline-none group"
     >
-      <div class="flex flex-col h-full space-y-4">
-        {/* Follow Mode Toggle */}
-        <div class="flex-shrink-0">
-          <FollowModeToggle
-            followMode={followMode}
-            setFollowMode={setFollowMode}
-          />
-        </div>
-
+      <div class="flex flex-col h-full">
         <div class="flex flex-col flex-1 min-h-0 bg-base-200 group-focus:bg-base-300 transition-bg duration-300 ease-in-out rounded">
           <div class="flex-shrink-0">
+            <CompactHeader
+              showUpButton={showUpButton()}
+              onUpClick={handleUpDirectory}
+              followMode={followMode}
+              setFollowMode={setFollowMode}
+            />
+            
             <Show when={cutNoteId()}>
               <CutIndicator
                 noteTitle={
@@ -895,10 +928,6 @@ function NotesTabContent(props: NotesTabProps = {}) {
                 }
                 onClearCut={handleClearCut}
               />
-            </Show>
-
-            <Show when={showUpButton()}>
-              <UpDirectoryButton onClick={handleUpDirectory} />
             </Show>
           </div>
 
@@ -1152,19 +1181,6 @@ const MenuItem = (props: {
   );
 };
 
-const UpDirectoryButton = (props: { onClick: () => void }) => (
-  <ul class="menu rounded-box w-full relative overflow-hidden">
-    <li class="border-b border-base-300 mb-2 pb-2">
-      <a
-        onClick={props.onClick}
-        class="text-base-content/80 hover:text-base-content hover:bg-base-300 rounded-lg font-medium transition-colors"
-      >
-        <FolderUp size={16} class="text-primary" />
-        <span class="flex-1">.. Parent Directory</span>
-      </a>
-    </li>
-  </ul>
-);
 
 const EmptyMessage = (props: {
   note: AccessorWithLatest<Note | null | undefined>;
