@@ -1,70 +1,140 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @plugin "daisyui";
-@import "highlight.js/styles/github-dark.css";
 
+/*
+-------------------------------------------------------------------------------
+HIGHLIGHT JS
+-------------------------------------------------------------------------------
+*/
+@import "highlight.js/styles/base16/dracula.css";
+.hljs {
+    /*Make the highlightjs background transparent*/
+    background: transparent;
+}
+.prose {
+    /*Set the prose background to Dracula*/
+    --tw-prose-pre-bg: #282936;
+}
+
+/*
+-------------------------------------------------------------------------------
+Markdown Callouts (Marked.JS plugin)
+-------------------------------------------------------------------------------
+*/
 /* Admonition styles for marked-alert */
 .markdown-alert {
-  @apply border-l-4 rounded-md p-4 mb-4
+    @apply border-l-4 rounded-md p-4 mb-4;
 }
 
 .markdown-alert .markdown-alert-title {
-  @apply flex items-center font-semibold mb-2 text-sm;
+    @apply flex items-center font-semibold mb-2 text-sm;
 }
 
 .markdown-alert .markdown-alert-title svg {
-  @apply w-4 h-4 mr-2 flex-shrink-0;
+    @apply w-4 h-4 mr-2 flex-shrink-0;
 }
 
 /* Note variant */
 .markdown-alert.markdown-alert-note {
-  @apply border-l-blue-500 bg-blue-500/10;
+    @apply border-l-blue-500 bg-blue-500/10;
 }
 
 .markdown-alert.markdown-alert-note .markdown-alert-title {
-  @apply text-blue-700 dark:text-blue-300;
+    @apply text-blue-700 dark:text-blue-300;
 }
 
 /* Tip variant */
 .markdown-alert.markdown-alert-tip {
-  @apply border-l-green-500 bg-green-500/10;
+    @apply border-l-green-500 bg-green-500/10;
 }
 
 .markdown-alert.markdown-alert-tip .markdown-alert-title {
-  @apply text-green-700 dark:text-green-300;
+    @apply text-green-700 dark:text-green-300;
 }
 
 /* Important variant */
 .markdown-alert.markdown-alert-important {
-  @apply border-l-purple-500 bg-purple-500/10;
+    @apply border-l-purple-500 bg-purple-500/10;
 }
 
 .markdown-alert.markdown-alert-important .markdown-alert-title {
-  @apply text-purple-700 dark:text-purple-300;
+    @apply text-purple-700 dark:text-purple-300;
 }
 
 /* Warning variant */
 .markdown-alert.markdown-alert-warning {
-  @apply border-l-yellow-500 bg-yellow-500/10;
+    @apply border-l-yellow-500 bg-yellow-500/10;
 }
 
 .markdown-alert.markdown-alert-warning .markdown-alert-title {
-  @apply text-yellow-700 dark:text-yellow-300;
+    @apply text-yellow-700 dark:text-yellow-300;
 }
 
 /* Caution variant */
 .markdown-alert.markdown-alert-caution {
-  @apply border-l-red-500 bg-red-500/10;
+    @apply border-l-red-500 bg-red-500/10;
 }
 
 .markdown-alert.markdown-alert-caution .markdown-alert-title {
-  @apply text-red-700 dark:text-red-300;
+    @apply text-red-700 dark:text-red-300;
 }
 
+/*
+-------------------------------------------------------------------------------
+Markdown Helper Classes
+-------------------------------------------------------------------------------
+*/
+
+/* Carousel -----------------------------------------------------------------*/
+
 .markdown-carousel {
-  @apply carousel carousel-center bg-neutral rounded-box max-w-md space-x-4 p-4;
+    @apply carousel carousel-center bg-neutral rounded-box max-w-md space-x-4 p-4;
 }
 
 .markdown-carousel-item {
-  @apply carousel-item;
+    @apply carousel-item;
 }
+
+/* Thumbnail Base Styles ---------------------------------------------------*/
+
+[class*="markdown-thumb"] {
+    @apply mb-4 max-w-xs bg-base-200 border border-base-300 rounded-lg overflow-hidden shadow-sm;
+}
+
+[class*="markdown-thumb"] img {
+    @apply w-full h-auto block;
+}
+
+[class*="markdown-thumb"] .thumb-caption {
+    @apply p-3 text-sm text-base-content/80 leading-relaxed;
+}
+
+[class*="markdown-thumb"] .thumb-caption p {
+    @apply m-0;
+}
+
+/* Thumbnail Position Variants ---------------------------------------------*/
+
+.markdown-thumb-right {
+    @apply float-right clear-right ml-4;
+}
+
+.markdown-thumb-left {
+    @apply float-left clear-left mr-4;
+}
+
+.markdown-thumb-center {
+    @apply mx-auto;
+}
+
+/*
+Example:
+
+<div class="markdown-thumb-right">
+  <img src="example-image.jpg" alt="Example thumbnail">
+  <div class="thumb-caption">
+    <p>This is an example of a right-floating thumbnail with a caption that provides additional context for the image.</p>
+  </div>
+</div>
+*/
