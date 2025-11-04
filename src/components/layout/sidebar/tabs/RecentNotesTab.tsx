@@ -1,8 +1,9 @@
 import { createAsync, useSearchParams, useNavigate } from "@solidjs/router";
-import { Suspense, Show, For, createEffect } from "solid-js";
-import { ContentList, ContentItemData } from "../shared/ContentItem";
+import { Suspense, Show, For } from "solid-js";
+import { ContentItem, ContentItemData } from "../shared/ContentItem";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { useNoteParents } from "~/lib/hooks/useNoteParents";
+import { useKeyboardNavigation } from "~/lib/hooks/useKeyboardNavigation";
 
 // Server function to get recent notes
 const getRecentNotesData = async () => {
@@ -51,7 +52,7 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
   };
 
   // Transform database notes to ContentItemData format
-  const transformedNotes = () => {
+  const transformedRecentNotes = () => {
     const notes = recentNotesData();
     if (!notes) return [];
     
@@ -59,28 +60,27 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
       id: note.id,
       title: note.title,
       abstract: note.abstract || "",
-      path: `/notes/${note.id}`,
+      path: `/note/${note.id}`,
       onClick: () => navigateToNote(note.id)
     }));
   };
 
-  // Handle external focus requests
-  createEffect(() => {
-    const trigger = props.focusTrigger?.();
-    if (trigger && containerRef) {
-      // Focus on next tick after render
-      setTimeout(() => {
-        containerRef.focus();
-      }, 0);
-    }
+  // Use keyboard navigation hook
+  const { focusedItemIndex } = useKeyboardNavigation({
+    items: transformedRecentNotes,
+    containerRef: () => containerRef,
+    onEnter: (item) => navigateToNote(item.id),
+    focusTrigger: props.focusTrigger,
   });
 
   return (
-    <Suspense fallback={
-      <div class="w-full h-full bg-base-200 rounded flex items-center justify-center">
-        <div class="loading loading-spinner loading-md"></div>
-      </div>
-    }>
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      class="flex flex-col h-full outline-none focus:outline-none"
+      role="list"
+      aria-label="Recent notes"
+    >
       <div class="space-y-4">
         {/* Current Note Info */}
         <Show when={note()}>
@@ -109,18 +109,50 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
 
         {/* Recent Notes List */}
         <div>
-          <h4 class="text-sm font-medium text-base-content/70 mb-2">Recent Notes</h4>
-          <Show when={recentNotesData()} fallback={<div class="text-sm text-base-content/60">Loading recent notes...</div>}>
-            <ContentList 
-              items={transformedNotes()}
-              showPath={false}
-              emptyMessage="No recent notes found"
-              enableKeyboardNav={true}
-              ref={(el) => containerRef = el}
-            />
-          </Show>
+          <Suspense
+            fallback={<div class="loading loading-spinner loading-sm"></div>}
+          >
+            <h4 class="text-sm font-medium text-base-content/70 mb-2">
+              Recent Notes
+              <Show when={transformedRecentNotes().length > 0}>
+                <span class="text-xs text-base-content/50 ml-2">
+                  ({transformedRecentNotes().length})
+                </span>
+              </Show>
+            </h4>
+
+            <Show
+              when={recentNotesData()}
+              fallback={
+                <div class="text-sm text-base-content/60">
+                  Loading recent notes...
+                </div>
+              }
+            >
+              <Show
+                when={transformedRecentNotes().length > 0}
+                fallback={
+                  <div class="text-center text-base-content/60 text-sm py-8">
+                    No recent notes found
+                  </div>
+                }
+              >
+                <div class="p-4 space-y-2">
+                  <For each={transformedRecentNotes()}>
+                    {(item, index) => (
+                      <ContentItem
+                        item={item}
+                        showPath={false}
+                        isFocused={focusedItemIndex() === index()}
+                      />
+                    )}
+                  </For>
+                </div>
+              </Show>
+            </Show>
+          </Suspense>
         </div>
       </div>
-    </Suspense>
+    </div>
   );
 }

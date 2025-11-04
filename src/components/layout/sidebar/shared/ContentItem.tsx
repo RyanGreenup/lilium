@@ -1,11 +1,10 @@
-import { For, createSignal, createEffect, Accessor, Show } from "solid-js";
-import { tv } from "tailwind-variants";
 import { useNavigate } from "@solidjs/router";
-import { Breadcrumbs } from "~/solid-daisy-components/components/Breadcrumbs";
+import { For, Show, createEffect, createSignal } from "solid-js";
+import { tv } from "tailwind-variants";
 import { NoteBreadcrumbsById } from "~/components/NoteBreadcrumbs";
-import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
-import { useFollowMode } from "~/lib/hooks/useFollowMode";
 import { FollowModeToggle } from "~/components/shared/FollowModeToggle";
+import { useFollowMode } from "~/lib/hooks/useFollowMode";
+import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 
 const breadcrumbsVariants = tv({
   base: "text-xs",
@@ -115,6 +114,7 @@ interface ContentListProps {
   onEscape?: () => void;
   ref?: (el: HTMLDivElement) => void;
   showFollowMode?: boolean;
+  focusTrigger?: () => string | null;
 }
 
 export const ContentList = (props: ContentListProps) => {
@@ -136,6 +136,16 @@ export const ContentList = (props: ContentListProps) => {
       })
     : { followMode: () => false, setFollowMode: () => {} };
 
+  // Handle external focus requests
+  createEffect(() => {
+    const trigger = props.focusTrigger?.();
+    if (trigger && containerRef) {
+      requestAnimationFrame(() => {
+        containerRef?.focus();
+      });
+    }
+  });
+
   // Auto-focus first item when items change and keyboard nav is enabled
   createEffect(() => {
     const items = props.items;
@@ -149,26 +159,26 @@ export const ContentList = (props: ContentListProps) => {
   // Scroll focused item into view
   createEffect(() => {
     if (!props.enableKeyboardNav) return;
-    
+
     const focusIndex = focusedIndex();
     if (focusIndex >= 0 && itemRefs[focusIndex] && containerRef) {
       const focusedElement = itemRefs[focusIndex];
       const container = containerRef;
-      
+
       if (focusedElement) {
         // Calculate if element is visible
         const containerRect = container.getBoundingClientRect();
         const elementRect = focusedElement.getBoundingClientRect();
-        
+
         // Check if element is outside the visible area
         const isAboveViewport = elementRect.top < containerRect.top;
         const isBelowViewport = elementRect.bottom > containerRect.bottom;
-        
+
         if (isAboveViewport || isBelowViewport) {
           focusedElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'nearest',
-            inline: 'nearest'
+            behavior: "smooth",
+            block: "nearest",
+            inline: "nearest",
           });
         }
       }
@@ -259,7 +269,7 @@ export const ContentList = (props: ContentListProps) => {
           <div class="space-y-2">
             <For each={props.items}>
               {(item, index) => (
-                <div ref={(el) => itemRefs[index()] = el}>
+                <div ref={(el) => (itemRefs[index()] = el)}>
                   <ContentItem
                     item={item}
                     showPath={props.showPath}
