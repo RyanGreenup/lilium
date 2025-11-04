@@ -6,7 +6,9 @@ WORKDIR /app
 ############################################################
 # Install the dependencies #################################
 ############################################################
-RUN apt install  python3 make g++ libsqlite3-dev
+RUN apt update
+RUN apt install  -y python3 make g++ libsqlite3-dev pandoc
+# RUN wget 'https://github.com/jgm/pandoc/releases/download/3.8.2.1/pandoc-3.8.2.1-1-amd64.deb' > /tmp/ && dpkg -i pandoc-3.8.2.1-1-amd64.deb
 RUN npm install -g rust-just
 # NOTE could also use snap
 # snap install --edge --classic just

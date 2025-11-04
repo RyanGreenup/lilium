@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  gfmdata:
+  lilium:
     build: .
     container_name: lilium
     ports:
