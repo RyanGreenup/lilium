@@ -1,3 +1,11 @@
 * Lilium
 ** Introduction
 This is a note-taking and documentation tool.
+** Usage
+
+1. Set up the `.env
+    1. `cp .env.example .env`
+    2. Run `openssl rand -base64 32 >> .env  && nvim .env`
+    3. Edit the `.env` accordingly
+2. `docker compose build`
+3. `docker compose up`
