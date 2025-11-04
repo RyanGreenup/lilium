@@ -38,14 +38,14 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
     // Preserve all current search parameters
     Object.entries(searchParams).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        value.forEach(v => currentParams.append(key, v));
+        value.forEach((v) => currentParams.append(key, v));
       } else if (value !== undefined) {
         currentParams.set(key, value);
       }
     });
 
     const searchString = currentParams.toString();
-    const url = `/note/${noteId}${searchString ? `?${searchString}` : ''}`;
+    const url = `/note/${noteId}${searchString ? `?${searchString}` : ""}`;
     navigate(url);
   };
 
@@ -54,44 +54,24 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
     const notes = recentNotesData();
     if (!notes) return [];
 
-    return notes.map((note): ContentItemData => ({
-      id: note.id,
-      title: note.title,
-      abstract: note.abstract || "",
-      path: `/note/${note.id}`,
-      onClick: () => navigateToNote(note.id)
-    }));
+    return notes.map(
+      (note): ContentItemData => ({
+        id: note.id,
+        title: note.title,
+        abstract: note.abstract || "",
+        path: `/note/${note.id}`,
+        onClick: () => navigateToNote(note.id),
+      }),
+    );
   };
 
   return (
     <div class="space-y-4">
-      {/* Current Note Info */}
-      <Show when={note()}>
-        {(currentNote) => (
-          <div class="bg-base-200 rounded-box p-3">
-            <h4 class="text-sm font-medium text-base-content/70 mb-1">Current Note</h4>
-            <p class="text-sm font-semibold">{currentNote().title}</p>
-            <Show when={parents() && parents()!.length > 0}>
-              <div class="text-xs text-base-content/60 mt-1">
-                <span>Path: </span>
-                <For each={parents()}>
-                  {(parent, index) => (
-                    <>
-                      {index() > 0 && " / "}
-                      <span>{parent.title}</span>
-                    </>
-                  )}
-                </For>
-                {parents()!.length > 0 && " / "}
-                <span class="font-medium">{currentNote().title}</span>
-              </div>
-            </Show>
-          </div>
-        )}
-      </Show>
 
       {/* Recent Notes List */}
-      <Suspense fallback={<div class="loading loading-spinner loading-sm"></div>}>
+      <Suspense
+        fallback={<div class="loading loading-spinner loading-sm"></div>}
+      >
         <div>
           <h4 class="text-sm font-medium text-base-content/70 mb-2">
             Recent Notes
@@ -104,7 +84,7 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
 
           <ContentList
             items={transformedRecentNotes()}
-            showPath={false}
+            showPath={true}
             enableKeyboardNav={true}
             focusTrigger={props.focusTrigger}
             emptyMessage="No recent notes found"
