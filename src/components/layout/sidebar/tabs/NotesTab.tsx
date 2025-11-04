@@ -1,8 +1,10 @@
-import { AccessorWithLatest, revalidate } from "@solidjs/router";
+import { AccessorWithLatest, revalidate, createAsync } from "@solidjs/router";
+import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
 import FolderUp from "lucide-solid/icons/folder-up";
+import Home from "lucide-solid/icons/home";
 import Scissors from "lucide-solid/icons/scissors";
 import X from "lucide-solid/icons/x";
 import {
@@ -21,7 +23,9 @@ import {
   type NavigationItem,
 } from "~/lib/hooks/useNoteNavigation";
 import { useNoteContext } from "~/lib/hooks/useNoteContext";
+import { useNoteParents } from "~/lib/hooks/useNoteParents";
 import { Alert } from "~/solid-daisy-components/components/Alert";
+import { Button } from "~/solid-daisy-components/components/Button";
 import { Input } from "~/solid-daisy-components/components/Input";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Kbd } from "~/solid-daisy-components/components/Kbd";
@@ -382,7 +386,7 @@ function NotesTabContent(props: NotesTabProps = {}) {
 
   // Create a ref for the tab container to make it focusable
   let tabRef: HTMLDivElement | undefined;
-  let menuContainerRef: HTMLUListElement | undefined;
+  let menuContainerRef: HTMLDivElement | undefined;
   const itemRefs: (HTMLLIElement | undefined)[] = [];
 
   // Check if note exists and is loaded (from useCurrentNote)
@@ -803,19 +807,22 @@ function NotesTabContent(props: NotesTabProps = {}) {
 
     if (targetItem) {
       const noteLink = `[${targetItem.title}](${targetItem.id})`;
-      
-      navigator.clipboard.writeText(noteLink).then(() => {
-        console.log(`Copied note link: ${noteLink}`);
-      }).catch((error) => {
-        console.error("Failed to copy note link:", error);
-        // Fallback for browsers that don't support clipboard API
-        const textArea = document.createElement("textarea");
-        textArea.value = noteLink;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textArea);
-      });
+
+      navigator.clipboard
+        .writeText(noteLink)
+        .then(() => {
+          console.log(`Copied note link: ${noteLink}`);
+        })
+        .catch((error) => {
+          console.error("Failed to copy note link:", error);
+          // Fallback for browsers that don't support clipboard API
+          const textArea = document.createElement("textarea");
+          textArea.value = noteLink;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textArea);
+        });
     }
   };
 
@@ -883,8 +890,8 @@ function NotesTabContent(props: NotesTabProps = {}) {
             <Show when={cutNoteId()}>
               <CutIndicator
                 noteTitle={
-                  displayItems().find((item) => item.id === cutNoteId())?.title ||
-                  "Unknown"
+                  displayItems().find((item) => item.id === cutNoteId())
+                    ?.title || "Unknown"
                 }
                 onClearCut={handleClearCut}
               />
@@ -895,48 +902,47 @@ function NotesTabContent(props: NotesTabProps = {}) {
             </Show>
           </div>
 
-          <ul
-            ref={menuContainerRef}
-            class="menu rounded-box w-full relative flex-1 overflow-y-auto min-h-0"
-          >
-            <div>
-              <Show
-                when={displayItems().length > 0}
-                fallback={
-                  <EmptyMessage note={note} isFolder={isCurrentNoteFolder} />
-                }
-              >
-                <For each={displayItems()}>
-                  {(item: NavigationItem, index) => (
-                    <MenuItem
-                      ref={(el) => (itemRefs[index()] = el)}
-                      item={item}
-                      isActive={noteId() === item.id}
-                      isFocused={focusedItemIndex() === index()}
-                      isEditing={editingItemId() === item.id}
-                      handleItemClick={handleItemClickWithDirection}
-                      handleRename={handleRenameNote}
-                      onCancelEdit={cancelEditing}
-                      startEditingItem={startEditingItem}
-                      handleDeleteNote={handleDeleteNote}
-                      handleCutNote={handleCutNote}
-                      handleCreateChildNote={handleCreateChildNote}
-                      handleCreateSiblingNote={handleCreateNote}
-                      handleDuplicateNote={handleDuplicateNote}
-                      handlePasteNote={handlePasteNote}
-                      handlePasteAsChild={handlePasteAsChild}
-                    />
-                  )}
-                </For>
-              </Show>
+          <div ref={menuContainerRef} class="overflow-y-auto">
+            <div class="flex-shrink-0">
+              <div class="mb-4">
+                <NoteBreadcrumbsVertical />
+              </div>
+              <div class="divider" />
             </div>
-          </ul>
-        </div>
 
-        <div class="flex-shrink-0">
-          <div class="divider" />
-          <div class="mb-4">
-            <NoteBreadcrumbsVertical />
+            <ul class="menu rounded-box w-full relative flex-1  min-h-0">
+              <div>
+                <Show
+                  when={displayItems().length > 0}
+                  fallback={
+                    <EmptyMessage note={note} isFolder={isCurrentNoteFolder} />
+                  }
+                >
+                  <For each={displayItems()}>
+                    {(item: NavigationItem, index) => (
+                      <MenuItem
+                        ref={(el) => (itemRefs[index()] = el)}
+                        item={item}
+                        isActive={noteId() === item.id}
+                        isFocused={focusedItemIndex() === index()}
+                        isEditing={editingItemId() === item.id}
+                        handleItemClick={handleItemClickWithDirection}
+                        handleRename={handleRenameNote}
+                        onCancelEdit={cancelEditing}
+                        startEditingItem={startEditingItem}
+                        handleDeleteNote={handleDeleteNote}
+                        handleCutNote={handleCutNote}
+                        handleCreateChildNote={handleCreateChildNote}
+                        handleCreateSiblingNote={handleCreateNote}
+                        handleDuplicateNote={handleDuplicateNote}
+                        handlePasteNote={handlePasteNote}
+                        handlePasteAsChild={handlePasteAsChild}
+                      />
+                    )}
+                  </For>
+                </Show>
+              </div>
+            </ul>
           </div>
         </div>
       </div>
@@ -959,7 +965,6 @@ const CutIndicator = (props: { noteTitle: string; onClearCut: () => void }) => {
     </Alert>
   );
 };
-
 
 const MenuItem = (props: {
   ref?: (el: HTMLLIElement) => void;
