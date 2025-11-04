@@ -138,3 +138,156 @@ Example:
   </div>
 </div>
 */
+
+/*
+-------------------------------------------------------------------------------
+Code Block Titles and Paths
+-------------------------------------------------------------------------------
+*/
+
+/* Code block with title/path header */
+.code-block-with-header {
+    @apply mb-4 rounded-lg overflow-hidden border border-base-300 shadow-sm;
+}
+
+/* Header containing title or file path */
+.code-block-header {
+    @apply bg-base-200 border-b border-base-300 px-4 py-2 text-sm font-mono text-base-content/70 flex items-center justify-between;
+}
+
+/* Language indicator */
+.code-block-language {
+    @apply text-xs px-2 py-1 bg-base-300 text-base-content/60 rounded font-medium uppercase tracking-wide;
+}
+
+/* Title variant - for descriptive titles */
+.code-block-header.title {
+    @apply text-base-content font-medium;
+}
+
+/* Path variant - for file paths */
+.code-block-header.path {
+    @apply text-base-content/60;
+}
+
+/* Path with line numbers */
+.code-block-header.path-lines {
+    @apply text-base-content/60;
+}
+
+/* The actual code container */
+.code-block-with-header pre {
+    @apply m-0 rounded-none border-none;
+}
+
+/* Copy button positioning for headers */
+.code-block-with-header .copy-button {
+    @apply opacity-40 hover:opacity-80;
+}
+
+/* Output section */
+.code-block-output {
+    @apply bg-base-100 border-t border-base-300 p-4 text-sm font-mono;
+}
+
+.code-block-output-header {
+    @apply text-xs font-medium text-base-content/60 uppercase tracking-wide mb-2 flex items-center;
+}
+
+.code-block-output-header::before {
+    @apply content-['▶'] mr-2 text-success;
+}
+
+/* Output content styling */
+.code-block-output pre {
+    @apply bg-transparent border-none p-0 m-0 text-base-content/80 whitespace-pre-wrap;
+}
+
+/*
+Examples:
+
+<!-- With descriptive title and language -->
+<div class="code-block-with-header">
+  <div class="code-block-header title">
+    <span>HTML Thumbnail Component</span>
+    <span class="code-block-language">html</span>
+  </div>
+  <pre style="position: relative; cursor: copy;" title="Double-click to copy">
+    <code class="hljs language-html">...</code>
+    <button class="copy-button btn btn-ghost btn-xs absolute top-2 right-2">Copy</button>
+  </pre>
+</div>
+
+<!-- With file path and language -->
+<div class="code-block-with-header">
+  <div class="code-block-header path">
+    <span>src/components/Thumbnail.tsx</span>
+    <span class="code-block-language">tsx</span>
+  </div>
+  <pre style="position: relative; cursor: copy;" title="Double-click to copy">
+    <code class="hljs language-typescript">...</code>
+    <button class="copy-button btn btn-ghost btn-xs absolute top-2 right-2">Copy</button>
+  </pre>
+</div>
+
+<!-- With file path, line numbers, and language -->
+<div class="code-block-with-header">
+  <div class="code-block-header path-lines">
+    <span>src/components/Thumbnail.tsx#L12-24</span>
+    <span class="code-block-language">tsx</span>
+  </div>
+  <pre style="position: relative; cursor: copy;" title="Double-click to copy">
+    <code class="hljs language-typescript">...</code>
+    <button class="copy-button btn btn-ghost btn-xs absolute top-2 right-2">Copy</button>
+  </pre>
+</div>
+
+<!-- With output section -->
+<div class="code-block-with-header">
+  <div class="code-block-header title">
+    <span>API Request Example</span>
+    <span class="code-block-language">js</span>
+  </div>
+  <pre style="position: relative; cursor: copy;" title="Double-click to copy">
+    <code class="hljs language-javascript">fetch('/api/users').then(r => r.json())</code>
+    <button class="copy-button btn btn-ghost btn-xs absolute top-2 right-2">Copy</button>
+  </pre>
+  <div class="code-block-output">
+    <div class="code-block-output-header">Output</div>
+    <pre>{"users": [{"id": 1, "name": "John Doe"}]}</pre>
+  </div>
+</div>
+
+<!-- As markdown -->
+
+<div class="code-block-with-header">
+<div class="code-block-header path">
+~/.local/bin/dump_dynamo_db.fish
+<span class="code-block-language">Fish</span>
+</div>
+
+```sh
+fish
+set n 30
+for i in (seq 0 30)
+    echo $i" / "$n
+    aws dynamodb scan --table-name GforceTasks-notow4pikzczbpjg42gytvbuci-production \
+        --total-segments $n \
+        --segment $i > data/raw/tasks_$i.raw.json
+end
+```
+
+<div class="code-block-output">
+<div class="code-block-output-header">Console Output</div>
+
+<pre>
+✓ Build completed successfully
+✓ 42 files processed
+✓ Ready for deployment
+</pre>
+
+</div>
+</div>
+
+*/
+
