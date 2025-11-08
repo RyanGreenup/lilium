@@ -99,6 +99,7 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
 
   // Refs
   let searchInputRef: HTMLInputElement | undefined;
+  let externalDisplayNameRef: HTMLInputElement | undefined;
   let resultsContainerRef: HTMLDivElement | undefined;
   const itemRefs = new Map<number, HTMLElement>();
 
@@ -109,11 +110,20 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
     setFocusedIndex(0);
   });
 
-  // Auto-focus search input when modal opens
+  // Auto-focus appropriate input when modal opens or tab changes
   createEffect(() => {
-    if (props.isOpen && searchInputRef) {
-      setTimeout(() => searchInputRef?.focus(), 50);
-    }
+    if (!props.isOpen) return;
+
+    const tab = activeTab(); // Track activeTab changes
+
+    // Use queueMicrotask instead of setTimeout for proper reactive timing
+    queueMicrotask(() => {
+      if (tab === "notes") {
+        searchInputRef?.focus();
+      } else {
+        externalDisplayNameRef?.focus();
+      }
+    });
   });
 
   // Keyboard navigation
@@ -232,6 +242,7 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
                   fallback={
                     <div class="space-y-2">
                       <input
+                        ref={externalDisplayNameRef}
                         type="text"
                         placeholder="Display name"
                         class="input input-bordered w-full"
