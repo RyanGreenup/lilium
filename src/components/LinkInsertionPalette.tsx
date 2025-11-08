@@ -6,6 +6,7 @@
  * - Action-agnostic: Parent decides what to do with selected items (navigate, insert, etc.)
  * - Format-aware: Supports both markdown and org-mode link formats
  * - Flexible data sources: Accept callbacks for both sync and async data fetching
+ * - Rendered via Portal: Modal is rendered at document.body level for proper z-index behavior
  * - Dual-mode operation:
  *   1. Notes tab: Search through notes/content using provided callback
  *   2. External tab: Manual entry of display name + URL (auto-formatted)
@@ -62,6 +63,7 @@ import {
   createEffect,
   JSXElement,
 } from "solid-js";
+import { Portal } from "solid-js/web";
 import { Transition } from "solid-transition-group";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { Button } from "~/solid-daisy-components/components/Button";
@@ -300,7 +302,7 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
   };
 
   return (
-    <>
+    <Portal>
       {/* Backdrop */}
       <BackdropTransition>
         {props.isOpen && (
@@ -468,7 +470,7 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
           </div>
         )}
       </PopupTransition>
-    </>
+    </Portal>
   );
 };
 
