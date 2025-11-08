@@ -271,7 +271,7 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
                       ref={searchInputRef}
                       type="text"
                       placeholder="Search notes..."
-                      class="input input-bordered w-full pl-10 pr-10"
+                      class="input input-bordered focus:border-none w-full pl-10 pr-10"
                       value={searchTerm()}
                       onInput={(e) => setSearchTerm(e.currentTarget.value)}
                     />
