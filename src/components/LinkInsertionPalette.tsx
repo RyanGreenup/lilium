@@ -26,19 +26,75 @@ interface LinkInsertionPaletteProps {
 export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
   const [activeTab, setActiveTab] = createSignal<"notes" | "external">("notes");
   const [searchTerm, setSearchTerm] = createSignal("");
-  const [selectedItem, setSelectedItem] = createSignal<LinkItem | null>(null);
+  const [focusedIndex, setFocusedIndex] = createSignal(0);
 
-  // Handle Escape key to close modal
+  let searchInputRef: HTMLInputElement | undefined;
+  let resultsContainerRef: HTMLDivElement | undefined;
+  const itemRefs: (HTMLButtonElement | undefined)[] = [];
+
+  // Handle keyboard navigation
   createEffect(() => {
     if (props.isOpen) {
       const handleKeyDown = (e: KeyboardEvent) => {
+        const results = filteredNotes();
+
         if (e.key === "Escape") {
           props.onClose();
+        } else if (e.key === "ArrowDown" || (e.altKey && e.key === "n") || (e.ctrlKey && e.key === "j") || (e.altKey && e.key === "j")) {
+          e.preventDefault();
+          setFocusedIndex((prev) => Math.min(prev + 1, results.length - 1));
+        } else if (e.key === "ArrowUp" || (e.altKey && e.key === "p") || (e.ctrlKey && e.key === "k") || (e.altKey && e.key === "k")) {
+          e.preventDefault();
+          setFocusedIndex((prev) => Math.max(prev - 1, 0));
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          const selectedItem = results[focusedIndex()];
+          if (selectedItem) {
+            props.onInsert(selectedItem.path || "");
+          }
         }
       };
 
       window.addEventListener("keydown", handleKeyDown);
       onCleanup(() => window.removeEventListener("keydown", handleKeyDown));
+    }
+  });
+
+  // Scroll focused item into view
+  createEffect(() => {
+    const index = focusedIndex();
+    if (props.isOpen && itemRefs[index] && resultsContainerRef) {
+      const focusedElement = itemRefs[index];
+      const container = resultsContainerRef;
+
+      if (focusedElement) {
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = focusedElement.getBoundingClientRect();
+
+        const isAboveViewport = elementRect.top < containerRect.top;
+        const isBelowViewport = elementRect.bottom > containerRect.bottom;
+
+        if (isAboveViewport || isBelowViewport) {
+          focusedElement.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+            inline: "nearest",
+          });
+        }
+      }
+    }
+  });
+
+  // Reset focused index when search term changes
+  createEffect(() => {
+    searchTerm();
+    setFocusedIndex(0);
+  });
+
+  // Auto-focus search input when modal opens
+  createEffect(() => {
+    if (props.isOpen && searchInputRef) {
+      setTimeout(() => searchInputRef?.focus(), 50);
     }
   });
 
@@ -67,8 +123,10 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
   };
 
   const handleInsert = () => {
-    if (selectedItem()) {
-      props.onInsert(selectedItem()!.path || "");
+    const results = filteredNotes();
+    const selectedItem = results[focusedIndex()];
+    if (selectedItem) {
+      props.onInsert(selectedItem.path || "");
     }
   };
 
@@ -79,26 +137,11 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
   return (
     <>
       {/* Backdrop */}
-      <Transition
-        onEnter={(el, done) => {
-          const a = el.animate([{ opacity: 0 }, { opacity: 1 }], {
-            duration: 200,
-            easing: "ease-out",
-          });
-          a.finished.then(done);
-        }}
-        onExit={(el, done) => {
-          const a = el.animate([{ opacity: 1 }, { opacity: 0 }], {
-            duration: 150,
-            easing: "ease-in",
-          });
-          a.finished.then(done);
-        }}
-      >
+      <BackdropTransition>
         {props.isOpen && (
           <div class="fixed inset-0 bg-black/50 z-50" onClick={props.onClose} />
         )}
-      </Transition>
+      </BackdropTransition>
 
       {/* Modal Dialog */}
       <PopupTransition>
@@ -126,7 +169,7 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
                   size="sm"
                   color="primary"
                   onClick={handleInsert}
-                  disabled={!selectedItem()}
+                  disabled={filteredNotes().length === 0}
                 >
                   Insert
                 </Button>
@@ -157,6 +200,7 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
                     <Search size={16} />
                   </div>
                   <input
+                    ref={searchInputRef}
                     type="text"
                     placeholder="fo"
                     class="input input-bordered w-full pl-10 pr-10"
@@ -176,18 +220,22 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
               </div>
 
               {/* Results List */}
-              <div class="flex-1 overflow-y-auto">
+              <div class="flex-1 overflow-y-auto" ref={resultsContainerRef}>
                 <Show when={activeTab() === "notes"}>
                   <div class="p-2">
                     <For each={filteredNotes()}>
-                      {(item) => (
+                      {(item, index) => (
                         <button
+                          ref={(el) => (itemRefs[index()] = el)}
                           class={`w-full text-left px-3 py-2 rounded hover:bg-base-200 transition-colors ${
-                            selectedItem()?.id === item.id
+                            focusedIndex() === index()
                               ? "bg-primary/10 text-primary"
                               : ""
                           }`}
-                          onClick={() => setSelectedItem(item)}
+                          onClick={() => {
+                            setFocusedIndex(index());
+                            handleInsert();
+                          }}
                         >
                           <div class="font-medium text-sm">{item.title}</div>
                         </button>
@@ -231,6 +279,29 @@ const PopupTransition = (props: { children: JSXElement }) => {
           ],
           { duration: 150, easing: "cubic-bezier(0.4, 0, 1, 1)" },
         );
+        a.finished.then(done);
+      }}
+    >
+      {props.children}
+    </Transition>
+  );
+};
+
+const BackdropTransition = (props: { children: JSXElement }) => {
+  return (
+    <Transition
+      onEnter={(el, done) => {
+        const a = el.animate([{ opacity: 0 }, { opacity: 1 }], {
+          duration: 200,
+          easing: "ease-out",
+        });
+        a.finished.then(done);
+      }}
+      onExit={(el, done) => {
+        const a = el.animate([{ opacity: 1 }, { opacity: 0 }], {
+          duration: 150,
+          easing: "ease-in",
+        });
         a.finished.then(done);
       }}
     >
