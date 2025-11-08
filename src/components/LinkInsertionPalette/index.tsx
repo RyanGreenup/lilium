@@ -147,19 +147,14 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
         props.onSelect(selectedItem);
       }
     } else {
-      // External link - format and return
+      // External link - return raw data, let parent format it
       const { displayName, url } = externalLink();
       if (displayName.trim() && url.trim()) {
-        const format = props.linkFormat || "markdown";
-        const formattedLink = formatLink(
-          { id: "external", title: displayName, value: url },
-          format
-        );
         props.onSelect({
           id: "external",
           title: displayName,
-          value: formattedLink,
-          subtitle: url,
+          value: url,  // Raw URL, parent will format as needed
+          subtitle: "External link",
         });
       }
     }
