@@ -40,6 +40,10 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
 
         if (e.key === "Escape") {
           props.onClose();
+        } else if (e.key === "Tab") {
+          e.preventDefault();
+          // Toggle between tabs
+          setActiveTab((prev) => prev === "notes" ? "external" : "notes");
         } else if (e.key === "ArrowDown" || (e.altKey && e.key === "n") || (e.ctrlKey && e.key === "j") || (e.altKey && e.key === "j")) {
           e.preventDefault();
           setFocusedIndex((prev) => Math.min(prev + 1, results.length - 1));

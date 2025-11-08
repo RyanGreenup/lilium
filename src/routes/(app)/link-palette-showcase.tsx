@@ -1,7 +1,8 @@
-import { createSignal } from "solid-js";
+import { createSignal, onMount, onCleanup } from "solid-js";
 import { A } from "@solidjs/router";
 import { LinkInsertionPalette } from "~/components/LinkInsertionPalette";
 import { Button } from "~/solid-daisy-components/components/Button";
+import { Kbd } from "~/solid-daisy-components/components/Kbd";
 
 export default function LinkPaletteShowcase() {
   const [isOpen, setIsOpen] = createSignal(false);
@@ -11,6 +12,19 @@ export default function LinkPaletteShowcase() {
     setInsertedLink(link);
     setIsOpen(false);
   };
+
+  // Add keyboard shortcut to open palette
+  onMount(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "k") {
+        e.preventDefault();
+        setIsOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    onCleanup(() => window.removeEventListener("keydown", handleKeyDown));
+  });
 
   return (
     <main class="container mx-auto p-8 max-w-4xl">
@@ -28,7 +42,7 @@ export default function LinkPaletteShowcase() {
           <div class="space-y-4">
             <div>
               <p class="mb-2 text-sm text-base-content/70">
-                Click the button below to open the link insertion palette:
+                Click the button below or press <Kbd>Ctrl</Kbd>+<Kbd>K</Kbd> to open the link insertion palette:
               </p>
               <Button
                 color="primary"
@@ -57,9 +71,34 @@ export default function LinkPaletteShowcase() {
             <li>Modal overlay with backdrop</li>
             <li>Tab navigation (notes / external site)</li>
             <li>Searchable list of notes</li>
-            <li>Keyboard navigation support (planned)</li>
+            <li>Full keyboard navigation support</li>
             <li>Responsive design</li>
           </ul>
+
+          <div class="divider">Keyboard Shortcuts</div>
+
+          <div class="space-y-2 text-sm">
+            <div class="flex items-center gap-2">
+              <Kbd size="sm">Ctrl</Kbd>+<Kbd size="sm">K</Kbd>
+              <span class="text-base-content/70">Open palette</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <Kbd size="sm">↑</Kbd>/<Kbd size="sm">↓</Kbd> or <Kbd size="sm">Ctrl</Kbd>+<Kbd size="sm">K</Kbd>/<Kbd size="sm">J</Kbd>
+              <span class="text-base-content/70">Navigate list</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <Kbd size="sm">Tab</Kbd>
+              <span class="text-base-content/70">Switch tabs</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <Kbd size="sm">Enter</Kbd>
+              <span class="text-base-content/70">Insert link</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <Kbd size="sm">Esc</Kbd>
+              <span class="text-base-content/70">Close palette</span>
+            </div>
+          </div>
         </div>
       </div>
 
