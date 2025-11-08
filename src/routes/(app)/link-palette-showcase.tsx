@@ -1,5 +1,5 @@
 import { createSignal, onMount, onCleanup, Show } from "solid-js";
-import { A } from "@solidjs/router";
+import { A, useNavigate } from "@solidjs/router";
 import { LinkInsertionPalette, LinkItem } from "~/components/LinkInsertionPalette";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { Kbd } from "~/solid-daisy-components/components/Kbd";
@@ -45,14 +45,18 @@ const dummyNotes: LinkItem[] = [
 ];
 
 export default function LinkPaletteShowcase() {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = createSignal(false);
+  const [mode, setMode] = createSignal<"insert" | "navigate">("insert");
   const [insertedLink, setInsertedLink] = createSignal("");
   const [textareaContent, setTextareaContent] = createSignal("Try adding a link here. Press Ctrl+K to open the palette.");
 
   let textareaRef: HTMLTextAreaElement | undefined;
 
-  const handleInsert = (markdownLink: string, item: LinkItem) => {
-    // The value is already formatted as a markdown link: [title](id) or [title](url)
+  // Use case 1: Insert markdown link
+  const handleInsertLink = (item: LinkItem) => {
+    // Format as markdown link
+    const markdownLink = `[${item.title}](${item.value})`;
     setInsertedLink(markdownLink);
 
     // Insert at cursor position in textarea
@@ -73,6 +77,22 @@ export default function LinkPaletteShowcase() {
     }
 
     setIsOpen(false);
+  };
+
+  // Use case 2: Navigate to note
+  const handleNavigate = (item: LinkItem) => {
+    setInsertedLink(`Navigated to: ${item.title} (${item.value})`);
+    navigate(`/note/${item.value}`);
+    setIsOpen(false);
+  };
+
+  // Dispatcher based on mode
+  const handleSelect = (item: LinkItem) => {
+    if (mode() === "insert") {
+      handleInsertLink(item);
+    } else {
+      handleNavigate(item);
+    }
   };
 
   // Example 1: Client-side filtering (synchronous)
@@ -122,18 +142,41 @@ export default function LinkPaletteShowcase() {
           <div class="space-y-4">
             <div>
               <p class="mb-2 text-sm text-base-content/70">
-                Click the button below or press <Kbd>Ctrl</Kbd>+<Kbd>K</Kbd> to open the link insertion palette:
+                Choose a mode and press <Kbd>Ctrl</Kbd>+<Kbd>K</Kbd> to open the palette:
               </p>
+
+              <div class="flex gap-3 mb-3">
+                <Button
+                  color={mode() === "insert" ? "primary" : "ghost"}
+                  onClick={() => setMode("insert")}
+                  size="sm"
+                >
+                  Insert Link Mode
+                </Button>
+                <Button
+                  color={mode() === "navigate" ? "primary" : "ghost"}
+                  onClick={() => setMode("navigate")}
+                  size="sm"
+                >
+                  Navigate Mode
+                </Button>
+              </div>
+
               <Button
                 color="primary"
                 onClick={() => setIsOpen(true)}
               >
-                Open Link Palette
+                Open Link Palette ({mode() === "insert" ? "Insert" : "Navigate"})
               </Button>
+
               <div class="mt-3 p-3 bg-info/10 rounded-lg border border-info/20">
                 <p class="text-xs text-base-content/80">
+                  <strong>Current mode:</strong> {mode() === "insert"
+                    ? "Inserts markdown link into textarea"
+                    : "Navigates to /note/<id>"}
+                  <br />
                   <strong>Demo includes:</strong> Mix of UUID-style IDs and file path IDs to show flexibility.
-                  Try searching for "render", "jupyter", or "forums". Use Tab to switch to external tab for custom URLs.
+                  Try searching for "render", "jupyter", or "forums".
                 </p>
               </div>
             </div>
@@ -237,10 +280,11 @@ export default function LinkPaletteShowcase() {
 
             <p class="font-semibold mt-4">Use Cases:</p>
             <ul class="list-disc list-inside space-y-1 ml-4 text-base-content/70">
-              <li><strong>Notes tab:</strong> Search notes, inserts as <code class="text-xs">[title](id)</code></li>
-              <li><strong>External tab:</strong> Manual URL entry, inserts as <code class="text-xs">[name](url)</code></li>
+              <li><strong>Insert links:</strong> Format as <code class="text-xs">[title](id)</code> and insert at cursor</li>
+              <li><strong>Navigate:</strong> Navigate to <code class="text-xs">/note/&lt;id&gt;</code> when selected</li>
+              <li><strong>Copy to clipboard:</strong> Copy note details or links</li>
+              <li><strong>Custom actions:</strong> Parent component decides what to do with selected item</li>
               <li><strong>Flexible IDs:</strong> Works with UUIDs, file paths, or any identifier</li>
-              <li><strong>Custom insertion:</strong> Parent component controls where links are inserted</li>
             </ul>
           </div>
 
@@ -261,7 +305,7 @@ export default function LinkPaletteShowcase() {
             </div>
             <div class="flex items-center gap-2">
               <Kbd size="sm">Enter</Kbd>
-              <span class="text-base-content/70">Insert selected link</span>
+              <span class="text-base-content/70">Select item (insert or navigate based on mode)</span>
             </div>
             <div class="flex items-center gap-2">
               <Kbd size="sm">Esc</Kbd>
@@ -269,7 +313,7 @@ export default function LinkPaletteShowcase() {
             </div>
           </div>
           <p class="text-xs text-base-content/60 mt-3">
-            <strong>Note:</strong> Both tabs insert markdown links. Notes: <code class="text-xs">[title](id)</code>, External: <code class="text-xs">[name](url)</code>
+            <strong>Note:</strong> Component is action-agnostic. Parent decides what happens on selection (insert, navigate, copy, etc.)
           </p>
         </div>
       </div>
@@ -283,7 +327,7 @@ export default function LinkPaletteShowcase() {
       <LinkInsertionPalette
         isOpen={isOpen()}
         onClose={() => setIsOpen(false)}
-        onInsert={handleInsert}
+        onSelect={handleSelect}
         // Try switching to sync version with no loading states
         // searchNotes={searchNotesClientSide}
         // Try switching to async version to see loading states:

@@ -1,20 +1,19 @@
 /**
- * LinkInsertionPalette - A flexible, keyboard-driven link insertion component
+ * LinkInsertionPalette - A flexible, keyboard-driven selection component
  *
  * Architecture:
  * - Data-agnostic: Component manages UI state only (search term, focused index, animations)
+ * - Action-agnostic: Parent decides what to do with selected items (navigate, insert, etc.)
  * - Flexible data sources: Accept callbacks for both sync and async data fetching
  * - Dual-mode operation:
  *   1. Notes tab: Search through notes/content using provided callback
  *   2. External tab: Manual entry of display name + URL
- * - Always inserts markdown links: [title](id) or [title](url)
- * - Parent controls insertion: Component provides formatted link, parent decides where to insert
  *
  * Use cases:
- *   1. Client-side filtering: Pre-load all items, filter with JavaScript
- *   2. Server-side FTS: Query SQLite with async callback
- *   3. External links: Manual URL entry
- *   4. Works with UUIDs, file paths, or any identifier in the value field
+ *   1. Navigate to note: onSelect receives item, navigates to `/note/${item.value}`
+ *   2. Insert link: onSelect formats as `[${item.title}](${item.value})` and inserts
+ *   3. Copy to clipboard: onSelect copies item details
+ *   4. Any custom action
  *
  * Example Usage:
  *
@@ -30,19 +29,27 @@
  *     }));
  * };
  *
- * // Server-side FTS (asynchronous)
- * const searchNotes = async (term: string) => await ftsQuery(term);
+ * // Use case 1: Navigate to note
+ * const handleNavigate = (item: LinkItem) => {
+ *   navigate(`/note/${item.value}`);
+ * };
  *
- * // Handle insertion at cursor position
- * // The value parameter will be a markdown link: [title](id)
- * const handleInsert = (markdownLink: string, item: LinkItem) => {
- *   insertAtCursor(markdownLink); // Your custom insertion logic
+ * // Use case 2: Insert markdown link
+ * const handleInsertLink = (item: LinkItem) => {
+ *   const markdownLink = `[${item.title}](${item.value})`;
+ *   insertAtCursor(markdownLink);
+ * };
+ *
+ * // Use case 3: Insert external URL
+ * const handleInsertExternal = (item: LinkItem) => {
+ *   // For external tab, item.value is already the full markdown link
+ *   insertAtCursor(item.value);
  * };
  *
  * <LinkInsertionPalette
  *   isOpen={isOpen()}
  *   onClose={() => setIsOpen(false)}
- *   onInsert={handleInsert}
+ *   onSelect={handleInsertLink}  // Or handleNavigate, or any custom handler
  *   searchNotes={searchNotes}
  * />
  */
@@ -71,7 +78,7 @@ export interface LinkItem {
 interface LinkInsertionPaletteProps {
   isOpen: boolean;
   onClose: () => void;
-  onInsert: (value: string, item: LinkItem) => void;
+  onSelect: (item: LinkItem) => void;  // Parent decides what to do with selected item
 
   // Data provider for notes tab - supports both sync and async
   searchNotes: (searchTerm: string) => Promise<LinkItem[]> | LinkItem[];
@@ -133,7 +140,7 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
           setFocusedIndex((prev) => Math.max(prev - 1, 0));
         } else if (e.key === "Enter") {
           e.preventDefault();
-          handleInsert();
+          handleSelect();
         }
       };
 
@@ -233,25 +240,23 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
     onCleanup(() => clearTimeout(timeoutId));
   });
 
-  const handleInsert = () => {
+  const handleSelect = () => {
     if (activeTab() === "notes") {
       const results = currentResults();
       const selectedItem = results[focusedIndex()];
       if (selectedItem) {
-        // Format as markdown link: [title](id)
-        const markdownLink = `[${selectedItem.title}](${selectedItem.value})`;
-        props.onInsert(markdownLink, selectedItem);
+        props.onSelect(selectedItem);
       }
     } else {
-      // External link - create markdown link
+      // External link - create item with markdown link as value
       const displayName = externalDisplayName();
       const url = externalUrl();
       if (displayName && url) {
         const markdownLink = `[${displayName}](${url})`;
-        props.onInsert(markdownLink, {
+        props.onSelect({
           id: "external",
           title: displayName,
-          value: markdownLink,
+          value: markdownLink,  // For external, value IS the markdown link
           subtitle: url,
         });
       }
@@ -262,7 +267,7 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
     setSearchTerm("");
   };
 
-  const canInsert = () => {
+  const canSelect = () => {
     if (activeTab() === "notes") {
       return currentResults().length > 0 && !isLoading();
     } else {
@@ -304,10 +309,10 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
                 <Button
                   size="sm"
                   color="primary"
-                  onClick={handleInsert}
-                  disabled={!canInsert()}
+                  onClick={handleSelect}
+                  disabled={!canSelect()}
                 >
-                  Insert
+                  Select
                 </Button>
               </div>
 
@@ -418,7 +423,7 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
                               }`}
                               onClick={() => {
                                 setFocusedIndex(index());
-                                handleInsert();
+                                handleSelect();
                               }}
                             >
                               <div class="font-medium text-sm">{item.title}</div>
