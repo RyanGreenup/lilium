@@ -50,7 +50,8 @@ export default function LinkPaletteShowcase() {
   const [mode, setMode] = createSignal<"insert" | "navigate">("insert");
   const [linkFormat, setLinkFormat] = createSignal<LinkFormat>("markdown");
   const [insertedLink, setInsertedLink] = createSignal("");
-  const [textareaContent, setTextareaContent] = createSignal("Try adding a link here. Press Ctrl+K to open the palette.");
+  const [textareaContent, setTextareaContent] = createSignal("Try adding a link here. Press Ctrl+K to open the palette, or type [[ to trigger it automatically.");
+  const [triggerPosition, setTriggerPosition] = createSignal<number | null>(null);
 
   let textareaRef: HTMLTextAreaElement | undefined;
 
@@ -62,9 +63,21 @@ export default function LinkPaletteShowcase() {
 
     // Insert at cursor position in textarea
     if (textareaRef) {
-      const start = textareaRef.selectionStart;
-      const end = textareaRef.selectionEnd;
       const currentText = textareaContent();
+      const triggerPos = triggerPosition();
+
+      let start, end;
+
+      if (triggerPos !== null) {
+        // Triggered by [[, replace the [[ with the link
+        start = triggerPos - 2; // Position before [[
+        end = textareaRef.selectionStart;
+      } else {
+        // Triggered by Ctrl+K, insert at cursor
+        start = textareaRef.selectionStart;
+        end = textareaRef.selectionEnd;
+      }
+
       const newText = currentText.substring(0, start) + formattedLink + currentText.substring(end);
       setTextareaContent(newText);
 
@@ -78,6 +91,7 @@ export default function LinkPaletteShowcase() {
     }
 
     setIsOpen(false);
+    setTriggerPosition(null);
   };
 
   // Use case 2: Navigate to note
@@ -94,6 +108,31 @@ export default function LinkPaletteShowcase() {
     } else {
       handleNavigate(item);
     }
+  };
+
+  // Detect [[ being typed to auto-trigger palette
+  const handleTextareaInput = (e: Event) => {
+    const target = e.currentTarget as HTMLTextAreaElement;
+    const value = target.value;
+    setTextareaContent(value);
+
+    // Check if user just typed [[
+    const cursorPos = target.selectionStart;
+    if (cursorPos >= 2) {
+      const lastTwoChars = value.substring(cursorPos - 2, cursorPos);
+      if (lastTwoChars === "[[") {
+        // Auto-trigger the palette
+        setTriggerPosition(cursorPos);
+        setMode("insert"); // Force insert mode when triggered by [[
+        setIsOpen(true);
+      }
+    }
+  };
+
+  // Handle palette close
+  const handleClose = () => {
+    setIsOpen(false);
+    setTriggerPosition(null);
   };
 
   // Example 1: Client-side filtering (synchronous)
@@ -207,6 +246,8 @@ export default function LinkPaletteShowcase() {
                     ? `Inserts ${linkFormat()} link into textarea`
                     : "Navigates to /note/<id>"}
                   <br />
+                  <strong>Auto-trigger:</strong> Type <code class="text-xs">[[</code> in the textarea to automatically open the palette!
+                  <br />
                   <strong>Demo includes:</strong> Mix of UUID-style IDs and file path IDs to show flexibility.
                   Try searching for "render", "jupyter", or "forums".
                 </p>
@@ -221,11 +262,11 @@ export default function LinkPaletteShowcase() {
                 ref={textareaRef}
                 class="textarea textarea-bordered w-full h-32 font-mono text-sm"
                 value={textareaContent()}
-                onInput={(e) => setTextareaContent(e.currentTarget.value)}
-                placeholder="Type here and press Ctrl+K to insert a link..."
+                onInput={handleTextareaInput}
+                placeholder="Type here and press Ctrl+K to insert a link, or type [[ to auto-trigger..."
               />
               <p class="text-xs text-base-content/60 mt-1">
-                Click inside the textarea and press <Kbd size="xs">Ctrl</Kbd>+<Kbd size="xs">K</Kbd> to insert a link at the cursor position
+                💡 <strong>Two ways to trigger:</strong> Press <Kbd size="xs">Ctrl</Kbd>+<Kbd size="xs">K</Kbd> or type <code class="text-xs">[[</code> to open the palette
               </p>
             </div>
 
@@ -276,6 +317,7 @@ export default function LinkPaletteShowcase() {
             <li>Supports both sync and async search functions</li>
             <li>Full keyboard navigation support</li>
             <li>Loading states and error handling</li>
+            <li>Auto-trigger on <code class="text-xs">[[</code> typing (Obsidian-style)</li>
             <li>Responsive design</li>
           </ul>
 
@@ -375,7 +417,7 @@ export default function LinkPaletteShowcase() {
 
       <LinkInsertionPalette
         isOpen={isOpen()}
-        onClose={() => setIsOpen(false)}
+        onClose={handleClose}
         onSelect={handleSelect}
         linkFormat={linkFormat()}
         // Try switching to sync version with no loading states
