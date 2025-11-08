@@ -4,14 +4,19 @@
  * Architecture:
  * - Data-agnostic: Component manages UI state only (search term, focused index, animations)
  * - Action-agnostic: Parent decides what to do with selected items (navigate, insert, etc.)
+ * - Format-aware: Supports both markdown and org-mode link formats
  * - Flexible data sources: Accept callbacks for both sync and async data fetching
  * - Dual-mode operation:
  *   1. Notes tab: Search through notes/content using provided callback
- *   2. External tab: Manual entry of display name + URL
+ *   2. External tab: Manual entry of display name + URL (auto-formatted)
+ *
+ * Link Formats:
+ * - Markdown: [title](url)
+ * - Org-mode: [[url][title]]
  *
  * Use cases:
  *   1. Navigate to note: onSelect receives item, navigates to `/note/${item.value}`
- *   2. Insert link: onSelect formats as `[${item.title}](${item.value})` and inserts
+ *   2. Insert link: Use formatLink() helper to format and insert
  *   3. Copy to clipboard: onSelect copies item details
  *   4. Any custom action
  *
@@ -34,23 +39,18 @@
  *   navigate(`/note/${item.value}`);
  * };
  *
- * // Use case 2: Insert markdown link
+ * // Use case 2: Insert formatted link
  * const handleInsertLink = (item: LinkItem) => {
- *   const markdownLink = `[${item.title}](${item.value})`;
- *   insertAtCursor(markdownLink);
- * };
- *
- * // Use case 3: Insert external URL
- * const handleInsertExternal = (item: LinkItem) => {
- *   // For external tab, item.value is already the full markdown link
- *   insertAtCursor(item.value);
+ *   const formattedLink = formatLink(item, linkFormat);
+ *   insertAtCursor(formattedLink);
  * };
  *
  * <LinkInsertionPalette
  *   isOpen={isOpen()}
  *   onClose={() => setIsOpen(false)}
- *   onSelect={handleInsertLink}  // Or handleNavigate, or any custom handler
+ *   onSelect={handleInsertLink}
  *   searchNotes={searchNotes}
+ *   linkFormat="markdown"  // or "org"
  * />
  */
 
@@ -71,9 +71,11 @@ import { Loading } from "~/solid-daisy-components/components/Loading";
 export interface LinkItem {
   id: string;
   title: string;
-  value: string; // The identifier (UUID, file path, etc.) - used in markdown link as [title](value)
+  value: string; // The identifier (UUID, file path, etc.)
   subtitle?: string; // Optional secondary info to display (e.g., full path)
 }
+
+export type LinkFormat = "markdown" | "org";
 
 interface LinkInsertionPaletteProps {
   isOpen: boolean;
@@ -87,6 +89,24 @@ interface LinkInsertionPaletteProps {
   searchExternalSites?: (
     searchTerm: string,
   ) => Promise<LinkItem[]> | LinkItem[];
+
+  // Link format for external links (notes are handled by parent)
+  linkFormat?: LinkFormat;
+}
+
+/**
+ * Format a link item according to the specified format
+ *
+ * @param item - The link item to format
+ * @param format - "markdown" for [title](url) or "org" for [[url][title]]
+ * @returns Formatted link string
+ */
+export function formatLink(item: LinkItem, format: LinkFormat = "markdown"): string {
+  if (format === "org") {
+    return `[[${item.value}][${item.title}]]`;
+  }
+  // markdown (default)
+  return `[${item.title}](${item.value})`;
 }
 
 export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
@@ -248,15 +268,19 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
         props.onSelect(selectedItem);
       }
     } else {
-      // External link - create item with markdown link as value
+      // External link - create item with formatted link as value
       const displayName = externalDisplayName();
       const url = externalUrl();
       if (displayName && url) {
-        const markdownLink = `[${displayName}](${url})`;
+        const format = props.linkFormat || "markdown";
+        const formattedLink = formatLink(
+          { id: "external", title: displayName, value: url },
+          format
+        );
         props.onSelect({
           id: "external",
           title: displayName,
-          value: markdownLink,  // For external, value IS the markdown link
+          value: formattedLink,  // For external, value IS the formatted link
           subtitle: url,
         });
       }

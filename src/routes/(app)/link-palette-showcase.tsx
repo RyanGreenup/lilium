@@ -1,6 +1,6 @@
 import { createSignal, onMount, onCleanup, Show } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
-import { LinkInsertionPalette, LinkItem } from "~/components/LinkInsertionPalette";
+import { LinkInsertionPalette, LinkItem, LinkFormat, formatLink } from "~/components/LinkInsertionPalette";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { Kbd } from "~/solid-daisy-components/components/Kbd";
 
@@ -48,29 +48,30 @@ export default function LinkPaletteShowcase() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = createSignal(false);
   const [mode, setMode] = createSignal<"insert" | "navigate">("insert");
+  const [linkFormat, setLinkFormat] = createSignal<LinkFormat>("markdown");
   const [insertedLink, setInsertedLink] = createSignal("");
   const [textareaContent, setTextareaContent] = createSignal("Try adding a link here. Press Ctrl+K to open the palette.");
 
   let textareaRef: HTMLTextAreaElement | undefined;
 
-  // Use case 1: Insert markdown link
+  // Use case 1: Insert formatted link
   const handleInsertLink = (item: LinkItem) => {
-    // Format as markdown link
-    const markdownLink = `[${item.title}](${item.value})`;
-    setInsertedLink(markdownLink);
+    // Format link according to selected format
+    const formattedLink = formatLink(item, linkFormat());
+    setInsertedLink(formattedLink);
 
     // Insert at cursor position in textarea
     if (textareaRef) {
       const start = textareaRef.selectionStart;
       const end = textareaRef.selectionEnd;
       const currentText = textareaContent();
-      const newText = currentText.substring(0, start) + markdownLink + currentText.substring(end);
+      const newText = currentText.substring(0, start) + formattedLink + currentText.substring(end);
       setTextareaContent(newText);
 
       // Set cursor position after inserted text
       setTimeout(() => {
         if (textareaRef) {
-          textareaRef.selectionStart = textareaRef.selectionEnd = start + markdownLink.length;
+          textareaRef.selectionStart = textareaRef.selectionEnd = start + formattedLink.length;
           textareaRef.focus();
         }
       }, 0);
@@ -142,37 +143,68 @@ export default function LinkPaletteShowcase() {
           <div class="space-y-4">
             <div>
               <p class="mb-2 text-sm text-base-content/70">
-                Choose a mode and press <Kbd>Ctrl</Kbd>+<Kbd>K</Kbd> to open the palette:
+                Choose mode and format, then press <Kbd>Ctrl</Kbd>+<Kbd>K</Kbd> to open the palette:
               </p>
 
-              <div class="flex gap-3 mb-3">
-                <Button
-                  color={mode() === "insert" ? "primary" : "ghost"}
-                  onClick={() => setMode("insert")}
-                  size="sm"
-                >
-                  Insert Link Mode
-                </Button>
-                <Button
-                  color={mode() === "navigate" ? "primary" : "ghost"}
-                  onClick={() => setMode("navigate")}
-                  size="sm"
-                >
-                  Navigate Mode
-                </Button>
+              <div class="space-y-3 mb-3">
+                <div>
+                  <p class="text-xs font-semibold mb-1">Mode:</p>
+                  <div class="flex gap-2">
+                    <Button
+                      variant={mode() === "insert" ? "default" : "ghost"}
+                      color="primary"
+                      onClick={() => setMode("insert")}
+                      size="sm"
+                    >
+                      Insert Link
+                    </Button>
+                    <Button
+                      variant={mode() === "navigate" ? "default" : "ghost"}
+                      color="primary"
+                      onClick={() => setMode("navigate")}
+                      size="sm"
+                    >
+                      Navigate
+                    </Button>
+                  </div>
+                </div>
+
+                <Show when={mode() === "insert"}>
+                  <div>
+                    <p class="text-xs font-semibold mb-1">Link Format:</p>
+                    <div class="flex gap-2">
+                      <Button
+                        variant={linkFormat() === "markdown" ? "default" : "ghost"}
+                        color="primary"
+                        onClick={() => setLinkFormat("markdown")}
+                        size="sm"
+                      >
+                        Markdown
+                      </Button>
+                      <Button
+                        variant={linkFormat() === "org" ? "default" : "ghost"}
+                        color="primary"
+                        onClick={() => setLinkFormat("org")}
+                        size="sm"
+                      >
+                        Org-mode
+                      </Button>
+                    </div>
+                  </div>
+                </Show>
               </div>
 
               <Button
                 color="primary"
                 onClick={() => setIsOpen(true)}
               >
-                Open Link Palette ({mode() === "insert" ? "Insert" : "Navigate"})
+                Open Link Palette
               </Button>
 
               <div class="mt-3 p-3 bg-info/10 rounded-lg border border-info/20">
                 <p class="text-xs text-base-content/80">
                   <strong>Current mode:</strong> {mode() === "insert"
-                    ? "Inserts markdown link into textarea"
+                    ? `Inserts ${linkFormat()} link into textarea`
                     : "Navigates to /note/<id>"}
                   <br />
                   <strong>Demo includes:</strong> Mix of UUID-style IDs and file path IDs to show flexibility.
@@ -250,21 +282,36 @@ export default function LinkPaletteShowcase() {
           <div class="divider">Output Examples</div>
 
           <div class="space-y-2 text-sm">
-            <p class="font-semibold">Notes tab output examples:</p>
+            <p class="font-semibold">Markdown format:</p>
             <div class="bg-base-100 p-3 rounded border border-base-300 space-y-2">
               <div>
-                <p class="text-xs text-base-content/60">UUID format:</p>
+                <p class="text-xs text-base-content/60">Notes with UUID:</p>
                 <code class="text-xs">[Forgejo](a1b2c3d4-e5f6-7890-abcd-ef1234567890)</code>
               </div>
               <div>
-                <p class="text-xs text-base-content/60">File path format:</p>
+                <p class="text-xs text-base-content/60">Notes with file path:</p>
                 <code class="text-xs">[Render Jupyter Notebooks](notes/projects/forgejo/render-jupyter.md)</code>
+              </div>
+              <div>
+                <p class="text-xs text-base-content/60">External URL:</p>
+                <code class="text-xs">[Example Site](https://example.com)</code>
               </div>
             </div>
 
-            <p class="font-semibold mt-3">External tab output:</p>
-            <div class="bg-base-100 p-3 rounded border border-base-300">
-              <code class="text-xs">[Example Site](https://example.com)</code>
+            <p class="font-semibold mt-3">Org-mode format:</p>
+            <div class="bg-base-100 p-3 rounded border border-base-300 space-y-2">
+              <div>
+                <p class="text-xs text-base-content/60">Notes with UUID:</p>
+                <code class="text-xs">[[a1b2c3d4-e5f6-7890-abcd-ef1234567890][Forgejo]]</code>
+              </div>
+              <div>
+                <p class="text-xs text-base-content/60">Notes with file path:</p>
+                <code class="text-xs">[[notes/projects/forgejo/render-jupyter.md][Render Jupyter Notebooks]]</code>
+              </div>
+              <div>
+                <p class="text-xs text-base-content/60">External URL:</p>
+                <code class="text-xs">[[https://example.com][Example Site]]</code>
+              </div>
             </div>
           </div>
 
@@ -280,11 +327,12 @@ export default function LinkPaletteShowcase() {
 
             <p class="font-semibold mt-4">Use Cases:</p>
             <ul class="list-disc list-inside space-y-1 ml-4 text-base-content/70">
-              <li><strong>Insert links:</strong> Format as <code class="text-xs">[title](id)</code> and insert at cursor</li>
+              <li><strong>Insert links:</strong> Markdown <code class="text-xs">[title](id)</code> or Org-mode <code class="text-xs">[[id][title]]</code></li>
               <li><strong>Navigate:</strong> Navigate to <code class="text-xs">/note/&lt;id&gt;</code> when selected</li>
-              <li><strong>Copy to clipboard:</strong> Copy note details or links</li>
+              <li><strong>Copy to clipboard:</strong> Copy note details or formatted links</li>
               <li><strong>Custom actions:</strong> Parent component decides what to do with selected item</li>
               <li><strong>Flexible IDs:</strong> Works with UUIDs, file paths, or any identifier</li>
+              <li><strong>Format support:</strong> Automatic formatting for both markdown and org-mode</li>
             </ul>
           </div>
 
@@ -313,7 +361,8 @@ export default function LinkPaletteShowcase() {
             </div>
           </div>
           <p class="text-xs text-base-content/60 mt-3">
-            <strong>Note:</strong> Component is action-agnostic. Parent decides what happens on selection (insert, navigate, copy, etc.)
+            <strong>Note:</strong> Component is action-agnostic. Parent decides what happens on selection (insert, navigate, copy, etc.).
+            Use the <code class="text-xs">formatLink()</code> helper to format links in markdown or org-mode.
           </p>
         </div>
       </div>
@@ -328,6 +377,7 @@ export default function LinkPaletteShowcase() {
         isOpen={isOpen()}
         onClose={() => setIsOpen(false)}
         onSelect={handleSelect}
+        linkFormat={linkFormat()}
         // Try switching to sync version with no loading states
         // searchNotes={searchNotesClientSide}
         // Try switching to async version to see loading states:
