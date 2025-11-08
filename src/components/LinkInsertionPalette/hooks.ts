@@ -69,8 +69,8 @@ export function useKeyboardNavigation(
         return;
       }
 
-      // Toggle tabs
-      if (e.key === "Tab" && handlers.onToggleTab) {
+      // Toggle tabs with Alt+Left/Right arrows
+      if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && e.altKey && handlers.onToggleTab) {
         e.preventDefault();
         handlers.onToggleTab();
         return;
