@@ -1,3 +1,30 @@
+/**
+ * LinkInsertionPalette - A flexible, keyboard-driven link insertion component
+ *
+ * Architecture:
+ * - Data-agnostic: Component manages UI state only (search term, focused index, animations)
+ * - Flexible data sources: Accept callbacks for both sync and async data fetching
+ * - Use cases:
+ *   1. Client-side filtering: Pre-load all items, filter with JavaScript
+ *   2. Server-side FTS: Query SQLite with async callback
+ *   3. API calls: Fetch from external search endpoints
+ *
+ * Example Usage:
+ *
+ * // Client-side filtering (synchronous)
+ * const searchNotes = (term: string) => allNotes.filter(n => n.title.includes(term));
+ *
+ * // Server-side FTS (asynchronous)
+ * const searchNotes = async (term: string) => await ftsQuery(term);
+ *
+ * <LinkInsertionPalette
+ *   isOpen={isOpen()}
+ *   onClose={() => setIsOpen(false)}
+ *   onInsert={(value, item) => insertLink(value)}
+ *   searchNotes={searchNotes}
+ * />
+ */
+
 import {
   createSignal,
   For,
@@ -11,32 +38,47 @@ import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { Search, X } from "lucide-solid";
 
-interface LinkItem {
+export interface LinkItem {
   id: string;
   title: string;
-  path?: string;
+  value: string;        // What gets inserted (path, URL, etc.)
+  subtitle?: string;    // Optional secondary info to display
 }
 
 interface LinkInsertionPaletteProps {
   isOpen: boolean;
   onClose: () => void;
-  onInsert: (link: string) => void;
+  onInsert: (value: string, item: LinkItem) => void;
+
+  // Data provider for notes tab - supports both sync and async
+  searchNotes: (searchTerm: string) => Promise<LinkItem[]> | LinkItem[];
+
+  // Optional: for external sites (if not provided, shows placeholder)
+  searchExternalSites?: (searchTerm: string) => Promise<LinkItem[]> | LinkItem[];
 }
 
 export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
   const [activeTab, setActiveTab] = createSignal<"notes" | "external">("notes");
   const [searchTerm, setSearchTerm] = createSignal("");
   const [focusedIndex, setFocusedIndex] = createSignal(0);
+  const [notesResults, setNotesResults] = createSignal<LinkItem[]>([]);
+  const [externalResults, setExternalResults] = createSignal<LinkItem[]>([]);
+  const [isLoading, setIsLoading] = createSignal(false);
 
   let searchInputRef: HTMLInputElement | undefined;
   let resultsContainerRef: HTMLDivElement | undefined;
   const itemRefs: (HTMLButtonElement | undefined)[] = [];
 
+  // Get current results based on active tab
+  const currentResults = () => {
+    return activeTab() === "notes" ? notesResults() : externalResults();
+  };
+
   // Handle keyboard navigation
   createEffect(() => {
     if (props.isOpen) {
       const handleKeyDown = (e: KeyboardEvent) => {
-        const results = filteredNotes();
+        const results = currentResults();
 
         if (e.key === "Escape") {
           props.onClose();
@@ -54,7 +96,7 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
           e.preventDefault();
           const selectedItem = results[focusedIndex()];
           if (selectedItem) {
-            props.onInsert(selectedItem.path || "");
+            props.onInsert(selectedItem.value, selectedItem);
           }
         }
       };
@@ -102,35 +144,64 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
     }
   });
 
-  // Dummy data for now
-  const dummyNotes: LinkItem[] = [
-    { id: "1", title: "Forgejo", path: "/note/1" },
-    {
-      id: "2",
-      title: "Forgejo/Indexing Markdown Repositories",
-      path: "/note/2",
-    },
-    { id: "3", title: "Forgejo/Render Jupyter", path: "/note/3" },
-    { id: "4", title: "Forgejo/Render Math", path: "/note/4" },
-    {
-      id: "5",
-      title: "Forgejo/Render Math/Async Javascript and Callback",
-      path: "/note/5",
-    },
-    { id: "6", title: "Forums to Review", path: "/note/6" },
-  ];
+  // Debounced search effect
+  createEffect(() => {
+    const term = searchTerm();
+    const tab = activeTab();
 
-  const filteredNotes = () => {
-    const term = searchTerm().toLowerCase();
-    if (!term) return dummyNotes;
-    return dummyNotes.filter((note) => note.title.toLowerCase().includes(term));
-  };
+    // Clear results immediately when search term changes for better UX
+    if (tab === "notes") {
+      setNotesResults([]);
+    } else {
+      setExternalResults([]);
+    }
+
+    const timeoutId = setTimeout(async () => {
+      if (!term || term.length < 1) {
+        // Optionally, you can still call with empty string to get all results
+        // For now, just clear results
+        if (tab === "notes") {
+          setNotesResults([]);
+        } else {
+          setExternalResults([]);
+        }
+        return;
+      }
+
+      setIsLoading(true);
+
+      try {
+        if (tab === "notes") {
+          const result = props.searchNotes(term);
+          // Handle both sync and async results
+          const items = result instanceof Promise ? await result : result;
+          setNotesResults(items);
+        } else if (tab === "external" && props.searchExternalSites) {
+          const result = props.searchExternalSites(term);
+          const items = result instanceof Promise ? await result : result;
+          setExternalResults(items);
+        }
+      } catch (error) {
+        console.error("Search error:", error);
+        // On error, set empty results
+        if (tab === "notes") {
+          setNotesResults([]);
+        } else {
+          setExternalResults([]);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300);
+
+    onCleanup(() => clearTimeout(timeoutId));
+  });
 
   const handleInsert = () => {
-    const results = filteredNotes();
+    const results = currentResults();
     const selectedItem = results[focusedIndex()];
     if (selectedItem) {
-      props.onInsert(selectedItem.path || "");
+      props.onInsert(selectedItem.value, selectedItem);
     }
   };
 
@@ -173,7 +244,7 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
                   size="sm"
                   color="primary"
                   onClick={handleInsert}
-                  disabled={filteredNotes().length === 0}
+                  disabled={currentResults().length === 0 || isLoading()}
                 >
                   Insert
                 </Button>
@@ -225,33 +296,62 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
 
               {/* Results List */}
               <div class="flex-1 overflow-y-auto" ref={resultsContainerRef}>
-                <Show when={activeTab() === "notes"}>
-                  <div class="p-2">
-                    <For each={filteredNotes()}>
-                      {(item, index) => (
-                        <button
-                          ref={(el) => (itemRefs[index()] = el)}
-                          class={`w-full text-left px-3 py-2 rounded hover:bg-base-200 transition-colors ${
-                            focusedIndex() === index()
-                              ? "bg-primary/10 text-primary"
-                              : ""
-                          }`}
-                          onClick={() => {
-                            setFocusedIndex(index());
-                            handleInsert();
-                          }}
+                <Show
+                  when={!isLoading()}
+                  fallback={
+                    <div class="p-4 text-center">
+                      <div class="loading loading-spinner loading-sm"></div>
+                      <div class="text-sm text-base-content/60 mt-2">
+                        Searching...
+                      </div>
+                    </div>
+                  }
+                >
+                  <Show
+                    when={currentResults().length > 0}
+                    fallback={
+                      <div class="p-4 text-center text-base-content/60">
+                        <Show
+                          when={searchTerm().length > 0}
+                          fallback={
+                            <p class="text-sm">
+                              {activeTab() === "external" && !props.searchExternalSites
+                                ? "External site linking coming soon"
+                                : "Start typing to search..."}
+                            </p>
+                          }
                         >
-                          <div class="font-medium text-sm">{item.title}</div>
-                        </button>
-                      )}
-                    </For>
-                  </div>
-                </Show>
-
-                <Show when={activeTab() === "external"}>
-                  <div class="p-4 text-center text-base-content/60">
-                    <p class="text-sm">External site linking coming soon</p>
-                  </div>
+                          <p class="text-sm">No results found</p>
+                        </Show>
+                      </div>
+                    }
+                  >
+                    <div class="p-2">
+                      <For each={currentResults()}>
+                        {(item, index) => (
+                          <button
+                            ref={(el) => (itemRefs[index()] = el)}
+                            class={`w-full text-left px-3 py-2 rounded hover:bg-base-200 transition-colors ${
+                              focusedIndex() === index()
+                                ? "bg-primary/10 text-primary"
+                                : ""
+                            }`}
+                            onClick={() => {
+                              setFocusedIndex(index());
+                              handleInsert();
+                            }}
+                          >
+                            <div class="font-medium text-sm">{item.title}</div>
+                            <Show when={item.subtitle}>
+                              <div class="text-xs text-base-content/60 mt-0.5">
+                                {item.subtitle}
+                              </div>
+                            </Show>
+                          </button>
+                        )}
+                      </For>
+                    </div>
+                  </Show>
                 </Show>
               </div>
             </div>
