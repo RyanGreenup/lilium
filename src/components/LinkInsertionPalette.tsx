@@ -37,12 +37,13 @@ import { Transition } from "solid-transition-group";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { Search, X } from "lucide-solid";
+import { Loading } from "~/solid-daisy-components/components/Loading";
 
 export interface LinkItem {
   id: string;
   title: string;
-  value: string;        // What gets inserted (path, URL, etc.)
-  subtitle?: string;    // Optional secondary info to display
+  value: string; // What gets inserted (path, URL, etc.)
+  subtitle?: string; // Optional secondary info to display
 }
 
 interface LinkInsertionPaletteProps {
@@ -54,7 +55,9 @@ interface LinkInsertionPaletteProps {
   searchNotes: (searchTerm: string) => Promise<LinkItem[]> | LinkItem[];
 
   // Optional: for external sites (if not provided, shows placeholder)
-  searchExternalSites?: (searchTerm: string) => Promise<LinkItem[]> | LinkItem[];
+  searchExternalSites?: (
+    searchTerm: string,
+  ) => Promise<LinkItem[]> | LinkItem[];
 }
 
 export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
@@ -85,11 +88,21 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
         } else if (e.key === "Tab") {
           e.preventDefault();
           // Toggle between tabs
-          setActiveTab((prev) => prev === "notes" ? "external" : "notes");
-        } else if (e.key === "ArrowDown" || (e.altKey && e.key === "n") || (e.ctrlKey && e.key === "j") || (e.altKey && e.key === "j")) {
+          setActiveTab((prev) => (prev === "notes" ? "external" : "notes"));
+        } else if (
+          e.key === "ArrowDown" ||
+          (e.altKey && e.key === "n") ||
+          (e.ctrlKey && e.key === "j") ||
+          (e.altKey && e.key === "j")
+        ) {
           e.preventDefault();
           setFocusedIndex((prev) => Math.min(prev + 1, results.length - 1));
-        } else if (e.key === "ArrowUp" || (e.altKey && e.key === "p") || (e.ctrlKey && e.key === "k") || (e.altKey && e.key === "k")) {
+        } else if (
+          e.key === "ArrowUp" ||
+          (e.altKey && e.key === "p") ||
+          (e.ctrlKey && e.key === "k") ||
+          (e.altKey && e.key === "k")
+        ) {
           e.preventDefault();
           setFocusedIndex((prev) => Math.max(prev - 1, 0));
         } else if (e.key === "Enter") {
@@ -300,7 +313,8 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
                   when={!isLoading()}
                   fallback={
                     <div class="p-4 text-center">
-                      <div class="loading loading-spinner loading-sm"></div>
+                      {/*<div class="loading loading-spinner loading-sm"></div>*/}
+                      <Loading variant="dots" />
                       <div class="text-sm text-base-content/60 mt-2">
                         Searching...
                       </div>
@@ -315,7 +329,8 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
                           when={searchTerm().length > 0}
                           fallback={
                             <p class="text-sm">
-                              {activeTab() === "external" && !props.searchExternalSites
+                              {activeTab() === "external" &&
+                              !props.searchExternalSites
                                 ? "External site linking coming soon"
                                 : "Start typing to search..."}
                             </p>
