@@ -60,6 +60,7 @@ interface LinkInsertionPaletteProps {
   searchNotes: (searchTerm: string) => Promise<LinkItem[]> | LinkItem[];
   searchExternalSites?: (searchTerm: string) => Promise<LinkItem[]> | LinkItem[];
   linkFormat?: LinkFormat;
+  clearOnToggle?: boolean; // Clear search/external fields when opening or closing (default: true)
 }
 
 export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
@@ -108,6 +109,18 @@ export const LinkInsertionPalette = (props: LinkInsertionPaletteProps) => {
     searchTerm();
     activeTab();
     setFocusedIndex(0);
+  });
+
+  // Clear inputs when palette is toggled (if clearOnToggle is true, which is default)
+  createEffect(() => {
+    const isOpen = props.isOpen;
+    const shouldClear = props.clearOnToggle ?? true;
+
+    if (!isOpen && shouldClear) {
+      // Clear everything when closing
+      setSearchTerm("");
+      setExternalLink({ displayName: "", url: "" });
+    }
   });
 
   // Auto-focus appropriate input when modal opens or tab changes
