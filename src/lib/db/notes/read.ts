@@ -11,7 +11,7 @@ import type { Note, NoteWithTags } from "../types";
 import { db } from "../index";
 
 /**
- * Get note by ID
+ * Get note by ID with path from FTS5
  */
 export async function getNoteById(id: string): Promise<Note | null> {
   const user = await requireUser();
@@ -19,7 +19,12 @@ export async function getNoteById(id: string): Promise<Note | null> {
     throw redirect("/login");
   }
 
-  const stmt = db.prepare("SELECT * FROM notes WHERE id = ? AND user_id = ?");
+  const stmt = db.prepare(`
+    SELECT n.*, fts.path
+    FROM notes n
+    LEFT JOIN notes_fts fts ON n.id = fts.id
+    WHERE n.id = ? AND n.user_id = ?
+  `);
   const note = stmt.get(id, user.id) as Note | undefined;
   return note || null;
 }

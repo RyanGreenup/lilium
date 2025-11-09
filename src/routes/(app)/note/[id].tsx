@@ -528,7 +528,13 @@ export default function NoteEditor() {
           isOpen={isPaletteOpen()}
           onClose={() => setIsPaletteOpen(false)}
           onSelect={handleLinkSelect}
-          searchNotes={searchNotesForLinksQuery}
+          searchNotes={(searchTerm) =>
+            searchNotesForLinksQuery(
+              searchTerm,
+              noteId(),
+              currentNote()?.path || ""
+            )
+          }
           linkFormat={linkFormat()}
         />
       </Show>
