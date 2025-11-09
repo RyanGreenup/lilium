@@ -150,48 +150,33 @@ export default function NoteEditor() {
     input.click();
   };
 
-  // Link palette functions
-  const searchNotesAdapter = async (searchTerm: string): Promise<LinkItem[]> => {
-    return await searchNotesForLinksQuery(searchTerm);
-  };
-
-  const getLinkFormat = () => {
-    const syntax = currentNote()?.syntax;
-    return syntax === "org" ? "org" : "markdown";
-  };
+  // Link format derived from note syntax
+  const linkFormat = () => currentNote()?.syntax === "org" ? "org" : "markdown";
 
   const handleLinkSelect = (item: LinkItem) => {
-    const textarea = textareaRef;
-    if (!textarea) return;
+    if (!textareaRef) return;
 
-    const formattedLink = formatLink(item, getLinkFormat());
+    const formattedLink = formatLink(item, linkFormat());
     const triggerPos = paletteTriggerPos();
 
-    let start, end;
-
     if (triggerPos !== null) {
-      // Triggered by [[, replace the [[ with the link
-      start = triggerPos - 2;
-      end = textarea.selectionStart;
+      // Auto-triggered by [[ - remove those characters and insert link
+      const content = currentNote()?.content || "";
+      const start = triggerPos - 2;
+      const end = textareaRef.selectionStart;
+      updateNote("content", content.substring(0, start) + formattedLink + content.substring(end));
+
+      queueMicrotask(() => {
+        if (textareaRef) {
+          const cursorPos = start + formattedLink.length;
+          textareaRef.setSelectionRange(cursorPos, cursorPos);
+          textareaRef.focus();
+        }
+      });
     } else {
-      // Triggered by Ctrl+K or button, insert at cursor
-      start = textarea.selectionStart;
-      end = textarea.selectionEnd;
+      // Manual trigger - use existing insertion logic
+      insertTextAtCursor(formattedLink);
     }
-
-    const currentContent = currentNote()?.content || "";
-    const newContent =
-      currentContent.substring(0, start) + formattedLink + currentContent.substring(end);
-    updateNote("content", newContent);
-
-    // Set cursor position after inserted text
-    queueMicrotask(() => {
-      if (textarea) {
-        const newCursorPos = start + formattedLink.length;
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-        textarea.focus();
-      }
-    });
 
     setIsPaletteOpen(false);
     setPaletteTriggerPos(null);
@@ -201,20 +186,17 @@ export default function NoteEditor() {
     const target = e.currentTarget as HTMLTextAreaElement;
     updateNote("content", target.value);
 
-    // Check if user just typed [[
-    const cursorPos = target.selectionStart;
-    if (cursorPos >= 2) {
-      const lastTwoChars = target.value.substring(cursorPos - 2, cursorPos);
-      if (lastTwoChars === "[[") {
-        setPaletteTriggerPos(cursorPos);
-        setIsPaletteOpen(true);
-      }
+    // Auto-open palette on [[
+    const pos = target.selectionStart;
+    if (pos >= 2 && target.value.substring(pos - 2, pos) === "[[") {
+      setPaletteTriggerPos(pos);
+      setIsPaletteOpen(true);
     }
   };
 
   const openLinkPalette = () => {
     if (isEditing()) {
-      setPaletteTriggerPos(null); // Manual trigger, no position replacement
+      setPaletteTriggerPos(null);
       setIsPaletteOpen(true);
     }
   };
@@ -546,8 +528,8 @@ export default function NoteEditor() {
           isOpen={isPaletteOpen()}
           onClose={() => setIsPaletteOpen(false)}
           onSelect={handleLinkSelect}
-          searchNotes={searchNotesAdapter}
-          linkFormat={getLinkFormat()}
+          searchNotes={searchNotesForLinksQuery}
+          linkFormat={linkFormat()}
         />
       </Show>
     </Show>
