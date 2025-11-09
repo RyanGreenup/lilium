@@ -11,5 +11,6 @@ services:
       - .env
     volumes:
       - ./.data:/app/.data:Z
+      - ./${ASSETS_DIR}:/app/${ASSETS_DIR}:Z
     security_opt:
       - label=type:container_runtime_t
