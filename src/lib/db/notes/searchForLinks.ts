@@ -18,53 +18,11 @@ interface NoteSearchResult {
 }
 
 /**
- * Compute the display text for a link based on the relationship between notes
- *
- * Rules:
- * - Sibling notes (same parent): Just the title
- * - Descendant notes (current is ancestor): Relative path from current
- * - Other cases (upward, unrelated): Full absolute path
- */
-function computeLinkDisplayText(
-  currentPath: string | undefined,
-  targetPath: string,
-  targetTitle: string
-): string {
-  const fullPath = targetPath ? `${targetPath}/${targetTitle}` : targetTitle;
-
-  // No current path means current note is at root
-  if (!currentPath || currentPath === "") {
-    // If target is also at root (no path), just use title
-    if (!targetPath || targetPath === "") {
-      return targetTitle;
-    }
-    // Target is descendant of root, use relative path
-    return fullPath;
-  }
-
-  // Same parent (siblings) → just title
-  if (currentPath === targetPath) {
-    return targetTitle;
-  }
-
-  // Target is descendant → relative path
-  if (targetPath && targetPath.startsWith(currentPath + '/')) {
-    const relativePath = targetPath.substring(currentPath.length + 1);
-    return `${relativePath}/${targetTitle}`;
-  }
-
-  // Otherwise (upward or unrelated) → full absolute path
-  return fullPath;
-}
-
-/**
  * Search notes by title and path for link insertion
- * Returns LinkItem format with computed display text based on relationship
+ * Returns LinkItem with title and full path subtitle
  */
 export async function searchNotesForLinks(
-  searchQuery: string,
-  currentNoteId?: string,
-  currentNotePath?: string
+  searchQuery: string
 ): Promise<LinkItem[]> {
   const user = await requireUser();
   if (!user.id) {
@@ -95,25 +53,17 @@ export async function searchNotesForLinks(
 
   const results = stmt.all(sanitized, user.id) as NoteSearchResult[];
 
-  // Convert to LinkItem format with computed display text
+  // Convert to LinkItem format
   return results.map((note) => {
-    // Compute display text based on relationship to current note
-    const displayText = computeLinkDisplayText(
-      currentNotePath,
-      note.path,
-      note.title
-    );
-
-    // Build full path for subtitle
     const fullPath = note.path
       ? `${note.path}/${note.title}`
       : note.title;
 
     return {
       id: note.id,
-      title: displayText,  // Use computed relative/absolute path
+      title: note.title,   // Always just the note title
       value: note.id,
-      subtitle: fullPath,  // Always show full path in subtitle
+      subtitle: fullPath,  // Full path for context
     };
   });
 }
@@ -122,9 +72,9 @@ export async function searchNotesForLinks(
  * Query function for client-side use with createAsync
  */
 export const searchNotesForLinksQuery = query(
-  async (searchQuery: string, currentNoteId?: string, currentNotePath?: string) => {
+  async (searchQuery: string) => {
     "use server";
-    return await searchNotesForLinks(searchQuery, currentNoteId, currentNotePath);
+    return await searchNotesForLinks(searchQuery);
   },
   "search-notes-for-links"
 );
