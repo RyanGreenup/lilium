@@ -9,3 +9,12 @@ This is a note-taking and documentation tool.
     3. Edit the `.env` accordingly
 2. `docker compose build`
 3. `docker compose up`
+
+** Upgrading
+
+*** Link Palette Migration
+If upgrading to a version with the link insertion palette, drop the FTS table to rebuild with path support:
+#+begin_src bash
+sqlite3 .data/notes.sqlite "DROP TABLE notes_fts;"
+#+end_src
+Then restart the server - paths will be automatically computed and indexed.

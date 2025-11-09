@@ -4,11 +4,14 @@ import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 import { updateNoteQuery } from "~/lib/db/notes/update";
 import { SYNTAX_OPTIONS, type Note, type NoteSyntax } from "~/lib/db/types";
+import { searchNotesForLinksQuery } from "~/lib/db/notes/searchForLinks";
+import { LinkInsertionPalette, type LinkItem, formatLink } from "~/components/LinkInsertionPalette";
 import Save from "lucide-solid/icons/save";
 import Eye from "lucide-solid/icons/eye";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import NotebookPen from "lucide-solid/icons/notebook-pen";
 import Upload from "lucide-solid/icons/upload";
+import Link from "lucide-solid/icons/link";
 
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
@@ -27,6 +30,10 @@ export default function NoteEditor() {
   const [metadataExpanded, setMetadataExpanded] = createSignal(false);
   const [localNote, setLocalNote] = createSignal<Note | null>(null);
   const [uploading, setUploading] = createSignal(false);
+
+  // Link insertion palette state
+  const [isPaletteOpen, setIsPaletteOpen] = createSignal(false);
+  const [paletteTriggerPos, setPaletteTriggerPos] = createSignal<number | null>(null);
 
   let textareaRef: HTMLTextAreaElement | undefined;
 
@@ -143,6 +150,75 @@ export default function NoteEditor() {
     input.click();
   };
 
+  // Link palette functions
+  const searchNotesAdapter = async (searchTerm: string): Promise<LinkItem[]> => {
+    return await searchNotesForLinksQuery(searchTerm);
+  };
+
+  const getLinkFormat = () => {
+    const syntax = currentNote()?.syntax;
+    return syntax === "org" ? "org" : "markdown";
+  };
+
+  const handleLinkSelect = (item: LinkItem) => {
+    const textarea = textareaRef;
+    if (!textarea) return;
+
+    const formattedLink = formatLink(item, getLinkFormat());
+    const triggerPos = paletteTriggerPos();
+
+    let start, end;
+
+    if (triggerPos !== null) {
+      // Triggered by [[, replace the [[ with the link
+      start = triggerPos - 2;
+      end = textarea.selectionStart;
+    } else {
+      // Triggered by Ctrl+K or button, insert at cursor
+      start = textarea.selectionStart;
+      end = textarea.selectionEnd;
+    }
+
+    const currentContent = currentNote()?.content || "";
+    const newContent =
+      currentContent.substring(0, start) + formattedLink + currentContent.substring(end);
+    updateNote("content", newContent);
+
+    // Set cursor position after inserted text
+    queueMicrotask(() => {
+      if (textarea) {
+        const newCursorPos = start + formattedLink.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        textarea.focus();
+      }
+    });
+
+    setIsPaletteOpen(false);
+    setPaletteTriggerPos(null);
+  };
+
+  const handleTextareaInput = (e: Event) => {
+    const target = e.currentTarget as HTMLTextAreaElement;
+    updateNote("content", target.value);
+
+    // Check if user just typed [[
+    const cursorPos = target.selectionStart;
+    if (cursorPos >= 2) {
+      const lastTwoChars = target.value.substring(cursorPos - 2, cursorPos);
+      if (lastTwoChars === "[[") {
+        setPaletteTriggerPos(cursorPos);
+        setIsPaletteOpen(true);
+      }
+    }
+  };
+
+  const openLinkPalette = () => {
+    if (isEditing()) {
+      setPaletteTriggerPos(null); // Manual trigger, no position replacement
+      setIsPaletteOpen(true);
+    }
+  };
+
   // Modular keybinding functions
   const toggleEditMode = () => {
     setIsEditing(!isEditing());
@@ -165,6 +241,7 @@ export default function NoteEditor() {
   useKeybinding({ key: "s", ctrl: true }, saveNote);
   useKeybinding({ key: "/", ctrl: true }, focusTextarea);
   useKeybinding({ key: "u", ctrl: true }, handleUploadKeybind);
+  useKeybinding({ key: "k", ctrl: true }, openLinkPalette);
 
   return (
     <Show
@@ -342,6 +419,16 @@ export default function NoteEditor() {
                         {uploading() ? "Uploading..." : "Upload"}
                       </span>
                     </button>
+
+                    {/* Link Button */}
+                    <button
+                      onClick={openLinkPalette}
+                      class="btn btn-sm btn-ghost gap-1 h-8 min-h-8"
+                      title="Insert link (Ctrl+K)"
+                    >
+                      <Link class="w-3.5 h-3.5" />
+                      <span class="hidden sm:inline text-xs">Link</span>
+                    </button>
                   </Show>
 
                   {/* Edit Toggle (hidden when metadata expanded) */}
@@ -414,7 +501,7 @@ export default function NoteEditor() {
               <textarea
                 ref={textareaRef}
                 value={currentNote()?.content || ""}
-                onInput={(e) => updateNote("content", e.currentTarget.value)}
+                onInput={handleTextareaInput}
                 class="flex-1 p-6 textarea textarea-ghost resize-none border-none focus:outline-none text-sm font-mono leading-relaxed"
                 placeholder="Start writing your note..."
                 style={{ "field-sizing": "content" }}
@@ -453,6 +540,15 @@ export default function NoteEditor() {
             </div>
           </div>
         </div>
+
+        {/* Link Insertion Palette */}
+        <LinkInsertionPalette
+          isOpen={isPaletteOpen()}
+          onClose={() => setIsPaletteOpen(false)}
+          onSelect={handleLinkSelect}
+          searchNotes={searchNotesAdapter}
+          linkFormat={getLinkFormat()}
+        />
       </Show>
     </Show>
   );

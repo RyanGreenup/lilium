@@ -71,46 +71,117 @@ db.exec(`
   ) child_counts ON n.id = child_counts.parent_id;
 `);
 
-// Create FTS5 virtual table for full-text search
+// Create FTS5 virtual table for full-text search with path support
 db.exec(`
   CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
     id UNINDEXED,
     title,
     abstract,
     content,
+    path,
     user_id UNINDEXED
   );
 `);
 
+// Drop and recreate triggers to ensure latest path computation logic
+db.exec(`DROP TRIGGER IF EXISTS notes_fts_insert;`);
+db.exec(`DROP TRIGGER IF EXISTS notes_fts_delete;`);
+db.exec(`DROP TRIGGER IF EXISTS notes_fts_update;`);
+
 // Create triggers to keep FTS5 table in sync with notes table
+// Triggers compute the hierarchical path using recursive CTEs
 db.exec(`
-  CREATE TRIGGER IF NOT EXISTS notes_fts_insert AFTER INSERT ON notes BEGIN
-    INSERT INTO notes_fts(id, title, abstract, content, user_id)
-    VALUES (new.id, new.title, new.abstract, new.content, new.user_id);
+  CREATE TRIGGER notes_fts_insert AFTER INSERT ON notes BEGIN
+    INSERT INTO notes_fts(id, title, abstract, content, path, user_id)
+    SELECT
+      new.id,
+      new.title,
+      new.abstract,
+      new.content,
+      COALESCE(
+        (WITH RECURSIVE parent_path AS (
+          SELECT parent_id, title, 1 as level
+          FROM notes
+          WHERE id = new.parent_id
+
+          UNION ALL
+
+          SELECT n.parent_id, n.title, p.level + 1
+          FROM notes n
+          INNER JOIN parent_path p ON n.id = p.parent_id
+        )
+        SELECT GROUP_CONCAT(title, '/')
+        FROM (SELECT title FROM parent_path ORDER BY level DESC)),
+        ''
+      ) as path,
+      new.user_id;
   END;
 `);
 
 db.exec(`
-  CREATE TRIGGER IF NOT EXISTS notes_fts_delete AFTER DELETE ON notes BEGIN
+  CREATE TRIGGER notes_fts_delete AFTER DELETE ON notes BEGIN
     DELETE FROM notes_fts WHERE id = old.id;
   END;
 `);
 
 db.exec(`
-  CREATE TRIGGER IF NOT EXISTS notes_fts_update AFTER UPDATE ON notes BEGIN
+  CREATE TRIGGER notes_fts_update AFTER UPDATE ON notes BEGIN
     DELETE FROM notes_fts WHERE id = old.id;
-    INSERT INTO notes_fts(id, title, abstract, content, user_id)
-    VALUES (new.id, new.title, new.abstract, new.content, new.user_id);
+    INSERT INTO notes_fts(id, title, abstract, content, path, user_id)
+    SELECT
+      new.id,
+      new.title,
+      new.abstract,
+      new.content,
+      COALESCE(
+        (WITH RECURSIVE parent_path AS (
+          SELECT parent_id, title, 1 as level
+          FROM notes
+          WHERE id = new.parent_id
+
+          UNION ALL
+
+          SELECT n.parent_id, n.title, p.level + 1
+          FROM notes n
+          INNER JOIN parent_path p ON n.id = p.parent_id
+        )
+        SELECT GROUP_CONCAT(title, '/')
+        FROM (SELECT title FROM parent_path ORDER BY level DESC)),
+        ''
+      ) as path,
+      new.user_id;
   END;
 `);
 
 // Populate FTS5 table with existing data if it's empty
 const ftsCount = db.prepare("SELECT COUNT(*) as count FROM notes_fts").get() as { count: number };
 if (ftsCount.count === 0) {
-  // Insert existing notes into FTS5 table
+  // Insert existing notes into FTS5 table with computed paths
   db.exec(`
-    INSERT INTO notes_fts(id, title, abstract, content, user_id)
-    SELECT id, title, abstract, content, user_id FROM notes;
+    INSERT INTO notes_fts(id, title, abstract, content, path, user_id)
+    SELECT
+      n.id,
+      n.title,
+      n.abstract,
+      n.content,
+      COALESCE(
+        (WITH RECURSIVE parent_path AS (
+          SELECT parent_id, title, 1 as level
+          FROM notes
+          WHERE id = n.parent_id
+
+          UNION ALL
+
+          SELECT p.parent_id, p.title, pp.level + 1
+          FROM notes p
+          INNER JOIN parent_path pp ON p.id = pp.parent_id
+        )
+        SELECT GROUP_CONCAT(title, '/')
+        FROM (SELECT title FROM parent_path ORDER BY level DESC)),
+        ''
+      ) as path,
+      n.user_id
+    FROM notes n;
   `);
 }
 
