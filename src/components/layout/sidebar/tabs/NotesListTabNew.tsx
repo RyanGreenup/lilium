@@ -1,0 +1,464 @@
+import { createAsync } from "@solidjs/router";
+import ArrowLeft from "lucide-solid/icons/arrow-left";
+import ChevronLeft from "lucide-solid/icons/chevron-left";
+import FileText from "lucide-solid/icons/file-text";
+import Folder from "lucide-solid/icons/folder";
+import HomeIcon from "lucide-solid/icons/home";
+import {
+  batch,
+  createEffect,
+  createMemo,
+  ErrorBoundary,
+  For,
+  on,
+  Show,
+  Suspense,
+} from "solid-js";
+import { createStore } from "solid-js/store";
+import {
+  getChildren,
+  getFolderPath,
+  getIndexNoteId,
+  type ListItem,
+} from "~/lib/api";
+import {
+  dividerVariants,
+  indexButtonVariants,
+  jumpButtonVariants,
+  listContainerVariants,
+  listItemNameVariants,
+  listItemVariants,
+  pathContainerVariants,
+  pathItemVariants,
+  pathTextVariants,
+} from "./listStyle";
+
+// Selection as discriminated union
+type Selection =
+  | { type: "none" }
+  | { type: "item"; index: number }
+  | { type: "index" };
+
+interface ListStore {
+  history: string[];
+  focusMemory: Record<string, number | undefined>;
+  focusedIndex: number | null;
+  selection: Selection;
+  focusZone: "path" | "list";
+  pathFocusIndex: number;
+  indexButtonFocused: boolean;
+  selectionHistory: string[] | null;
+}
+
+interface ListViewerProps {
+  onSelect?: (item: ListItem) => void;
+  onSelectIndex?: (noteId: string) => void;
+  onFocus?: (item: ListItem | null) => void;
+  selectionFollowsFocus?: boolean;
+}
+
+const memoryKey = (parentId: string | null): string => parentId ?? "root";
+const INDEX_KEY = "0";
+const INDENT_PX = 12;
+
+export function ListViewer(props: ListViewerProps) {
+  const [list, setList] = createStore<ListStore>({
+    history: [],
+    focusMemory: {},
+    focusedIndex: null,
+    selection: { type: "none" },
+    focusZone: "list",
+    pathFocusIndex: 0,
+    indexButtonFocused: false,
+    selectionHistory: null,
+  });
+
+  // Batch update helper
+  const update = (changes: Partial<ListStore>) => {
+    batch(() => {
+      Object.entries(changes).forEach(([k, v]) => setList(k as keyof ListStore, v as never));
+    });
+  };
+
+  let containerRef!: HTMLDivElement;
+
+  // Derived state
+  const currentParent = createMemo(() => list.history.at(-1) ?? null);
+  const selectedIndex = () =>
+    list.selection.type === "item" ? list.selection.index : null;
+  const indexSelected = () => list.selection.type === "index";
+
+  // Data fetching
+  const items = createAsync(() => getChildren(currentParent()));
+  const folderPath = createAsync(() => getFolderPath(list.history));
+  const indexNoteId = createAsync(() => getIndexNoteId(currentParent()));
+
+  const pathItemCount = createMemo(() => 1 + (folderPath()?.length ?? 0));
+
+  const isOnCurrentFolder = createMemo(
+    () => list.pathFocusIndex === (folderPath()?.length ?? 0),
+  );
+
+  const hasNavigatedFromSelection = createMemo(() => {
+    const ctx = list.selectionHistory;
+    return ctx !== null && JSON.stringify(ctx) !== JSON.stringify(list.history);
+  });
+
+  // Refocus container after navigation
+  createEffect(on(currentParent, () => containerRef.focus(), { defer: false }));
+
+  // Focus memory
+  const saveFocus = () => {
+    if (list.focusedIndex !== null) {
+      setList("focusMemory", memoryKey(currentParent()), list.focusedIndex);
+    }
+  };
+
+  const restoreFocus = (parentId: string | null): number | null =>
+    list.focusMemory[memoryKey(parentId)] ?? null;
+
+  // Navigation actions
+  const applyNavigation = (history: string[], focusedIndex: number | null) => {
+    update({ history, focusedIndex, pathFocusIndex: history.length, indexButtonFocused: false });
+  };
+
+  const navigateToFolder = (folderId: string | null) => {
+    if (folderId === null) {
+      saveFocus();
+      applyNavigation([], restoreFocus(null));
+    } else {
+      const idx = list.history.indexOf(folderId);
+      if (idx !== -1) {
+        saveFocus();
+        const newHistory = list.history.slice(0, idx + 1);
+        applyNavigation(newHistory, restoreFocus(folderId));
+      }
+    }
+  };
+
+  const navigateInto = (item: ListItem) => {
+    if (item.type !== "folder") return;
+    saveFocus();
+    applyNavigation([...list.history, item.id], restoreFocus(item.id));
+  };
+
+  const navigateBack = () => {
+    if (list.history.length === 0) return;
+    saveFocus();
+    const newHistory = list.history.slice(0, -1);
+    applyNavigation(newHistory, restoreFocus(newHistory.at(-1) ?? null));
+  };
+
+  const jumpToSelection = () => {
+    const ctx = list.selectionHistory;
+    if (!ctx) return;
+    saveFocus();
+    update({
+      history: [...ctx],
+      focusedIndex: list.selection.type === "item" ? list.selection.index : null,
+      pathFocusIndex: ctx.length,
+      indexButtonFocused: false,
+      focusZone: "list",
+    });
+  };
+
+  // Focus navigation
+  const navigateFocus = (direction: "up" | "down") => {
+    const currentItems = items();
+    if (!currentItems?.length) return;
+
+    const curr = list.focusedIndex ?? -1;
+    const len = currentItems.length;
+    const newIndex = direction === "up"
+      ? (curr <= 0 ? len - 1 : curr - 1)
+      : (curr >= len - 1 ? 0 : curr + 1);
+
+    const item = currentItems[newIndex] ?? null;
+
+    if (props.selectionFollowsFocus && item) {
+      update({
+        focusedIndex: newIndex,
+        selection: { type: "item", index: newIndex },
+        selectionHistory: [...list.history],
+      });
+      props.onSelect?.(item);
+    } else {
+      setList("focusedIndex", newIndex);
+    }
+    props.onFocus?.(item);
+  };
+
+  const navigatePathFocus = (direction: "up" | "down") => {
+    const count = pathItemCount();
+    const curr = list.pathFocusIndex;
+    const newIndex = direction === "up"
+      ? (curr <= 0 ? count - 1 : curr - 1)
+      : (curr >= count - 1 ? 0 : curr + 1);
+    update({ indexButtonFocused: false, pathFocusIndex: newIndex });
+  };
+
+  // Selection actions
+  const selectItem = (index: number) => {
+    update({ selection: { type: "item", index }, selectionHistory: [...list.history] });
+    const item = items()?.[index];
+    if (item) props.onSelect?.(item);
+  };
+
+  const selectIndex = () => {
+    const noteId = indexNoteId();
+    if (!noteId) return;
+    update({ selection: { type: "index" }, selectionHistory: [...list.history] });
+    props.onSelectIndex?.(noteId);
+  };
+
+  // Event handlers
+  const handleListClick = (index: number) => {
+    update({ focusZone: "list", focusedIndex: index });
+    selectItem(index);
+  };
+
+  const handlePathClick = (index: number) => {
+    update({ focusZone: "path", pathFocusIndex: index, indexButtonFocused: false });
+    activatePathItem(index);
+    // Ensure container has focus for keyboard navigation (clicking current folder won't trigger the effect)
+    containerRef.focus();
+  };
+
+  const activatePathItem = (index: number) => {
+    const path = folderPath() ?? [];
+    if (index === 0) {
+      navigateToFolder(null);
+    } else if (index <= path.length) {
+      navigateToFolder(path[index - 1].id);
+    }
+  };
+
+  const enterFocusedFolder = () => {
+    const currentItems = items();
+    if (list.focusedIndex !== null && currentItems) {
+      const item = currentItems[list.focusedIndex];
+      if (item) navigateInto(item);
+    }
+  };
+
+  // Keyboard handlers using key maps
+  const listKeyActions: Record<string, () => void> = {
+    ArrowUp: () => navigateFocus("up"),
+    k: () => navigateFocus("up"),
+    ArrowDown: () => navigateFocus("down"),
+    j: () => navigateFocus("down"),
+    l: enterFocusedFolder,
+    h: navigateBack,
+    Backspace: navigateBack,
+    Escape: () => setList("focusZone", "path"),
+    Enter: () => list.focusedIndex !== null && selectItem(list.focusedIndex),
+  };
+
+  const pathKeyActions: Record<string, () => void> = {
+    ArrowUp: () => navigatePathFocus("up"),
+    k: () => navigatePathFocus("up"),
+    ArrowDown: () => navigatePathFocus("down"),
+    j: () => navigatePathFocus("down"),
+    ArrowRight: handlePathRight,
+    l: handlePathRight,
+    ArrowLeft: () => list.indexButtonFocused
+      ? setList("indexButtonFocused", false)
+      : setList("focusZone", "list"),
+    h: () => list.indexButtonFocused
+      ? setList("indexButtonFocused", false)
+      : setList("focusZone", "list"),
+    Escape: () => update({ indexButtonFocused: false, focusZone: "list" }),
+    Enter: () => list.indexButtonFocused
+      ? selectIndex()
+      : activatePathItem(list.pathFocusIndex),
+  };
+
+  function handlePathRight() {
+    if (list.indexButtonFocused) selectIndex();
+    else if (isOnCurrentFolder() && indexNoteId()) setList("indexButtonFocused", true);
+    else activatePathItem(list.pathFocusIndex);
+  }
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Global shortcuts
+    if (e.key === INDEX_KEY) {
+      e.preventDefault();
+      selectIndex();
+      return;
+    }
+    if (e.ctrlKey && e.key === "ArrowUp") {
+      e.preventDefault();
+      setList("focusZone", "path");
+      return;
+    }
+    if (e.ctrlKey && e.key === "ArrowDown") {
+      e.preventDefault();
+      setList("focusZone", "list");
+      return;
+    }
+
+    // Zone-specific handlers
+    const actions = list.focusZone === "path" ? pathKeyActions : listKeyActions;
+    const action = actions[e.key];
+    if (action) {
+      e.preventDefault();
+      action();
+    }
+  };
+
+  // Render helpers
+  const isPathItemFocused = (index: number) =>
+    list.focusZone === "path" &&
+    list.pathFocusIndex === index &&
+    !list.indexButtonFocused;
+
+  const isIndexButtonFocused = () =>
+    list.focusZone === "path" && list.indexButtonFocused;
+
+  const IndexButton = (btnProps: { pathIndex: number }) => (
+    <button
+      class={indexButtonVariants({
+        focused: isIndexButtonFocused(),
+        selected: indexSelected(),
+      })}
+      onClick={(e) => {
+        e.stopPropagation();
+        update({ focusZone: "path", pathFocusIndex: btnProps.pathIndex, indexButtonFocused: true });
+        selectIndex();
+        // Return focus to container (button click steals focus)
+        containerRef.focus();
+      }}
+      title={`View folder index (press ${INDEX_KEY})`}
+      aria-label="View folder index"
+    >
+      <FileText size={14} aria-hidden="true" />
+    </button>
+  );
+
+  return (
+    <div
+      class="outline-none"
+      ref={containerRef}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+    >
+      <nav aria-label="Folder path">
+        <div class={pathContainerVariants()} role="list">
+          <Show when={hasNavigatedFromSelection()}>
+            <button
+              class={jumpButtonVariants()}
+              onClick={(e) => {
+                e.stopPropagation();
+                jumpToSelection();
+                // Return focus to container (button click steals focus)
+                containerRef.focus();
+              }}
+            >
+              <ArrowLeft size={14} />
+              <span>Back to selection</span>
+            </button>
+          </Show>
+
+          <div
+            role="listitem"
+            aria-current={list.history.length === 0 ? "location" : undefined}
+            class={pathItemVariants({
+              focused: isPathItemFocused(0),
+              current: list.history.length === 0,
+            })}
+            onClick={() => handlePathClick(0)}
+          >
+            <HomeIcon size={16} />
+            <span class={pathTextVariants()}>Home</span>
+            <Show when={list.history.length === 0 && indexNoteId()}>
+              <IndexButton pathIndex={0} />
+            </Show>
+          </div>
+
+          <Suspense>
+            <For each={folderPath() ?? []}>
+              {(crumb, index) => {
+                const pathIndex = () => 1 + index();
+                const isLast = () =>
+                  index() === (folderPath()?.length ?? 0) - 1;
+
+                return (
+                  <div
+                    role="listitem"
+                    aria-current={isLast() ? "location" : undefined}
+                    class={pathItemVariants({
+                      focused: isPathItemFocused(pathIndex()),
+                      current: isLast(),
+                    })}
+                    style={{ "padding-left": `${(index() + 2) * INDENT_PX}px` }}
+                    onClick={() => handlePathClick(pathIndex())}
+                  >
+                    <ChevronLeft size={12} class="rotate-180 opacity-40" />
+                    <Folder size={14} />
+                    <span class={pathTextVariants()}>{crumb.title}</span>
+                    <Show when={isLast() && indexNoteId()}>
+                      <IndexButton pathIndex={pathIndex()} />
+                    </Show>
+                  </div>
+                );
+              }}
+            </For>
+          </Suspense>
+        </div>
+      </nav>
+
+      <div class={dividerVariants()} />
+
+      <div
+        class={listContainerVariants()}
+        role="listbox"
+        aria-label="Files and folders"
+        aria-activedescendant={
+          list.focusZone === "list" && list.focusedIndex !== null
+            ? `listitem-${list.focusedIndex}`
+            : undefined
+        }
+      >
+        <ErrorBoundary fallback={<p>Error loading items</p>}>
+          <Suspense fallback={<p>...</p>}>
+            <For each={items() ?? []}>
+              {(item, index) => {
+                const isFocused = () =>
+                  list.focusZone === "list" && list.focusedIndex === index();
+                const isSelected = () => selectedIndex() === index();
+
+                return (
+                  <div
+                    id={`listitem-${index()}`}
+                    role="option"
+                    aria-selected={isSelected()}
+                    class={listItemVariants({
+                      focused: isFocused(),
+                      selected: isSelected(),
+                    })}
+                    onClick={() => handleListClick(index())}
+                    onDblClick={() => navigateInto(item)}
+                  >
+                    <span
+                      class={listItemNameVariants({
+                        focused: isFocused(),
+                        selected: isSelected(),
+                      })}
+                    >
+                      {item.type === "folder" ? (
+                        <Folder size={16} class="inline mr-2" />
+                      ) : (
+                        <FileText size={16} class="inline mr-2" />
+                      )}
+                      {item.title}
+                    </span>
+                  </div>
+                );
+              }}
+            </For>
+          </Suspense>
+        </ErrorBoundary>
+      </div>
+    </div>
+  );
+}
