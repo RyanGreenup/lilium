@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Clock,
+  FolderTree,
   MessageSquare,
   Notebook,
   Search,
@@ -15,6 +16,7 @@ import BacklinksTab from "./tabs/BacklinksTab";
 import DiscussionTab from "./tabs/DiscussionTab";
 import ForwardLinksTab from "./tabs/ForwardLinksTab";
 import NotesTab from "./tabs/NotesTab";
+import { ListViewer } from "./tabs/NotesListTabNew";
 import RecentNotesTab from "./tabs/RecentNotesTab";
 import RelatedTab from "./tabs/RelatedTab";
 import { SidebarSearchContent } from "./tabs/SearchTab";
@@ -27,6 +29,7 @@ export const SidebarTabs = () => {
 
   // Focus triggers for tabs
   const [notesFocusTrigger, setNotesFocusTrigger] = createSignal<string | null>(null);
+  const [listViewerFocusTrigger, setListViewerFocusTrigger] = createSignal<string | null>(null);
   const [recentFocusTrigger, setRecentFocusTrigger] = createSignal<string | null>(null);
   const [searchFocusTrigger, setSearchFocusTrigger] = createSignal<string | null>(null);
   const [backlinksFocusTrigger, setBacklinksFocusTrigger] = createSignal<string | null>(null);
@@ -38,28 +41,29 @@ export const SidebarTabs = () => {
 
   const tabs = [
     { id: 0, label: "Notes", key: "notes", icon: <Notebook class="w-4 h-4" /> },
-    { id: 1, label: "Recent", key: "recent", icon: <Clock class="w-4 h-4" /> },
-    { id: 2, label: "Search", key: "search", icon: <Search class="w-4 h-4" /> },
+    { id: 1, label: "List", key: "list", icon: <FolderTree class="w-4 h-4" /> },
+    { id: 2, label: "Recent", key: "recent", icon: <Clock class="w-4 h-4" /> },
+    { id: 3, label: "Search", key: "search", icon: <Search class="w-4 h-4" /> },
     {
-      id: 3,
+      id: 4,
       label: "Backlinks",
       key: "backlinks",
       icon: <ArrowLeft class="w-4 h-4" />,
     },
     {
-      id: 4,
+      id: 5,
       label: "Forward",
       key: "forward",
       icon: <ArrowRight class="w-4 h-4" />,
     },
     {
-      id: 5,
+      id: 6,
       label: "Related",
       key: "related",
       icon: <Sparkles class="w-4 h-4" />,
     },
     {
-      id: 6,
+      id: 7,
       label: "Discussion",
       key: "discussion",
       icon: <MessageSquare class="w-4 h-4" />,
@@ -83,7 +87,7 @@ export const SidebarTabs = () => {
     }
 
     // Trigger focus for keybindings and search tab clicks
-    const shouldFocus = fromKeybinding || tabId === 2;
+    const shouldFocus = fromKeybinding || tabId === 3;
     if (shouldFocus) {
       const triggerId = Date.now().toString();
       if (tabId === 0) {
@@ -91,26 +95,30 @@ export const SidebarTabs = () => {
         setNotesFocusTrigger(triggerId);
         setTimeout(() => setNotesFocusTrigger(null), 100);
       } else if (tabId === 1) {
+        // List viewer tab - focus for keyboard navigation
+        setListViewerFocusTrigger(triggerId);
+        setTimeout(() => setListViewerFocusTrigger(null), 100);
+      } else if (tabId === 2) {
         // Recent tab - focus list for keybinding navigation
         setRecentFocusTrigger(triggerId);
         setTimeout(() => setRecentFocusTrigger(null), 100);
-      } else if (tabId === 2) {
+      } else if (tabId === 3) {
         // Search tab - focus input for both keybinding and clicks
         setSearchFocusTrigger(triggerId);
         setTimeout(() => setSearchFocusTrigger(null), 100);
-      } else if (tabId === 3) {
+      } else if (tabId === 4) {
         // Backlinks tab - focus list for keybinding navigation
         setBacklinksFocusTrigger(triggerId);
         setTimeout(() => setBacklinksFocusTrigger(null), 100);
-      } else if (tabId === 4) {
+      } else if (tabId === 5) {
         // Forward links tab - focus list for keybinding navigation
         setForwardLinksFocusTrigger(triggerId);
         setTimeout(() => setForwardLinksFocusTrigger(null), 100);
-      } else if (tabId === 5) {
+      } else if (tabId === 6) {
         // Related tab - focus list for keybinding navigation
         setRelatedFocusTrigger(triggerId);
         setTimeout(() => setRelatedFocusTrigger(null), 100);
-      } else if (tabId === 6) {
+      } else if (tabId === 7) {
         // Discussion tab - focus textarea for immediate typing
         setDiscussionFocusTrigger(triggerId);
         setTimeout(() => setDiscussionFocusTrigger(null), 100);
@@ -118,7 +126,7 @@ export const SidebarTabs = () => {
     }
   };
 
-  // Global keybindings for tab switching (Alt + 1-7)
+  // Global keybindings for tab switching (Alt + 1-8)
   useKeybinding({ key: "1", alt: true }, () => handleTabChange(0, true));
   useKeybinding({ key: "2", alt: true }, () => handleTabChange(1, true));
   useKeybinding({ key: "3", alt: true }, () => handleTabChange(2, true));
@@ -126,6 +134,7 @@ export const SidebarTabs = () => {
   useKeybinding({ key: "5", alt: true }, () => handleTabChange(4, true));
   useKeybinding({ key: "6", alt: true }, () => handleTabChange(5, true));
   useKeybinding({ key: "7", alt: true }, () => handleTabChange(6, true));
+  useKeybinding({ key: "8", alt: true }, () => handleTabChange(7, true));
 
   // Global keybindings for tab navigation (Alt + h/l)
   useKeybinding({ key: "h", alt: true }, () => {
@@ -170,30 +179,34 @@ export const SidebarTabs = () => {
             </Show>
 
             <Show when={activeTab() === 1}>
-              <RecentNotesTab focusTrigger={recentFocusTrigger} />
+              <ListViewer />
             </Show>
 
             <Show when={activeTab() === 2}>
-              <SidebarSearchContent 
+              <RecentNotesTab focusTrigger={recentFocusTrigger} />
+            </Show>
+
+            <Show when={activeTab() === 3}>
+              <SidebarSearchContent
                 focusTrigger={searchFocusTrigger}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
               />
             </Show>
 
-            <Show when={activeTab() === 3}>
+            <Show when={activeTab() === 4}>
               <BacklinksTab focusTrigger={backlinksFocusTrigger} />
             </Show>
 
-            <Show when={activeTab() === 4}>
+            <Show when={activeTab() === 5}>
               <ForwardLinksTab focusTrigger={forwardLinksFocusTrigger} />
             </Show>
 
-            <Show when={activeTab() === 5}>
+            <Show when={activeTab() === 6}>
               <RelatedTab focusTrigger={relatedFocusTrigger} />
             </Show>
 
-            <Show when={activeTab() === 6}>
+            <Show when={activeTab() === 7}>
               <DiscussionTab focusTrigger={discussionFocusTrigger} />
             </Show>
           </div>
