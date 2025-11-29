@@ -12,6 +12,7 @@ import {
   For,
   on,
   Show,
+  splitProps,
   Suspense,
 } from "solid-js";
 import { createStore } from "solid-js/store";
@@ -48,6 +49,7 @@ interface ListStore {
   pathFocusIndex: number;
   indexButtonFocused: boolean;
   selectionHistory: string[] | null;
+  autoSelectingIndex: boolean;
 }
 
 interface ListViewerProps {
@@ -55,6 +57,8 @@ interface ListViewerProps {
   onSelectIndex?: (noteId: string) => void;
   onFocus?: (item: ListItem | null) => void;
   selectionFollowsFocus?: boolean;
+  /** Because double touch on Mobile is bad form, and a small button is also bad*/
+  navigateFoldersOnClick?: boolean;
 }
 
 const memoryKey = (parentId: string | null): string => parentId ?? "root";
@@ -62,6 +66,9 @@ const INDEX_KEY = "0";
 const INDENT_PX = 12;
 
 export function ListViewer(props: ListViewerProps) {
+  const [local] = splitProps(props, ["navigateFoldersOnClick"]);
+  const navigateOnClick = local.navigateFoldersOnClick ?? true;
+
   const [list, setList] = createStore<ListStore>({
     history: [],
     focusMemory: {},
@@ -71,6 +78,7 @@ export function ListViewer(props: ListViewerProps) {
     pathFocusIndex: 0,
     indexButtonFocused: false,
     selectionHistory: null,
+    autoSelectingIndex: false,
   });
 
   // Batch update helper
@@ -106,6 +114,14 @@ export function ListViewer(props: ListViewerProps) {
 
   // Refocus container after navigation
   createEffect(on(currentParent, () => containerRef.focus(), { defer: false }));
+
+  // Auto-select index note after navigating into a folder (when clicking a folder)
+  createEffect(() => {
+    if (list.autoSelectingIndex && indexNoteId()) {
+      selectIndex();
+      setList("autoSelectingIndex", false);
+    }
+  });
 
   // Focus memory
   const saveFocus = () => {
@@ -214,7 +230,17 @@ export function ListViewer(props: ListViewerProps) {
   // Event handlers
   const handleListClick = (index: number) => {
     update({ focusZone: "list", focusedIndex: index });
-    selectItem(index);
+    const item = items()?.[index];
+    if (!item) return;
+
+    // Navigate into folders if prop enabled (default behavior)
+    if (item.type === "folder" && navigateOnClick) {
+      navigateInto(item);
+      setList("autoSelectingIndex", true);
+    } else {
+      // Select folders/notes when navigation disabled or item is note
+      selectItem(index);
+    }
   };
 
   const handlePathClick = (index: number) => {
