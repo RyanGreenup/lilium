@@ -179,7 +179,22 @@ export const SidebarTabs = () => {
             </Show>
 
             <Show when={activeTab() === 1}>
-              <ListViewer />
+              {/* IMPORTANT: Suspense boundary prevents full-screen flicker
+                  ListViewer uses createAsync for data fetching (items, folderPath, indexNoteId).
+                  When users interact with the component (click items, navigate folders),
+                  these async queries re-run. Without a Suspense boundary at the parent level,
+                  SolidJS triggers re-renders of the entire page instead of just this component.
+                  The Suspense boundary isolates these async updates to prevent flicker.
+                  See also: BacklinksTab, ForwardLinksTab, RelatedTab (same pattern) */}
+              <Suspense
+                fallback={
+                  <div class="w-full h-full bg-base-200 rounded flex items-center justify-center">
+                    <div class="loading loading-spinner loading-md"></div>
+                  </div>
+                }
+              >
+                <ListViewer />
+              </Suspense>
             </Show>
 
             <Show when={activeTab() === 2}>
