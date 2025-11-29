@@ -31,7 +31,8 @@ export const pathItemVariants = tv({
   base: [
     "flex items-center gap-2 px-3 py-2",
     "cursor-pointer transition-colors rounded",
-    "hover:bg-base-200"
+    "hover:bg-base-200",
+    "select-none"
   ],
   variants: {
     focused: {
@@ -59,7 +60,8 @@ export const pathTextVariants = tv({
 export const indexButtonVariants = tv({
   base: [
     "p-1 rounded transition-colors ml-auto",
-    "hover:bg-base-300"
+    "hover:bg-base-300",
+    "select-none"
   ],
   variants: {
     focused: {
@@ -83,7 +85,8 @@ export const jumpButtonVariants = tv({
     "text-xs text-info bg-info/10",
     "rounded border border-info/20",
     "hover:bg-info/20 transition-colors",
-    "mb-2"
+    "mb-2",
+    "select-none"
   ]
 });
 
@@ -110,7 +113,8 @@ export const listItemVariants = tv({
   base: [
     "flex items-center px-3 py-2",
     "cursor-pointer transition-colors rounded",
-    "hover:bg-base-200"
+    "hover:bg-base-200",
+    "select-none"
   ],
   variants: {
     focused: {
