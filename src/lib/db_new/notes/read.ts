@@ -49,7 +49,9 @@ export const getNoteByIdQuery = query(async (noteId: string) => {
 /**
  * Get note metadata by ID (without content)
  */
-export async function getNoteByIdWithoutContent(id: string): Promise<NoteWithoutContent | null> {
+export async function getNoteByIdWithoutContent(
+  id: string,
+): Promise<NoteWithoutContent | null> {
   const user = await requireUser();
   if (!user.id) {
     throw redirect("/login");
@@ -79,7 +81,3 @@ export const getNoteByIdWithoutContentQuery = query(async (noteId: string) => {
   "use server";
   return await getNoteByIdWithoutContent(noteId);
 }, "note-by-id-without-content");
-
-
-
-

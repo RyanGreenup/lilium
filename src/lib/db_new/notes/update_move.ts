@@ -21,7 +21,7 @@ import { getFolderById } from "../folders/read";
  */
 export async function moveNote(
   id: string,
-  newParentId?: string
+  newParentId?: string,
 ): Promise<Note> {
   // If moving to a specific folder, validate it exists
   if (newParentId) {
@@ -43,5 +43,5 @@ export const moveNoteQuery = query(
     "use server";
     return await moveNote(noteId, newParentId);
   },
-  "move-note"
+  "move-note",
 );

@@ -25,7 +25,7 @@ import { getFolderById } from "../folders/read";
  * 3. Update note's title to "index" (rename second!)
  */
 export async function convertNoteToFolder(
-  noteId: string
+  noteId: string,
 ): Promise<{ folder: Folder; note: Note }> {
   const user = await requireUser();
   if (!user.id) {
@@ -85,10 +85,7 @@ export async function convertNoteToFolder(
 /**
  * Query function to convert a note to folder (for client-side use)
  */
-export const convertNoteToFolderQuery = query(
-  async (noteId: string) => {
-    "use server";
-    return await convertNoteToFolder(noteId);
-  },
-  "convert-note-to-folder",
-);
+export const convertNoteToFolderQuery = query(async (noteId: string) => {
+  "use server";
+  return await convertNoteToFolder(noteId);
+}, "convert-note-to-folder");

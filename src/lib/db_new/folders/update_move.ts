@@ -27,7 +27,7 @@ import { getFolderById, getFolderParents } from "./read";
  */
 export async function moveFolder(
   id: string,
-  newParentId?: string
+  newParentId?: string,
 ): Promise<Folder> {
   const user = await requireUser();
   if (!user.id) {
@@ -72,5 +72,5 @@ export const moveFolderQuery = query(
     "use server";
     return await moveFolder(folderId, newParentId);
   },
-  "move-folder"
+  "move-folder",
 );

@@ -26,5 +26,5 @@ export const renameNoteQuery = query(
     "use server";
     return await renameNote(noteId, newTitle);
   },
-  "rename-note"
+  "rename-note",
 );

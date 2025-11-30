@@ -14,7 +14,10 @@ import { updateFolder } from "./update";
  * Thin wrapper around updateFolder for cleaner API.
  * Auth is handled by updateFolder.
  */
-export async function renameFolder(id: string, newTitle: string): Promise<Folder> {
+export async function renameFolder(
+  id: string,
+  newTitle: string,
+): Promise<Folder> {
   return updateFolder(id, { title: newTitle });
 }
 
@@ -26,5 +29,5 @@ export const renameFolderQuery = query(
     "use server";
     return await renameFolder(folderId, newTitle);
   },
-  "rename-folder"
+  "rename-folder",
 );

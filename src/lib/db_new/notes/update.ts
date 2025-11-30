@@ -16,7 +16,9 @@ import { getNoteById } from "./read";
  */
 export async function updateNote(
   id: string,
-  updates: Partial<Pick<Note, "title" | "abstract" | "content" | "syntax" | "parent_id">>
+  updates: Partial<
+    Pick<Note, "title" | "abstract" | "content" | "syntax" | "parent_id">
+  >,
 ): Promise<Note> {
   const user = await requireUser();
   if (!user.id) {
@@ -30,8 +32,8 @@ export async function updateNote(
   }
 
   // Build dynamic UPDATE query
-  const setClause = fields.map(f => `${f} = ?`).join(", ");
-  const values = fields.map(f => updates[f as keyof typeof updates]);
+  const setClause = fields.map((f) => `${f} = ?`).join(", ");
+  const values = fields.map((f) => updates[f as keyof typeof updates]);
 
   const stmt = db.prepare(`
     UPDATE notes
@@ -60,10 +62,12 @@ export async function updateNote(
 export const updateNoteQuery = query(
   async (
     noteId: string,
-    updates: Partial<Pick<Note, "title" | "abstract" | "content" | "syntax" | "parent_id">>
+    updates: Partial<
+      Pick<Note, "title" | "abstract" | "content" | "syntax" | "parent_id">
+    >,
   ) => {
     "use server";
     return await updateNote(noteId, updates);
   },
-  "update-note"
+  "update-note",
 );

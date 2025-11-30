@@ -16,7 +16,7 @@ import { getFolderById } from "./read";
  */
 export async function updateFolder(
   id: string,
-  updates: Partial<Pick<Folder, "title" | "parent_id">>
+  updates: Partial<Pick<Folder, "title" | "parent_id">>,
 ): Promise<Folder> {
   const user = await requireUser();
   if (!user.id) {
@@ -30,8 +30,8 @@ export async function updateFolder(
   }
 
   // Build dynamic UPDATE query
-  const setClause = fields.map(f => `${f} = ?`).join(", ");
-  const values = fields.map(f => updates[f as keyof typeof updates]);
+  const setClause = fields.map((f) => `${f} = ?`).join(", ");
+  const values = fields.map((f) => updates[f as keyof typeof updates]);
 
   const stmt = db.prepare(`
     UPDATE folders
@@ -60,10 +60,10 @@ export async function updateFolder(
 export const updateFolderQuery = query(
   async (
     folderId: string,
-    updates: Partial<Pick<Folder, "title" | "parent_id">>
+    updates: Partial<Pick<Folder, "title" | "parent_id">>,
   ) => {
     "use server";
     return await updateFolder(folderId, updates);
   },
-  "update-folder"
+  "update-folder",
 );

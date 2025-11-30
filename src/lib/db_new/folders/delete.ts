@@ -35,13 +35,17 @@ export async function deleteFolder(id: string): Promise<void> {
  * Check if folder has children (folders or notes)
  */
 async function hasChildren(folderId: string, userId: string): Promise<boolean> {
-  const folderCount = db.prepare(
-    "SELECT COUNT(*) as count FROM folders WHERE parent_id = ? AND user_id = ?"
-  ).get(folderId, userId) as { count: number };
+  const folderCount = db
+    .prepare(
+      "SELECT COUNT(*) as count FROM folders WHERE parent_id = ? AND user_id = ?",
+    )
+    .get(folderId, userId) as { count: number };
 
-  const noteCount = db.prepare(
-    "SELECT COUNT(*) as count FROM notes WHERE parent_id = ? AND user_id = ?"
-  ).get(folderId, userId) as { count: number };
+  const noteCount = db
+    .prepare(
+      "SELECT COUNT(*) as count FROM notes WHERE parent_id = ? AND user_id = ?",
+    )
+    .get(folderId, userId) as { count: number };
 
   return folderCount.count > 0 || noteCount.count > 0;
 }

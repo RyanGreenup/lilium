@@ -160,7 +160,13 @@ export const duplicateNoteByTitleAndContentQuery = query(
     parentId?: string,
   ) => {
     "use server";
-    return await duplicateNoteByTitleAndContent(title, content, syntax, abstract, parentId);
+    return await duplicateNoteByTitleAndContent(
+      title,
+      content,
+      syntax,
+      abstract,
+      parentId,
+    );
   },
   "duplicate-note-by-title-content",
 );

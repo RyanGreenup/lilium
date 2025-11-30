@@ -141,7 +141,15 @@ export async function createFolderWithIndex(
       INSERT INTO notes (id, title, abstract, content, syntax, parent_id, user_id)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    noteStmt.run(noteId, INDEX_NOTE_TITLE, null, indexContent, syntax, folderId, user.id);
+    noteStmt.run(
+      noteId,
+      INDEX_NOTE_TITLE,
+      null,
+      indexContent,
+      syntax,
+      folderId,
+      user.id,
+    );
 
     return { folderId, noteId };
   });
@@ -168,10 +176,15 @@ export const createFolderWithIndexQuery = query(
     folderTitle: string,
     indexContent?: string,
     syntax?: NoteSyntax,
-    parentId?: string
+    parentId?: string,
   ) => {
     "use server";
-    return await createFolderWithIndex(folderTitle, indexContent, syntax, parentId);
+    return await createFolderWithIndex(
+      folderTitle,
+      indexContent,
+      syntax,
+      parentId,
+    );
   },
   "create-folder-with-index",
 );
