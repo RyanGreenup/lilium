@@ -5,22 +5,17 @@
 "use server";
 
 import { query } from "@solidjs/router";
-import { requireUser } from "../../auth";
-import { redirect } from "@solidjs/router";
 import type { Note } from "../types";
 import { updateNote } from "./update";
 
 /**
  * Rename a note (update title only)
- * Thin wrapper around updateNote for cleaner API
+ *
+ * Thin wrapper around updateNote for cleaner API.
+ * Auth is handled by updateNote.
  */
 export async function renameNote(id: string, newTitle: string): Promise<Note> {
-  const user = await requireUser();
-  if (!user.id) {
-    throw redirect("/login");
-  }
-
-  return await updateNote(id, { title: newTitle });
+  return updateNote(id, { title: newTitle });
 }
 
 /**

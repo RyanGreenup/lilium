@@ -4,9 +4,8 @@
 
 "use server";
 
-import { query } from "@solidjs/router";
+import { query, redirect } from "@solidjs/router";
 import { requireUser } from "../../auth";
-import { redirect } from "@solidjs/router";
 import type { Folder } from "../types";
 import { updateFolder } from "./update";
 import { getFolderById, getFolderParents } from "./read";
@@ -21,7 +20,7 @@ import { getFolderById, getFolderParents } from "./read";
  * being moved is in that list, it means the target is a descendant.
  *
  * Example prevention:
- * Folder A ’ Folder B ’ Folder C
+ * Folder A ï¿½ Folder B ï¿½ Folder C
  * L Cannot move A into B (B is child of A)
  * L Cannot move A into C (C is descendant of A)
  *  Can move B into C (valid)

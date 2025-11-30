@@ -4,9 +4,8 @@
 
 "use server";
 
-import { query } from "@solidjs/router";
+import { query, redirect } from "@solidjs/router";
 import { requireUser } from "../../auth";
-import { redirect } from "@solidjs/router";
 import type { Folder } from "../types";
 import { db } from "../index";
 import { getFolderById } from "./read";

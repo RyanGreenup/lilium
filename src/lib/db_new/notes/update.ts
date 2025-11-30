@@ -4,11 +4,9 @@
 
 "use server";
 
-import { query } from "@solidjs/router";
+import { query, redirect } from "@solidjs/router";
 import { requireUser } from "../../auth";
-import { redirect } from "@solidjs/router";
 import type { Note } from "../types";
-import type { NoteSyntax } from "../../db/types";
 import { db } from "../index";
 import { getNoteById } from "./read";
 

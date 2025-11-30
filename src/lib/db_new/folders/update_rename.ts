@@ -5,22 +5,17 @@
 "use server";
 
 import { query } from "@solidjs/router";
-import { requireUser } from "../../auth";
-import { redirect } from "@solidjs/router";
 import type { Folder } from "../types";
 import { updateFolder } from "./update";
 
 /**
  * Rename a folder (update title only)
- * Thin wrapper around updateFolder for cleaner API
+ *
+ * Thin wrapper around updateFolder for cleaner API.
+ * Auth is handled by updateFolder.
  */
 export async function renameFolder(id: string, newTitle: string): Promise<Folder> {
-  const user = await requireUser();
-  if (!user.id) {
-    throw redirect("/login");
-  }
-
-  return await updateFolder(id, { title: newTitle });
+  return updateFolder(id, { title: newTitle });
 }
 
 /**
