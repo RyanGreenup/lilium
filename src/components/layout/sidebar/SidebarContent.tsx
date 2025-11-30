@@ -76,6 +76,10 @@ export const SidebarTabs = () => {
     string | null
   >(null);
 
+  const [discussionFocusTrigger, setDiscussionFocusTrigger] = createSignal<
+    string | null
+  >(null);
+
   // Persistent search state across tab navigation
   const [searchTerm, setSearchTerm] = createSignal("");
 
