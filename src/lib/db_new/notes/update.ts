@@ -37,7 +37,7 @@ export async function updateNote(
 
   const stmt = db.prepare(`
     UPDATE notes
-    SET ${setClause}
+    SET ${setClause}, updated_at = CURRENT_TIMESTAMP
     WHERE id = ? AND user_id = ?
   `);
 
