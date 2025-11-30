@@ -53,6 +53,8 @@ interface ListStore {
   indexButtonFocused: boolean;
   selectionHistory: string[] | null;
   autoSelectingIndex: boolean;
+  /** When true, the next auto-expand from URL change will be skipped (used for internal navigation like Enter on folder) */
+  skipNextAutoExpand: boolean;
 }
 
 interface ListViewerProps {
@@ -96,6 +98,7 @@ export function ListViewer(props: ListViewerProps) {
     indexButtonFocused: false,
     selectionHistory: null,
     autoSelectingIndex: false,
+    skipNextAutoExpand: false,
   });
 
   // Batch update helper
@@ -152,6 +155,12 @@ export function ListViewer(props: ListViewerProps) {
     on(
       () => props.currentNoteId?.(),
       async (noteId) => {
+        // Skip if this was triggered by internal folder index selection (Enter on folder)
+        if (list.skipNextAutoExpand) {
+          setList("skipNextAutoExpand", false);
+          return;
+        }
+
         if (!noteId) return;
 
         // Fetch the note's folder path to know where to navigate
@@ -299,6 +308,27 @@ export function ListViewer(props: ListViewerProps) {
     props.onSelectIndex?.(noteId);
   };
 
+  // Select a folder's index note without changing the sidebar view
+  // This allows "Enter on folder" to select its index while staying in current folder
+  const selectFolderIndex = async (index: number) => {
+    const item = items()?.[index];
+    if (!item || item.type !== "folder") return;
+
+    // Fetch the index note ID for this folder
+    const indexId = await getIndexNoteIdQuery(item.id);
+    if (!indexId) return;
+
+    // Batch update: mark folder as selected + set skip flag to prevent auto-expand
+    update({
+      selection: { type: "item", index },
+      selectionHistory: [...list.history],
+      skipNextAutoExpand: true,
+    });
+
+    // Navigate to the index note (triggers auto-expand effect, which will skip due to flag)
+    props.onNoteSelect?.(indexId);
+  };
+
   // Event handlers
   const handleListClick = (index: number) => {
     update({ focusZone: "list", focusedIndex: index });
@@ -349,7 +379,15 @@ export function ListViewer(props: ListViewerProps) {
     h: navigateBack,
     Backspace: navigateBack,
     Escape: () => setList("focusZone", "path"),
-    Enter: () => list.focusedIndex !== null && selectItem(list.focusedIndex),
+    Enter: () => {
+      if (list.focusedIndex === null) return;
+      const item = items()?.[list.focusedIndex];
+      if (item?.type === "folder") {
+        selectFolderIndex(list.focusedIndex);
+      } else {
+        selectItem(list.focusedIndex);
+      }
+    },
     F2: () => {
       const currentItems = items();
       if (list.focusedIndex !== null && currentItems) {
