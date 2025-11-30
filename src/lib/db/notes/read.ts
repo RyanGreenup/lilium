@@ -140,7 +140,9 @@ export async function getNoteChildCount(note_id: string): Promise<number> {
   return result?.child_count ?? 0;
 }
 
+
 /**
+ * @deprecated Use from db_new/types.ts instead
  * Query function to get note child counts (for client-side use)
  */
 export const getNoteChildCountsQuery = query(async () => {

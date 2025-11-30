@@ -45,6 +45,9 @@ export async function getChildren(parentId: string | null): Promise<ListItem[]> 
   ) as Folder[];
 
   // Get child notes (without content)
+  // Note: Index notes (title = "index") are excluded because they serve as
+  // folder landing pages and are accessed via the dedicated index button
+  // in the breadcrumb path, not through the file list.
   const notesStmt = db.prepare(`
     SELECT
       id,
@@ -58,6 +61,7 @@ export async function getChildren(parentId: string | null): Promise<ListItem[]> 
     FROM notes
     WHERE ${parentId ? "parent_id = ?" : "parent_id IS NULL"}
       AND user_id = ?
+      AND LOWER(TRIM(title)) != 'index'
     ORDER BY title ASC
   `);
   const notes = (parentId
@@ -83,11 +87,11 @@ export const getChildrenQuery = query(async (parentId: string | null) => {
 /**
  * Get folder path for breadcrumb navigation
  *
- * Returns array of folders from root to current (excludes current folder).
+ * Returns array of folders from root to current (inclusive).
  * Uses recursive CTE to traverse the parent chain.
  *
  * @param folderId - The current folder ID, or null for root
- * @returns Array of parent folders from root to immediate parent
+ * @returns Array of folders from root to current folder
  */
 export async function getFolderPath(folderId: string | null): Promise<Folder[]> {
   const user = await requireUser();
@@ -133,7 +137,6 @@ export async function getFolderPath(folderId: string | null): Promise<Folder[]> 
       created_at,
       updated_at
     FROM parent_chain
-    WHERE level > 0
     ORDER BY level DESC
   `);
 
