@@ -5,6 +5,7 @@ import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
 import HomeIcon from "lucide-solid/icons/home";
 import {
+  type Accessor,
   batch,
   createEffect,
   createMemo,
@@ -20,6 +21,7 @@ import {
   getChildrenQuery,
   getFolderPathQuery,
   getIndexNoteIdQuery,
+  getNoteFolderPathQuery,
 } from "~/lib/db_new/api";
 import type { ListItem } from "~/lib/db_new/types";
 import {
@@ -59,6 +61,10 @@ interface ListViewerProps {
   selectionFollowsFocus?: boolean;
   /** Because double touch on Mobile is bad form, and a small button is also bad*/
   navigateFoldersOnClick?: boolean;
+  /** Current note ID from route - used to highlight and auto-navigate to folder */
+  currentNoteId?: Accessor<string | undefined>;
+  /** Called when user selects a note (for navigation) */
+  onNoteSelect?: (noteId: string) => void;
 }
 
 const memoryKey = (parentId: string | null): string => parentId ?? "root";
@@ -94,7 +100,14 @@ export function ListViewer(props: ListViewerProps) {
   const currentParent = createMemo(() => list.history.at(-1) ?? null);
   const selectedIndex = () =>
     list.selection.type === "item" ? list.selection.index : null;
-  const indexSelected = () => list.selection.type === "index";
+  // Derive index selection from URL - index note is selected if its ID matches current route
+  const indexSelected = () => {
+    const currentIndexId = indexNoteId();
+    if (currentIndexId && props.currentNoteId) {
+      return props.currentNoteId() === currentIndexId;
+    }
+    return list.selection.type === "index";
+  };
 
   // Data fetching
   const items = createAsync(() => getChildrenQuery(currentParent()));
@@ -122,6 +135,38 @@ export function ListViewer(props: ListViewerProps) {
       setList("autoSelectingIndex", false);
     }
   });
+
+  // Auto-expand to note's folder when URL changes (external navigation)
+  createEffect(
+    on(
+      () => props.currentNoteId?.(),
+      async (noteId) => {
+        if (!noteId) return;
+
+        // Fetch the note's folder path to know where to navigate
+        const pathInfo = await getNoteFolderPathQuery(noteId);
+        if (!pathInfo) return;
+
+        // Build the history array (folder IDs from root to parent)
+        // folderPath contains ancestors, parentId is the direct parent
+        const newHistory = pathInfo.folderPath.map((f) => f.id);
+        if (pathInfo.parentId) {
+          newHistory.push(pathInfo.parentId);
+        }
+
+        // Only update if we need to navigate to a different folder
+        const currentHistoryStr = JSON.stringify(list.history);
+        const newHistoryStr = JSON.stringify(newHistory);
+        if (currentHistoryStr !== newHistoryStr) {
+          update({
+            history: newHistory,
+            pathFocusIndex: newHistory.length,
+          });
+        }
+      },
+      { defer: true },
+    ),
+  );
 
   // Focus memory
   const saveFocus = () => {
@@ -215,14 +260,33 @@ export function ListViewer(props: ListViewerProps) {
 
   // Selection actions
   const selectItem = (index: number) => {
-    update({ selection: { type: "item", index }, selectionHistory: [...list.history] });
     const item = items()?.[index];
-    if (item) props.onSelect?.(item);
+    if (!item) return;
+
+    // For notes, trigger navigation callback - URL change will drive selection state
+    if (item.type === "note" && props.onNoteSelect) {
+      props.onNoteSelect(item.id);
+      // Still call onSelect for any other listeners
+      props.onSelect?.(item);
+      return;
+    }
+
+    // For folders (when navigateFoldersOnClick is false), keep old behavior
+    update({ selection: { type: "item", index }, selectionHistory: [...list.history] });
+    props.onSelect?.(item);
   };
 
   const selectIndex = () => {
     const noteId = indexNoteId();
     if (!noteId) return;
+
+    // Trigger navigation for index notes - URL change will drive selection state
+    if (props.onNoteSelect) {
+      props.onNoteSelect(noteId);
+      props.onSelectIndex?.(noteId);
+      return;
+    }
+
     update({ selection: { type: "index" }, selectionHistory: [...list.history] });
     props.onSelectIndex?.(noteId);
   };
@@ -451,7 +515,13 @@ export function ListViewer(props: ListViewerProps) {
               {(item, index) => {
                 const isFocused = () =>
                   list.focusZone === "list" && list.focusedIndex === index();
-                const isSelected = () => selectedIndex() === index();
+                // Derive selection from URL for notes, fall back to internal state for folders
+                const isSelected = () => {
+                  if (item.type === "note") {
+                    return props.currentNoteId?.() === item.id;
+                  }
+                  return selectedIndex() === index();
+                };
 
                 return (
                   <div

@@ -187,3 +187,48 @@ export const getIndexNoteIdQuery = query(async (parentId: string | null) => {
   "use server";
   return await getIndexNoteId(parentId);
 }, "index-note-id");
+
+/**
+ * Get the folder path for a note (to enable auto-expand in sidebar)
+ *
+ * Returns the note's parent folder ID and the full folder path to navigate to it.
+ * Used when URL changes to a note - the sidebar needs to expand to show that note.
+ *
+ * @param noteId - The note ID to find the folder path for
+ * @returns Object with parentId and folderPath, or null if note not found
+ */
+export async function getNoteFolderPath(noteId: string): Promise<{
+  parentId: string | null;
+  folderPath: Folder[];
+} | null> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  // 1. Get the note to find its parent_id
+  const noteStmt = db.prepare(`
+    SELECT parent_id
+    FROM notes
+    WHERE id = ? AND user_id = ?
+  `);
+  const note = noteStmt.get(noteId, user.id) as { parent_id: string | null } | undefined;
+
+  if (!note) {
+    return null;
+  }
+
+  // 2. If note has a parent folder, get the full path
+  const parentId = note.parent_id;
+  const folderPath = parentId ? await getFolderPath(parentId) : [];
+
+  return { parentId, folderPath };
+}
+
+/**
+ * Query function to get note's folder path (for client-side use)
+ */
+export const getNoteFolderPathQuery = query(async (noteId: string) => {
+  "use server";
+  return await getNoteFolderPath(noteId);
+}, "note-folder-path");
