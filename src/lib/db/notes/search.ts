@@ -23,14 +23,14 @@ export async function searchNotes(searchQuery: string, parentId?: string): Promi
     INNER JOIN notes_fts fts ON n.id = fts.id
     WHERE notes_fts MATCH ? AND fts.user_id = ?
   `;
-  
+
   const params: any[] = [searchQuery.trim().replace(/['"]/g, '""'), user.id];
-  
+
   if (parentId) {
     sql += ` AND n.parent_id = ?`;
     params.push(parentId);
   }
-  
+
   sql += ` ORDER BY bm25(notes_fts), n.updated_at DESC`;
 
   const stmt = db.prepare(sql);
@@ -132,11 +132,11 @@ export async function getForwardLinks(noteId: string): Promise<Note[]> {
 
   // First, get the current note's content
   const currentNoteStmt = db.prepare(`
-    SELECT title, content, abstract FROM notes 
+    SELECT title, content, abstract FROM notes
     WHERE id = ? AND user_id = ?
   `);
   const currentNote = currentNoteStmt.get(noteId, user.id) as Note | undefined;
-  
+
   if (!currentNote) {
     return [];
   }
@@ -147,16 +147,16 @@ export async function getForwardLinks(noteId: string): Promise<Note[]> {
   const content = [currentNote.title, currentNote.content, currentNote.abstract]
     .filter(Boolean)
     .join(' ');
-  
+
   const foundIds = content.match(noteIdRegex) || [];
-  
+
   if (foundIds.length === 0) {
     return [];
   }
 
   // Remove duplicates and filter out the current note's ID
   const uniqueIds = [...new Set(foundIds)].filter(id => id !== noteId);
-  
+
   if (uniqueIds.length === 0) {
     return [];
   }
@@ -256,6 +256,7 @@ export const getNotesBySyntaxQuery = query(async (syntax: string) => {
 }, "notes-by-syntax");
 
 /**
+ * @deprecated Use from db_new/types.ts instead
  * Query function to get recent notes (for client-side use)
  */
 export const getRecentNotesQuery = query(async (limit?: number) => {

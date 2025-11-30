@@ -1,9 +1,8 @@
-import { useSearchParams } from "@solidjs/router";
+import { revalidate, useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import {
   ArrowLeft,
   ArrowRight,
   Clock,
-  FolderTree,
   MessageSquare,
   Notebook,
   Search,
@@ -19,16 +18,23 @@ import {
 } from "solid-js";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
+import {
+  ContextMenu,
+  useContextMenu,
+  type ContextMenuItem,
+} from "~/solid-daisy-components/components/ContextMenu";
 import BacklinksTab from "./tabs/BacklinksTab";
 import DiscussionTab from "./tabs/DiscussionTab";
 import ForwardLinksTab from "./tabs/ForwardLinksTab";
-import NotesTab from "./tabs/NotesTab";
 import { ListViewer } from "./tabs/NotesListTabNew";
 import RecentNotesTab from "./tabs/RecentNotesTab";
 import RelatedTab from "./tabs/RelatedTab";
 import { SidebarSearchContent } from "./tabs/SearchTab";
 import { SlideTransition } from "~/components/Animations/SlideTransition";
 import { Loading } from "~/solid-daisy-components/components/Loading";
+import type { ListItem } from "~/lib/db_new/types";
+import { renameNoteQuery } from "~/lib/db_new/notes/update_rename";
+import { renameFolderQuery } from "~/lib/db_new/folders/update_rename";
 
 // Delayed fallback component to avoid flickering loading states for fast operations
 function DelayedFallback(props: { delay?: number; children: any }) {
@@ -52,14 +58,18 @@ export const SidebarTabs = () => {
   const [activeTab, setActiveTab] = createSignal(0);
   const [isGoingDeeper, setIsGoingDeeper] = createSignal(true);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const params = useParams();
+
+  // Reactive accessor for current note ID from route
+  const currentNoteId = () => params.id;
+
+  // Navigation handler for when user selects a note in the sidebar
+  const handleNoteSelect = (noteId: string) => {
+    navigate(`/note/${noteId}`);
+  };
 
   // Focus triggers for tabs
-  const [notesFocusTrigger, setNotesFocusTrigger] = createSignal<string | null>(
-    null,
-  );
-  const [listViewerFocusTrigger, setListViewerFocusTrigger] = createSignal<
-    string | null
-  >(null);
   const [recentFocusTrigger, setRecentFocusTrigger] = createSignal<
     string | null
   >(null);
@@ -83,31 +93,132 @@ export const SidebarTabs = () => {
   // Persistent search state across tab navigation
   const [searchTerm, setSearchTerm] = createSignal("");
 
+  // Context menu state
+  const [contextItem, setContextItem] = createSignal<ListItem | null>(null);
+  const [editingItemId, setEditingItemId] = createSignal<string | null>(null);
+
+  const getContextMenuItems = (): ContextMenuItem[] => {
+    const item = contextItem();
+    if (!item) return [];
+
+    return [
+      {
+        id: "rename",
+        label: "Rename",
+        keybind: "F2",
+        onClick: () => setEditingItemId(item.id),
+      },
+      {
+        id: "create-sibling",
+        label: "New sibling",
+        keybind: "Ctrl+N",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      {
+        id: "create-child",
+        label: "New child",
+        keybind: "Shift+N",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      { id: "sep1", label: "", separator: true },
+      {
+        id: "copy-link",
+        label: "Copy Link",
+        keybind: "y",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      {
+        id: "duplicate",
+        label: "Duplicate",
+        keybind: "Ctrl+D",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      {
+        id: "cut",
+        label: "Cut",
+        keybind: "Ctrl+X",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      {
+        id: "paste",
+        label: "Paste as sibling",
+        keybind: "Ctrl+V",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      {
+        id: "paste-child",
+        label: "Paste as child",
+        keybind: "Ctrl+Shift+V",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      { id: "sep2", label: "", separator: true },
+      {
+        id: "delete",
+        label: "Delete",
+        keybind: "Del",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+    ];
+  };
+
+  const contextMenu = useContextMenu({
+    items: getContextMenuItems(),
+  });
+
+  const handleContextMenu = (item: ListItem, event: MouseEvent) => {
+    setContextItem(item);
+    contextMenu.open(event);
+  };
+
+  const handleRename = async (item: ListItem, newTitle: string) => {
+    try {
+      if (item.type === "folder") {
+        await renameFolderQuery(item.id, newTitle);
+      } else {
+        await renameNoteQuery(item.id, newTitle);
+      }
+      // Revalidate the children query to refresh the list
+      revalidate("list-children");
+    } catch (error) {
+      console.error("Failed to rename:", error);
+      alert("Failed to rename item");
+    } finally {
+      setEditingItemId(null);
+    }
+  };
+
+  const handleCancelRename = () => {
+    setEditingItemId(null);
+  };
+
+  const handleStartEdit = (item: ListItem) => {
+    setEditingItemId(item.id);
+  };
+
   const tabs = [
     { id: 0, label: "Notes", key: "notes", icon: <Notebook class="w-4 h-4" /> },
-    { id: 1, label: "List", key: "list", icon: <FolderTree class="w-4 h-4" /> },
-    { id: 2, label: "Recent", key: "recent", icon: <Clock class="w-4 h-4" /> },
-    { id: 3, label: "Search", key: "search", icon: <Search class="w-4 h-4" /> },
+    { id: 1, label: "Recent", key: "recent", icon: <Clock class="w-4 h-4" /> },
+    { id: 2, label: "Search", key: "search", icon: <Search class="w-4 h-4" /> },
     {
-      id: 4,
+      id: 3,
       label: "Backlinks",
       key: "backlinks",
       icon: <ArrowLeft class="w-4 h-4" />,
     },
     {
-      id: 5,
+      id: 4,
       label: "Forward",
       key: "forward",
       icon: <ArrowRight class="w-4 h-4" />,
     },
     {
-      id: 6,
+      id: 5,
       label: "Related",
       key: "related",
       icon: <Sparkles class="w-4 h-4" />,
     },
     {
-      id: 7,
+      id: 6,
       label: "Discussion",
       key: "discussion",
       icon: <MessageSquare class="w-4 h-4" />,
@@ -131,38 +242,30 @@ export const SidebarTabs = () => {
     }
 
     // Trigger focus for keybindings and search tab clicks
-    const shouldFocus = fromKeybinding || tabId === 3;
+    const shouldFocus = fromKeybinding || tabId === 2;
     if (shouldFocus) {
       const triggerId = Date.now().toString();
-      if (tabId === 0) {
-        // Notes tab
-        setNotesFocusTrigger(triggerId);
-        setTimeout(() => setNotesFocusTrigger(null), 100);
-      } else if (tabId === 1) {
-        // List viewer tab - focus for keyboard navigation
-        setListViewerFocusTrigger(triggerId);
-        setTimeout(() => setListViewerFocusTrigger(null), 100);
-      } else if (tabId === 2) {
+      if (tabId === 1) {
         // Recent tab - focus list for keybinding navigation
         setRecentFocusTrigger(triggerId);
         setTimeout(() => setRecentFocusTrigger(null), 100);
-      } else if (tabId === 3) {
+      } else if (tabId === 2) {
         // Search tab - focus input for both keybinding and clicks
         setSearchFocusTrigger(triggerId);
         setTimeout(() => setSearchFocusTrigger(null), 100);
-      } else if (tabId === 4) {
+      } else if (tabId === 3) {
         // Backlinks tab - focus list for keybinding navigation
         setBacklinksFocusTrigger(triggerId);
         setTimeout(() => setBacklinksFocusTrigger(null), 100);
-      } else if (tabId === 5) {
+      } else if (tabId === 4) {
         // Forward links tab - focus list for keybinding navigation
         setForwardLinksFocusTrigger(triggerId);
         setTimeout(() => setForwardLinksFocusTrigger(null), 100);
-      } else if (tabId === 6) {
+      } else if (tabId === 5) {
         // Related tab - focus list for keybinding navigation
         setRelatedFocusTrigger(triggerId);
         setTimeout(() => setRelatedFocusTrigger(null), 100);
-      } else if (tabId === 7) {
+      } else if (tabId === 6) {
         // Discussion tab - focus textarea for immediate typing
         setDiscussionFocusTrigger(triggerId);
         setTimeout(() => setDiscussionFocusTrigger(null), 100);
@@ -170,7 +273,7 @@ export const SidebarTabs = () => {
     }
   };
 
-  // Global keybindings for tab switching (Alt + 1-8)
+  // Global keybindings for tab switching (Alt + 1-7)
   useKeybinding({ key: "1", alt: true }, () => handleTabChange(0, true));
   useKeybinding({ key: "2", alt: true }, () => handleTabChange(1, true));
   useKeybinding({ key: "3", alt: true }, () => handleTabChange(2, true));
@@ -178,7 +281,6 @@ export const SidebarTabs = () => {
   useKeybinding({ key: "5", alt: true }, () => handleTabChange(4, true));
   useKeybinding({ key: "6", alt: true }, () => handleTabChange(5, true));
   useKeybinding({ key: "7", alt: true }, () => handleTabChange(6, true));
-  useKeybinding({ key: "8", alt: true }, () => handleTabChange(7, true));
 
   // Global keybindings for tab navigation (Alt + h/l)
   useKeybinding({ key: "h", alt: true }, () => {
@@ -219,10 +321,6 @@ export const SidebarTabs = () => {
         >
           <div class="h-full">
             <Show when={activeTab() === 0}>
-              <NotesTab focusTrigger={notesFocusTrigger} />
-            </Show>
-
-            <Show when={activeTab() === 1}>
               {/* IMPORTANT: Suspense boundary prevents full-screen flicker
                   ListViewer uses createAsync for data fetching (items, folderPath, indexNoteId).
                   When users interact with the component (click items, navigate folders),
@@ -231,17 +329,25 @@ export const SidebarTabs = () => {
                   The Suspense boundary isolates these async updates to prevent flicker.
                   See also: BacklinksTab, ForwardLinksTab, RelatedTab (same pattern) */}
               <Suspense fallback={<SidebarLoadingIndicator />}>
-                <ListViewer />
+                <ListViewer
+                  currentNoteId={currentNoteId}
+                  onNoteSelect={handleNoteSelect}
+                  onContextMenu={handleContextMenu}
+                  editingItemId={editingItemId}
+                  onRename={handleRename}
+                  onCancelRename={handleCancelRename}
+                  onStartEdit={handleStartEdit}
+                />
               </Suspense>
             </Show>
 
-            <Show when={activeTab() === 2}>
+            <Show when={activeTab() === 1}>
               <Suspense fallback={<SidebarLoadingIndicator />}>
                 <RecentNotesTab focusTrigger={recentFocusTrigger} />
               </Suspense>
             </Show>
 
-            <Show when={activeTab() === 3}>
+            <Show when={activeTab() === 2}>
               <Suspense fallback={<SidebarLoadingIndicator />}>
                 <SidebarSearchContent
                   focusTrigger={searchFocusTrigger}
@@ -251,25 +357,25 @@ export const SidebarTabs = () => {
               </Suspense>
             </Show>
 
-            <Show when={activeTab() === 4}>
+            <Show when={activeTab() === 3}>
               <Suspense fallback={<SidebarLoadingIndicator />}>
                 <BacklinksTab focusTrigger={backlinksFocusTrigger} />
               </Suspense>
             </Show>
 
-            <Show when={activeTab() === 5}>
+            <Show when={activeTab() === 4}>
               <Suspense fallback={<SidebarLoadingIndicator />}>
                 <ForwardLinksTab focusTrigger={forwardLinksFocusTrigger} />
               </Suspense>
             </Show>
 
-            <Show when={activeTab() === 6}>
+            <Show when={activeTab() === 5}>
               <Suspense fallback={<SidebarLoadingIndicator />}>
                 <RelatedTab focusTrigger={relatedFocusTrigger} />
               </Suspense>
             </Show>
 
-            <Show when={activeTab() === 7}>
+            <Show when={activeTab() === 6}>
               <Suspense fallback={<SidebarLoadingIndicator />}>
                 <DiscussionTab focusTrigger={discussionFocusTrigger} />
               </Suspense>
@@ -277,6 +383,20 @@ export const SidebarTabs = () => {
           </div>
         </SlideTransition>
       </div>
+
+      {/* Context menu for list items - wrapped in Show to ensure items are evaluated
+          when the menu opens (after contextItem signal is set), not at component init */}
+      <Show when={contextMenu.isOpen()}>
+        <ContextMenu
+          items={getContextMenuItems()}
+          open={true}
+          x={contextMenu.contextMenuProps().x}
+          y={contextMenu.contextMenuProps().y}
+          onOpenChange={(open) => {
+            if (!open) contextMenu.close();
+          }}
+        />
+      </Show>
     </div>
   );
 };

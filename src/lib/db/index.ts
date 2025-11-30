@@ -11,6 +11,18 @@ import Database from "better-sqlite3";
 // Initialize SQLite database for notes app
 export const db = new Database("./.data/notes.sqlite");
 
+// Enable foreign key constraints (CRITICAL: required for CASCADE to work)
+db.pragma("foreign_keys = ON");
+
+// Enable WAL mode for better concurrency and performance
+db.pragma("journal_mode = WAL");
+
+// Performance optimizations
+db.pragma("synchronous = NORMAL");  // Faster than FULL, still safe with WAL
+db.pragma("cache_size = -64000");   // 64MB cache (negative = KB)
+db.pragma("temp_store = MEMORY");   // Store temp tables in memory
+db.pragma("mmap_size = 30000000000"); // 30GB memory-mapped I/O
+
 // Create notes table
 db.exec(`
   CREATE TABLE IF NOT EXISTS notes (

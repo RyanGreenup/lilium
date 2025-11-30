@@ -6,9 +6,8 @@ import Folder from "lucide-solid/icons/folder";
 
 import { For, Suspense, Show } from "solid-js";
 import { getUser } from "~/lib/auth";
-import { getNoteChildCountsQuery } from "~/lib/db/notes/read";
-import { getNotesStatsQuery } from "~/lib/db/noteStats";
-import { getRecentNotesQuery } from "~/lib/db/notes/search";
+import { getNotesStatsQuery } from "~/lib/db_new/noteStats";
+import { getRecentNotesQuery } from "~/lib/db_new/notes/search";
 
 import { Badge } from "~/solid-daisy-components/components/Badge";
 import { Card } from "~/solid-daisy-components/components/Card";
@@ -26,7 +25,6 @@ export const route = {
     getUser();
     getNotesStatsQuery();
     getRecentNotesQuery(20);
-    getNoteChildCountsQuery();
   },
 } satisfies RouteDefinition;
 
@@ -34,7 +32,6 @@ export const route = {
 export default function Home() {
   const stats = createAsync(() => getNotesStatsQuery());
   const recentNotes = createAsync(() => getRecentNotesQuery(4));
-  const childCounts = createAsync(() => getNoteChildCountsQuery());
 
   const formatDate = (isoString: string) => {
     return new Date(isoString).toLocaleDateString();
@@ -45,13 +42,6 @@ export default function Home() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const isFolder = (noteId: string) => {
-    const counts = childCounts();
-    if (!counts) return false;
-    const noteCount = counts.find(c => c.id === noteId);
-    return noteCount ? noteCount.child_count > 0 : false;
   };
 
   return (
@@ -82,7 +72,7 @@ export default function Home() {
                   <StatFigure class="text-accent">
                     <Folder class="w-8 h-8" />
                   </StatFigure>
-                  <StatValue>{statsData().folders}</StatValue>
+                  <StatValue>{statsData().total_folders}</StatValue>
                   <StatDesc>Folders</StatDesc>
                 </Stat>
               </Stats>
@@ -107,9 +97,7 @@ export default function Home() {
                       <Card.Body>
                         <div class="flex justify-between items-start mb-2">
                           <div class="flex items-center gap-2">
-                            <Show when={isFolder(note.id)} fallback={<FileText class="w-4 h-4 text-base-content/60" />}>
-                              <Folder class="w-4 h-4 text-base-content/60" />
-                            </Show>
+                            <FileText class="w-4 h-4 text-base-content/60" />
                             <h3 class="card-title text-lg">{note.title}</h3>
                           </div>
                           <Badge variant="outline" size="sm">
