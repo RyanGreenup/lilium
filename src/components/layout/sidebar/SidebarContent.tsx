@@ -9,7 +9,14 @@ import {
   Search,
   Sparkles,
 } from "lucide-solid";
-import { createSignal, For, onMount, Show } from "solid-js";
+import {
+  createSignal,
+  For,
+  onMount,
+  onCleanup,
+  Show,
+  Suspense,
+} from "solid-js";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import BacklinksTab from "./tabs/BacklinksTab";
@@ -21,6 +28,25 @@ import RecentNotesTab from "./tabs/RecentNotesTab";
 import RelatedTab from "./tabs/RelatedTab";
 import { SidebarSearchContent } from "./tabs/SearchTab";
 import { SlideTransition } from "~/components/Animations/SlideTransition";
+import { Loading } from "~/solid-daisy-components/components/Loading";
+
+// Delayed fallback component to avoid flickering loading states for fast operations
+function DelayedFallback(props: { delay?: number; children: any }) {
+  const [show, setShow] = createSignal(false);
+
+  const timeoutId = setTimeout(() => setShow(true), props.delay ?? 500);
+  onCleanup(() => clearTimeout(timeoutId));
+
+  return <Show when={show()}>{props.children}</Show>;
+}
+
+const SidebarLoadingIndicator = () => (
+  <DelayedFallback delay={500}>
+    <Loading variant="dots" />
+    <Loading variant="dots" />
+    <Loading variant="dots" />
+  </DelayedFallback>
+);
 
 export const SidebarTabs = () => {
   const [activeTab, setActiveTab] = createSignal(0);
@@ -28,13 +54,27 @@ export const SidebarTabs = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Focus triggers for tabs
-  const [notesFocusTrigger, setNotesFocusTrigger] = createSignal<string | null>(null);
-  const [listViewerFocusTrigger, setListViewerFocusTrigger] = createSignal<string | null>(null);
-  const [recentFocusTrigger, setRecentFocusTrigger] = createSignal<string | null>(null);
-  const [searchFocusTrigger, setSearchFocusTrigger] = createSignal<string | null>(null);
-  const [backlinksFocusTrigger, setBacklinksFocusTrigger] = createSignal<string | null>(null);
-  const [forwardLinksFocusTrigger, setForwardLinksFocusTrigger] = createSignal<string | null>(null);
-  const [relatedFocusTrigger, setRelatedFocusTrigger] = createSignal<string | null>(null);
+  const [notesFocusTrigger, setNotesFocusTrigger] = createSignal<string | null>(
+    null,
+  );
+  const [listViewerFocusTrigger, setListViewerFocusTrigger] = createSignal<
+    string | null
+  >(null);
+  const [recentFocusTrigger, setRecentFocusTrigger] = createSignal<
+    string | null
+  >(null);
+  const [searchFocusTrigger, setSearchFocusTrigger] = createSignal<
+    string | null
+  >(null);
+  const [backlinksFocusTrigger, setBacklinksFocusTrigger] = createSignal<
+    string | null
+  >(null);
+  const [forwardLinksFocusTrigger, setForwardLinksFocusTrigger] = createSignal<
+    string | null
+  >(null);
+  const [relatedFocusTrigger, setRelatedFocusTrigger] = createSignal<
+    string | null
+  >(null);
 
   // Persistent search state across tab navigation
   const [searchTerm, setSearchTerm] = createSignal("");
@@ -186,43 +226,49 @@ export const SidebarTabs = () => {
                   SolidJS triggers re-renders of the entire page instead of just this component.
                   The Suspense boundary isolates these async updates to prevent flicker.
                   See also: BacklinksTab, ForwardLinksTab, RelatedTab (same pattern) */}
-              <Suspense
-                fallback={
-                  <div class="w-full h-full bg-base-200 rounded flex items-center justify-center">
-                    <div class="loading loading-spinner loading-md"></div>
-                  </div>
-                }
-              >
+              <Suspense fallback={<SidebarLoadingIndicator />}>
                 <ListViewer />
               </Suspense>
             </Show>
 
             <Show when={activeTab() === 2}>
-              <RecentNotesTab focusTrigger={recentFocusTrigger} />
+              <Suspense fallback={<SidebarLoadingIndicator />}>
+                <RecentNotesTab focusTrigger={recentFocusTrigger} />
+              </Suspense>
             </Show>
 
             <Show when={activeTab() === 3}>
-              <SidebarSearchContent
-                focusTrigger={searchFocusTrigger}
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-              />
+              <Suspense fallback={<SidebarLoadingIndicator />}>
+                <SidebarSearchContent
+                  focusTrigger={searchFocusTrigger}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                />
+              </Suspense>
             </Show>
 
             <Show when={activeTab() === 4}>
-              <BacklinksTab focusTrigger={backlinksFocusTrigger} />
+              <Suspense fallback={<SidebarLoadingIndicator />}>
+                <BacklinksTab focusTrigger={backlinksFocusTrigger} />
+              </Suspense>
             </Show>
 
             <Show when={activeTab() === 5}>
-              <ForwardLinksTab focusTrigger={forwardLinksFocusTrigger} />
+              <Suspense fallback={<SidebarLoadingIndicator />}>
+                <ForwardLinksTab focusTrigger={forwardLinksFocusTrigger} />
+              </Suspense>
             </Show>
 
             <Show when={activeTab() === 6}>
-              <RelatedTab focusTrigger={relatedFocusTrigger} />
+              <Suspense fallback={<SidebarLoadingIndicator />}>
+                <RelatedTab focusTrigger={relatedFocusTrigger} />
+              </Suspense>
             </Show>
 
             <Show when={activeTab() === 7}>
-              <DiscussionTab focusTrigger={discussionFocusTrigger} />
+              <Suspense fallback={<SidebarLoadingIndicator />}>
+                <DiscussionTab focusTrigger={discussionFocusTrigger} />
+              </Suspense>
             </Show>
           </div>
         </SlideTransition>
