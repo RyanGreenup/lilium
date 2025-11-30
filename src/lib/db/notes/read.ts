@@ -25,6 +25,14 @@ export async function getNoteById(id: string): Promise<Note | null> {
 }
 
 /**
+ * Query function to get note by ID (for client-side use)
+ */
+export const getNoteByIdQuery = query(async (noteId: string) => {
+  "use server";
+  return await getNoteById(noteId);
+}, "note-by-id");
+
+/**
  * Get notes with their tags
  */
 export async function getNotesWithTags(): Promise<NoteWithTags[]> {
@@ -182,13 +190,6 @@ export const getNoteChildCountQuery = query(async (noteId: string) => {
   return await getNoteChildCount(noteId);
 }, "note-child-count");
 
-/**
- * Query function to get note by ID (for client-side use)
- */
-export const getNoteByIdQuery = query(async (noteId: string) => {
-  "use server";
-  return await getNoteById(noteId);
-}, "note-by-id");
 
 /**
  * Query function to get notes with tags (for client-side use)
