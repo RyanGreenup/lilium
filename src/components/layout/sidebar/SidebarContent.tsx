@@ -1,4 +1,4 @@
-import { useNavigate, useParams, useSearchParams } from "@solidjs/router";
+import { revalidate, useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import {
   ArrowLeft,
   ArrowRight,
@@ -18,6 +18,11 @@ import {
 } from "solid-js";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
+import {
+  ContextMenu,
+  useContextMenu,
+  type ContextMenuItem,
+} from "~/solid-daisy-components/components/ContextMenu";
 import BacklinksTab from "./tabs/BacklinksTab";
 import DiscussionTab from "./tabs/DiscussionTab";
 import ForwardLinksTab from "./tabs/ForwardLinksTab";
@@ -27,6 +32,9 @@ import RelatedTab from "./tabs/RelatedTab";
 import { SidebarSearchContent } from "./tabs/SearchTab";
 import { SlideTransition } from "~/components/Animations/SlideTransition";
 import { Loading } from "~/solid-daisy-components/components/Loading";
+import type { ListItem } from "~/lib/db_new/types";
+import { renameNoteQuery } from "~/lib/db_new/notes/update_rename";
+import { renameFolderQuery } from "~/lib/db_new/folders/update_rename";
 
 // Delayed fallback component to avoid flickering loading states for fast operations
 function DelayedFallback(props: { delay?: number; children: any }) {
@@ -84,6 +92,108 @@ export const SidebarTabs = () => {
 
   // Persistent search state across tab navigation
   const [searchTerm, setSearchTerm] = createSignal("");
+
+  // Context menu state
+  const [contextItem, setContextItem] = createSignal<ListItem | null>(null);
+  const [editingItemId, setEditingItemId] = createSignal<string | null>(null);
+
+  const getContextMenuItems = (): ContextMenuItem[] => {
+    const item = contextItem();
+    if (!item) return [];
+
+    return [
+      {
+        id: "rename",
+        label: "Rename",
+        keybind: "F2",
+        onClick: () => setEditingItemId(item.id),
+      },
+      {
+        id: "create-sibling",
+        label: "New sibling",
+        keybind: "Ctrl+N",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      {
+        id: "create-child",
+        label: "New child",
+        keybind: "Shift+N",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      { id: "sep1", label: "", separator: true },
+      {
+        id: "copy-link",
+        label: "Copy Link",
+        keybind: "y",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      {
+        id: "duplicate",
+        label: "Duplicate",
+        keybind: "Ctrl+D",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      {
+        id: "cut",
+        label: "Cut",
+        keybind: "Ctrl+X",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      {
+        id: "paste",
+        label: "Paste as sibling",
+        keybind: "Ctrl+V",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      {
+        id: "paste-child",
+        label: "Paste as child",
+        keybind: "Ctrl+Shift+V",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+      { id: "sep2", label: "", separator: true },
+      {
+        id: "delete",
+        label: "Delete",
+        keybind: "Del",
+        onClick: () => alert("TODO: not implemented (yet)"),
+      },
+    ];
+  };
+
+  const contextMenu = useContextMenu({
+    items: getContextMenuItems(),
+  });
+
+  const handleContextMenu = (item: ListItem, event: MouseEvent) => {
+    setContextItem(item);
+    contextMenu.open(event);
+  };
+
+  const handleRename = async (item: ListItem, newTitle: string) => {
+    try {
+      if (item.type === "folder") {
+        await renameFolderQuery(item.id, newTitle);
+      } else {
+        await renameNoteQuery(item.id, newTitle);
+      }
+      // Revalidate the children query to refresh the list
+      revalidate("list-children");
+    } catch (error) {
+      console.error("Failed to rename:", error);
+      alert("Failed to rename item");
+    } finally {
+      setEditingItemId(null);
+    }
+  };
+
+  const handleCancelRename = () => {
+    setEditingItemId(null);
+  };
+
+  const handleStartEdit = (item: ListItem) => {
+    setEditingItemId(item.id);
+  };
 
   const tabs = [
     { id: 0, label: "Notes", key: "notes", icon: <Notebook class="w-4 h-4" /> },
@@ -222,6 +332,11 @@ export const SidebarTabs = () => {
                 <ListViewer
                   currentNoteId={currentNoteId}
                   onNoteSelect={handleNoteSelect}
+                  onContextMenu={handleContextMenu}
+                  editingItemId={editingItemId}
+                  onRename={handleRename}
+                  onCancelRename={handleCancelRename}
+                  onStartEdit={handleStartEdit}
                 />
               </Suspense>
             </Show>
@@ -268,6 +383,20 @@ export const SidebarTabs = () => {
           </div>
         </SlideTransition>
       </div>
+
+      {/* Context menu for list items - wrapped in Show to ensure items are evaluated
+          when the menu opens (after contextItem signal is set), not at component init */}
+      <Show when={contextMenu.isOpen()}>
+        <ContextMenu
+          items={getContextMenuItems()}
+          open={true}
+          x={contextMenu.contextMenuProps().x}
+          y={contextMenu.contextMenuProps().y}
+          onOpenChange={(open) => {
+            if (!open) contextMenu.close();
+          }}
+        />
+      </Show>
     </div>
   );
 };

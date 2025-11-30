@@ -9,6 +9,7 @@ import {
   batch,
   createEffect,
   createMemo,
+  createSignal,
   ErrorBoundary,
   For,
   on,
@@ -65,6 +66,16 @@ interface ListViewerProps {
   currentNoteId?: Accessor<string | undefined>;
   /** Called when user selects a note (for navigation) */
   onNoteSelect?: (noteId: string) => void;
+  /** Called when user right-clicks an item */
+  onContextMenu?: (item: ListItem, event: MouseEvent) => void;
+  /** ID of item currently being renamed (controlled from parent) */
+  editingItemId?: Accessor<string | null>;
+  /** Called when rename is confirmed (Enter/blur) */
+  onRename?: (item: ListItem, newTitle: string) => void;
+  /** Called when rename is cancelled (Escape) */
+  onCancelRename?: () => void;
+  /** Called when user initiates rename (F2 key) */
+  onStartEdit?: (item: ListItem) => void;
 }
 
 const memoryKey = (parentId: string | null): string => parentId ?? "root";
@@ -339,6 +350,13 @@ export function ListViewer(props: ListViewerProps) {
     Backspace: navigateBack,
     Escape: () => setList("focusZone", "path"),
     Enter: () => list.focusedIndex !== null && selectItem(list.focusedIndex),
+    F2: () => {
+      const currentItems = items();
+      if (list.focusedIndex !== null && currentItems) {
+        const item = currentItems[list.focusedIndex];
+        if (item) props.onStartEdit?.(item);
+      }
+    },
   };
 
   const pathKeyActions: Record<string, () => void> = {
@@ -531,20 +549,78 @@ export function ListViewer(props: ListViewerProps) {
                     })}
                     onClick={() => handleListClick(index())}
                     onDblClick={() => navigateInto(item)}
+                    onContextMenu={(e) => {
+                      if (props.onContextMenu) {
+                        e.preventDefault();
+                        props.onContextMenu(item, e);
+                      }
+                    }}
                   >
-                    <span
-                      class={listItemNameVariants({
-                        focused: isFocused(),
-                        selected: isSelected(),
-                      })}
+                    {item.type === "folder" ? (
+                      <Folder size={16} class="inline mr-2 flex-shrink-0" />
+                    ) : (
+                      <FileText size={16} class="inline mr-2 flex-shrink-0" />
+                    )}
+                    <Show
+                      when={props.editingItemId?.() === item.id}
+                      fallback={
+                        <span
+                          class={listItemNameVariants({
+                            focused: isFocused(),
+                            selected: isSelected(),
+                          })}
+                        >
+                          {item.title}
+                        </span>
+                      }
                     >
-                      {item.type === "folder" ? (
-                        <Folder size={16} class="inline mr-2" />
-                      ) : (
-                        <FileText size={16} class="inline mr-2" />
-                      )}
-                      {item.title}
-                    </span>
+                      {(() => {
+                        const [editValue, setEditValue] = createSignal(item.title);
+                        let inputRef: HTMLInputElement | undefined;
+
+                        const handleSave = () => {
+                          const newTitle = editValue().trim();
+                          if (newTitle && newTitle !== item.title) {
+                            props.onRename?.(item, newTitle);
+                          } else {
+                            props.onCancelRename?.();
+                          }
+                        };
+
+                        const handleKeyDown = (e: KeyboardEvent) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleSave();
+                          } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            props.onCancelRename?.();
+                          }
+                          // Stop propagation to prevent list keyboard handlers
+                          e.stopPropagation();
+                        };
+
+                        // Auto-focus when mounted
+                        createEffect(() => {
+                          if (inputRef) {
+                            inputRef.focus();
+                            inputRef.select();
+                          }
+                        });
+
+                        return (
+                          <input
+                            ref={inputRef}
+                            type="text"
+                            value={editValue()}
+                            onInput={(e) => setEditValue(e.currentTarget.value)}
+                            onBlur={handleSave}
+                            onKeyDown={handleKeyDown}
+                            class="flex-1 px-1 py-0 text-sm bg-base-100 border border-primary rounded outline-none focus:ring-1 focus:ring-primary"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        );
+                      })()}
+                    </Show>
                   </div>
                 );
               }}
