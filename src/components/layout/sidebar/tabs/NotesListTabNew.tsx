@@ -17,11 +17,11 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import {
-  getChildren,
-  getFolderPath,
-  getIndexNoteId,
-  type ListItem,
-} from "~/lib/api";
+  getChildrenQuery,
+  getFolderPathQuery,
+  getIndexNoteIdQuery,
+} from "~/lib/db_new/api";
+import type { ListItem } from "~/lib/db_new/types";
 import {
   dividerVariants,
   indexButtonVariants,
@@ -97,9 +97,9 @@ export function ListViewer(props: ListViewerProps) {
   const indexSelected = () => list.selection.type === "index";
 
   // Data fetching
-  const items = createAsync(() => getChildren(currentParent()));
-  const folderPath = createAsync(() => getFolderPath(list.history));
-  const indexNoteId = createAsync(() => getIndexNoteId(currentParent()));
+  const items = createAsync(() => getChildrenQuery(currentParent()));
+  const folderPath = createAsync(() => getFolderPathQuery(currentParent()));
+  const indexNoteId = createAsync(() => getIndexNoteIdQuery(currentParent()));
 
   const pathItemCount = createMemo(() => 1 + (folderPath()?.length ?? 0));
 
