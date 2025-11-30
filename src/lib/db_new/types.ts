@@ -21,6 +21,50 @@ export interface Note {
   updated_at: string;
 }
 
+export interface NoteWithoutContent {
+  id: string;
+  title: string;
+  abstract?: string;
+  syntax: NoteSyntax;
+  parent_id?: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+////////////////////////////////////////////////////////////
+// Index Notes /////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+/**
+ * Special note title for index pages
+ *
+ * Index notes serve as the default landing page for a folder.
+ * When a user navigates to a folder, the UI automatically displays
+ * the index note's content as a preview, providing immediate context
+ * about the folder's purpose and contents.
+ *
+ * Behavior:
+ * - Index notes are automatically shown when viewing a folder
+ * - Each folder can have only one index note (enforced by UNIQUE constraint)
+ * - Index notes function like README files in code repositories
+ */
+export const INDEX_NOTE_TITLE = "index";
+
+/**
+ * Check if a note is an index note
+ *
+ * Index notes are special notes that serve as the default preview
+ * for their parent folder. They are displayed automatically when
+ * a user navigates to the folder.
+ *
+ * @param note - The note to check (or just its title)
+ * @returns true if the note is an index note
+ */
+export function isIndexNote(note: Note | NoteWithoutContent | { title: string }): boolean {
+  return note.title === INDEX_NOTE_TITLE;
+}
+
 ////////////////////////////////////////////////////////////
 // Pandoc stuff ////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
