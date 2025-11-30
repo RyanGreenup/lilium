@@ -1,5 +1,13 @@
-export type NoteSyntax = "md" | "org" | "html" | "jsx" | "ipynb" | "dw" | "mw" | "tex" | "typ";
-
+export type NoteSyntax =
+  | "md"
+  | "org"
+  | "html"
+  | "jsx"
+  | "ipynb"
+  | "dw"
+  | "mw"
+  | "tex"
+  | "typ";
 
 export interface NoteSyntaxOption {
   value: NoteSyntax;
@@ -7,6 +15,9 @@ export interface NoteSyntaxOption {
   extension: string;
 }
 
+/**
+ * @deprecated Use SYNTAX_OPTIONS from db_new/types.ts instead
+ */
 export const SYNTAX_OPTIONS: NoteSyntaxOption[] = [
   { value: "md", label: "Markdown", extension: ".md" },
   { value: "org", label: "Org Mode", extension: ".org" },
@@ -19,34 +30,93 @@ export const SYNTAX_OPTIONS: NoteSyntaxOption[] = [
   { value: "typ", label: "Typst", extension: ".typ" },
 ];
 
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
 export const PANDOC_SUPPORTED_SYNTAXES = ["ipynb", "typ"] as const;
-export type PandocSyntax = typeof PANDOC_SUPPORTED_SYNTAXES[number];
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
+export type PandocSyntax = (typeof PANDOC_SUPPORTED_SYNTAXES)[number];
 
-export const MARKDOWN_CONVERTIBLE_SYNTAXES = ["org", "dw", "mw", "tex"] as const;
-export type MarkdownConvertibleSyntax = typeof MARKDOWN_CONVERTIBLE_SYNTAXES[number];
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
+export const MARKDOWN_CONVERTIBLE_SYNTAXES = [
+  "org",
+  "dw",
+  "mw",
+  "tex",
+] as const;
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
+export type MarkdownConvertibleSyntax =
+  (typeof MARKDOWN_CONVERTIBLE_SYNTAXES)[number];
 
-export const CLIENT_RENDERED_SYNTAXES = ["md", "org", "dw", "mw", "tex"] as const;
-export type ClientRenderedSyntax = typeof CLIENT_RENDERED_SYNTAXES[number];
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
+export const CLIENT_RENDERED_SYNTAXES = [
+  "md",
+  "org",
+  "dw",
+  "mw",
+  "tex",
+] as const;
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
+export type ClientRenderedSyntax = (typeof CLIENT_RENDERED_SYNTAXES)[number];
 
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
 export const PASSTHROUGH_SYNTAXES = ["html"] as const;
-export type PassthroughSyntax = typeof PASSTHROUGH_SYNTAXES[number];
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
+export type PassthroughSyntax = (typeof PASSTHROUGH_SYNTAXES)[number];
 
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
 export const isPandocSyntax = (syntax: string): syntax is PandocSyntax => {
   return PANDOC_SUPPORTED_SYNTAXES.includes(syntax as PandocSyntax);
 };
 
-export const isMarkdownConvertibleSyntax = (syntax: string): syntax is MarkdownConvertibleSyntax => {
-  return MARKDOWN_CONVERTIBLE_SYNTAXES.includes(syntax as MarkdownConvertibleSyntax);
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
+export const isMarkdownConvertibleSyntax = (
+  syntax: string,
+): syntax is MarkdownConvertibleSyntax => {
+  return MARKDOWN_CONVERTIBLE_SYNTAXES.includes(
+    syntax as MarkdownConvertibleSyntax,
+  );
 };
 
-export const isClientRenderedSyntax = (syntax: string): syntax is ClientRenderedSyntax => {
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
+export const isClientRenderedSyntax = (
+  syntax: string,
+): syntax is ClientRenderedSyntax => {
   return CLIENT_RENDERED_SYNTAXES.includes(syntax as ClientRenderedSyntax);
 };
 
-export const isPassthroughSyntax = (syntax: string): syntax is PassthroughSyntax => {
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
+export const isPassthroughSyntax = (
+  syntax: string,
+): syntax is PassthroughSyntax => {
   return PASSTHROUGH_SYNTAXES.includes(syntax as PassthroughSyntax);
 };
 
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
 export interface Note {
   id: string;
   title: string;
@@ -59,6 +129,9 @@ export interface Note {
   updated_at: string;
 }
 
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
 export interface Tag {
   id: string;
   title: string;
@@ -67,6 +140,9 @@ export interface Tag {
   created_at: string;
 }
 
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
 export interface NoteTag {
   id: string;
   note_id: string;
@@ -74,10 +150,16 @@ export interface NoteTag {
   created_at: string;
 }
 
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
 export interface NoteWithTags extends Note {
   tags: Tag[];
 }
 
+/**
+ * @deprecated Use from db_new/types.ts instead
+ */
 export interface NoteChildCount {
   id: string;
   user_id: string;
