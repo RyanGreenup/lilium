@@ -22,7 +22,6 @@ import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding"
 import BacklinksTab from "./tabs/BacklinksTab";
 import DiscussionTab from "./tabs/DiscussionTab";
 import ForwardLinksTab from "./tabs/ForwardLinksTab";
-import NotesTab from "./tabs/NotesTab";
 import { ListViewer } from "./tabs/NotesListTabNew";
 import RecentNotesTab from "./tabs/RecentNotesTab";
 import RelatedTab from "./tabs/RelatedTab";
@@ -54,9 +53,6 @@ export const SidebarTabs = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Focus triggers for tabs
-  const [notesFocusTrigger, setNotesFocusTrigger] = createSignal<string | null>(
-    null,
-  );
   const [listViewerFocusTrigger, setListViewerFocusTrigger] = createSignal<
     string | null
   >(null);
@@ -134,11 +130,7 @@ export const SidebarTabs = () => {
     const shouldFocus = fromKeybinding || tabId === 3;
     if (shouldFocus) {
       const triggerId = Date.now().toString();
-      if (tabId === 0) {
-        // Notes tab
-        setNotesFocusTrigger(triggerId);
-        setTimeout(() => setNotesFocusTrigger(null), 100);
-      } else if (tabId === 1) {
+      if (tabId === 1) {
         // List viewer tab - focus for keyboard navigation
         setListViewerFocusTrigger(triggerId);
         setTimeout(() => setListViewerFocusTrigger(null), 100);
@@ -218,10 +210,6 @@ export const SidebarTabs = () => {
           contentId={`tab-${activeTab()}`}
         >
           <div class="h-full">
-            <Show when={activeTab() === 0}>
-              <NotesTab focusTrigger={notesFocusTrigger} />
-            </Show>
-
             <Show when={activeTab() === 1}>
               {/* IMPORTANT: Suspense boundary prevents full-screen flicker
                   ListViewer uses createAsync for data fetching (items, folderPath, indexNoteId).
