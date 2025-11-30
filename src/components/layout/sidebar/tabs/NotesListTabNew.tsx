@@ -148,11 +148,8 @@ export function ListViewer(props: ListViewerProps) {
         if (!pathInfo) return;
 
         // Build the history array (folder IDs from root to parent)
-        // folderPath contains ancestors, parentId is the direct parent
+        // folderPath now includes the parent folder itself (inclusive)
         const newHistory = pathInfo.folderPath.map((f) => f.id);
-        if (pathInfo.parentId) {
-          newHistory.push(pathInfo.parentId);
-        }
 
         // Only update if we need to navigate to a different folder
         const currentHistoryStr = JSON.stringify(list.history);
