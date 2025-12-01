@@ -5,9 +5,8 @@
 "use server";
 
 import { randomBytes } from "crypto";
-import { query } from "@solidjs/router";
-import { requireUser } from "../../auth";
 import { redirect } from "@solidjs/router";
+import { requireUser } from "../../auth";
 import type { Note } from "../types";
 import type { NoteSyntax } from "../../db/types";
 import { db } from "../index";
@@ -127,46 +126,44 @@ export async function duplicateNoteByTitleAndContent(
 }
 
 /**
- * Query function to create a new note (for client-side use)
+ * Server function to create a new note (for client-side use)
+ * Note: This is NOT wrapped in query() because mutations should not be cached
  */
-export const createNewNote = query(
-  async (title: string, content: string, parentId?: string) => {
-    "use server";
-    return await createNote(title, content, "md", undefined, parentId);
-  },
-  "create-note",
-);
+export async function createNewNote(
+  title: string,
+  content: string,
+  parentId?: string,
+) {
+  "use server";
+  return await createNote(title, content, "md", undefined, parentId);
+}
 
 /**
- * Query function to duplicate a note (for client-side use)
+ * Server function to duplicate a note (for client-side use)
+ * Note: This is NOT wrapped in query() because mutations should not be cached
  */
-export const duplicateNoteQuery = query(
-  async (sourceId: string, newTitle: string) => {
-    "use server";
-    return await duplicateNote(sourceId, newTitle);
-  },
-  "duplicate-note",
-);
+export async function duplicateNoteQuery(sourceId: string, newTitle: string) {
+  "use server";
+  return await duplicateNote(sourceId, newTitle);
+}
 
 /**
- * Query function to duplicate a note by title and content (for client-side use)
+ * Server function to duplicate a note by title and content (for client-side use)
+ * Note: This is NOT wrapped in query() because mutations should not be cached
  */
-export const duplicateNoteByTitleAndContentQuery = query(
-  async (
-    title: string,
-    content: string,
-    syntax?: NoteSyntax,
-    abstract?: string,
-    parentId?: string,
-  ) => {
-    "use server";
-    return await duplicateNoteByTitleAndContent(
-      title,
-      content,
-      syntax,
-      abstract,
-      parentId,
-    );
-  },
-  "duplicate-note-by-title-content",
-);
+export async function duplicateNoteByTitleAndContentQuery(
+  title: string,
+  content: string,
+  syntax?: NoteSyntax,
+  abstract?: string,
+  parentId?: string,
+) {
+  "use server";
+  return await duplicateNoteByTitleAndContent(
+    title,
+    content,
+    syntax,
+    abstract,
+    parentId,
+  );
+}

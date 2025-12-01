@@ -12,6 +12,8 @@ import { moveFolderQuery } from "~/lib/db_new/folders/update_move";
 import { deleteNoteQuery } from "~/lib/db_new/notes/delete";
 import { deleteFolderQuery } from "~/lib/db_new/folders/delete";
 import { convertNoteToFolderQuery } from "~/lib/db_new/notes/convert";
+import { convertFolderToNoteQuery } from "~/lib/db_new/folders/convert";
+import { getIndexNoteIdQuery } from "~/lib/db_new/api";
 
 interface UseListItemActionsReturn {
   /** ID of item currently being edited (for inline rename) */
@@ -43,6 +45,8 @@ interface UseListItemActionsReturn {
   handleDelete: (item: ListItem) => Promise<void>;
   /** Convert note to folder */
   handleMakeFolder: (item: ListItem) => Promise<void>;
+  /** Convert folder to note */
+  handleMakeNote: (item: ListItem) => Promise<void>;
 }
 
 /**
@@ -117,7 +121,7 @@ export function useListItemActions(): UseListItemActionsReturn {
         newItem = await createNewFolder(title, parentId ?? undefined);
       }
 
-      revalidate("list-children");
+      await revalidate("list-children");
       setEditingItemId(newItem.id);
     } catch (error) {
       console.error("Failed to create item:", error);
@@ -143,7 +147,10 @@ export function useListItemActions(): UseListItemActionsReturn {
         newItem = await createNewFolder(title, parentId);
       }
 
-      revalidate("list-children");
+      // Revalidate and wait for the DOM to update before enabling edit mode
+      await revalidate("list-children");
+      // Wait for the next animation frame to ensure the reactive system has updated the DOM
+      await new Promise(resolve => requestAnimationFrame(resolve));
       setEditingItemId(newItem.id);
     } catch (error) {
       console.error("Failed to create item:", error);
@@ -152,8 +159,18 @@ export function useListItemActions(): UseListItemActionsReturn {
   };
 
   const handleCopyLink = async (item: ListItem) => {
-    const link = `[${item.title}](${item.id})`;
-    await navigator.clipboard.writeText(link);
+    if (item.type === "folder") {
+      const indexNoteId = await getIndexNoteIdQuery(item.id);
+      if (!indexNoteId) {
+        alert(`Folder "${item.title}" has no index note. Create a note named "index" inside the folder to enable linking.`);
+        return;
+      }
+      const link = `[${item.title}](${indexNoteId})`;
+      await navigator.clipboard.writeText(link);
+    } else {
+      const link = `[${item.title}](${item.id})`;
+      await navigator.clipboard.writeText(link);
+    }
   };
 
   const handleDuplicate = async (item: ListItem) => {
@@ -169,7 +186,10 @@ export function useListItemActions(): UseListItemActionsReturn {
         newItem = await duplicateNoteQuery(item.id, title);
       }
 
-      revalidate("list-children");
+      // Revalidate and wait for the DOM to update before enabling edit mode
+      await revalidate("list-children");
+      // Wait for the next animation frame to ensure the reactive system has updated the DOM
+      await new Promise(resolve => requestAnimationFrame(resolve));
       setEditingItemId(newItem.id);
     } catch (error) {
       console.error("Failed to duplicate:", error);
@@ -263,6 +283,21 @@ export function useListItemActions(): UseListItemActionsReturn {
     }
   };
 
+  const handleMakeNote = async (item: ListItem) => {
+    if (item.type === "note") {
+      alert("Item is already a note");
+      return;
+    }
+
+    try {
+      await convertFolderToNoteQuery(item.id);
+      revalidate("list-children");
+    } catch (error) {
+      console.error("Failed to convert to note:", error);
+      alert(error instanceof Error ? error.message : "Failed to convert to note");
+    }
+  };
+
   return {
     editingItemId,
     setEditingItemId,
@@ -279,5 +314,6 @@ export function useListItemActions(): UseListItemActionsReturn {
     handlePasteChild,
     handleDelete,
     handleMakeFolder,
+    handleMakeNote,
   };
 }

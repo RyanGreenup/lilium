@@ -100,6 +100,8 @@ interface ListViewerProps {
   onDelete?: (item: ListItem) => Promise<void>;
   /** Called when user converts note to folder (Ctrl+Shift+F) */
   onMakeFolder?: (item: ListItem) => Promise<void>;
+  /** Called when user converts folder to note (Ctrl+Shift+G) */
+  onMakeNote?: (item: ListItem) => Promise<void>;
 }
 
 const memoryKey = (parentId: string | null): string => parentId ?? "root";
@@ -134,6 +136,8 @@ export function ListViewer(props: ListViewerProps) {
   };
 
   let containerRef!: HTMLDivElement;
+  const itemRefs: (HTMLDivElement | undefined)[] = [];
+  const pathItemRefs: (HTMLDivElement | undefined)[] = [];
 
   // Derived state
   const currentParent = createMemo(() => list.history.at(-1) ?? null);
@@ -209,6 +213,30 @@ export function ListViewer(props: ListViewerProps) {
       { defer: true },
     ),
   );
+
+  // Scroll focused item into view
+  createEffect(() => {
+    const focusIndex = list.focusedIndex;
+    if (focusIndex !== null && itemRefs[focusIndex]) {
+      itemRefs[focusIndex]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }
+  });
+
+  // Scroll focused path item into view
+  createEffect(() => {
+    if (list.focusZone === "path" && !list.indexButtonFocused) {
+      const pathIndex = list.pathFocusIndex;
+      if (pathItemRefs[pathIndex]) {
+        pathItemRefs[pathIndex]?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+        });
+      }
+    }
+  });
 
   // Focus memory
   const saveFocus = () => {
@@ -436,23 +464,14 @@ export function ListViewer(props: ListViewerProps) {
       return true;
     }
 
+    // Create sibling/child - infer type from selected item
     if (matchesKeybind(e, ITEM_KEYBINDINGS.createSibling.key)) {
-      props.onCreateSibling?.(item, "note");
-      return true;
-    }
-
-    if (matchesKeybind(e, ITEM_KEYBINDINGS.createSiblingFolder.key)) {
-      props.onCreateSibling?.(item, "folder");
+      props.onCreateSibling?.(item, item.type);
       return true;
     }
 
     if (matchesKeybind(e, ITEM_KEYBINDINGS.createChild.key)) {
-      props.onCreateChild?.(item, "note");
-      return true;
-    }
-
-    if (matchesKeybind(e, ITEM_KEYBINDINGS.createChildFolder.key)) {
-      props.onCreateChild?.(item, "folder");
+      props.onCreateChild?.(item, item.type);
       return true;
     }
 
@@ -488,6 +507,11 @@ export function ListViewer(props: ListViewerProps) {
 
     if (matchesKeybind(e, ITEM_KEYBINDINGS.makeFolder.key)) {
       props.onMakeFolder?.(item);
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.makeNote.key)) {
+      props.onMakeNote?.(item);
       return true;
     }
 
@@ -583,73 +607,77 @@ export function ListViewer(props: ListViewerProps) {
 
   return (
     <div
-      class="outline-none"
+      class="h-full flex flex-col outline-none"
       ref={containerRef}
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
       <nav aria-label="Folder path">
         <div class={pathContainerVariants()} role="list">
-          <Show when={hasNavigatedFromSelection()}>
-            <button
-              class={jumpButtonVariants()}
-              onClick={(e) => {
-                e.stopPropagation();
-                jumpToSelection();
-                // Return focus to container (button click steals focus)
-                containerRef.focus();
-              }}
-            >
-              <ArrowLeft size={14} />
-              <span>Back to selection</span>
-            </button>
-          </Show>
-
-          <div
-            role="listitem"
-            aria-current={list.history.length === 0 ? "location" : undefined}
-            class={pathItemVariants({
-              focused: isPathItemFocused(0),
-              current: list.history.length === 0,
-            })}
-            onClick={() => handlePathClick(0)}
-          >
-            <HomeIcon size={16} />
-            <span class={pathTextVariants()}>Home</span>
-            <Show when={list.history.length === 0 && indexNoteId()}>
-              <IndexButton pathIndex={0} />
+          <div class="w-max min-w-full">
+            <Show when={hasNavigatedFromSelection()}>
+              <button
+                class={jumpButtonVariants()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  jumpToSelection();
+                  // Return focus to container (button click steals focus)
+                  containerRef.focus();
+                }}
+              >
+                <ArrowLeft size={14} />
+                <span>Back to selection</span>
+              </button>
             </Show>
+
+            <div
+              ref={(el) => pathItemRefs[0] = el}
+              role="listitem"
+              aria-current={list.history.length === 0 ? "location" : undefined}
+              class={pathItemVariants({
+                focused: isPathItemFocused(0),
+                current: list.history.length === 0,
+              })}
+              onClick={() => handlePathClick(0)}
+            >
+              <HomeIcon size={16} />
+              <span class={pathTextVariants()}>Home</span>
+              <Show when={list.history.length === 0 && indexNoteId()}>
+                <IndexButton pathIndex={0} />
+              </Show>
+            </div>
+
+            <Suspense>
+              <For each={folderPath() ?? []}>
+                {(crumb, index) => {
+                  const pathIndex = () => 1 + index();
+                  const isLast = () =>
+                    index() === (folderPath()?.length ?? 0) - 1;
+
+                  return (
+                    <div
+                      ref={(el) => pathItemRefs[pathIndex()] = el}
+                      role="listitem"
+                      aria-current={isLast() ? "location" : undefined}
+                      class={pathItemVariants({
+                        focused: isPathItemFocused(pathIndex()),
+                        current: isLast(),
+                      })}
+                      style={{ "padding-left": `${(index() + 2) * INDENT_PX}px` }}
+                      onClick={() => handlePathClick(pathIndex())}
+                    >
+                      <ChevronLeft size={12} class="rotate-180 opacity-40" />
+                      <Folder size={14} />
+                      <span class={pathTextVariants()}>{crumb.title}</span>
+                      <Show when={isLast() && indexNoteId()}>
+                        <IndexButton pathIndex={pathIndex()} />
+                      </Show>
+                    </div>
+                  );
+                }}
+              </For>
+            </Suspense>
           </div>
-
-          <Suspense>
-            <For each={folderPath() ?? []}>
-              {(crumb, index) => {
-                const pathIndex = () => 1 + index();
-                const isLast = () =>
-                  index() === (folderPath()?.length ?? 0) - 1;
-
-                return (
-                  <div
-                    role="listitem"
-                    aria-current={isLast() ? "location" : undefined}
-                    class={pathItemVariants({
-                      focused: isPathItemFocused(pathIndex()),
-                      current: isLast(),
-                    })}
-                    style={{ "padding-left": `${(index() + 2) * INDENT_PX}px` }}
-                    onClick={() => handlePathClick(pathIndex())}
-                  >
-                    <ChevronLeft size={12} class="rotate-180 opacity-40" />
-                    <Folder size={14} />
-                    <span class={pathTextVariants()}>{crumb.title}</span>
-                    <Show when={isLast() && indexNoteId()}>
-                      <IndexButton pathIndex={pathIndex()} />
-                    </Show>
-                  </div>
-                );
-              }}
-            </For>
-          </Suspense>
         </div>
       </nav>
 
@@ -685,6 +713,7 @@ export function ListViewer(props: ListViewerProps) {
 
                 return (
                   <div
+                    ref={(el) => itemRefs[index()] = el}
                     id={`listitem-${index()}`}
                     role="option"
                     aria-selected={isSelected()}

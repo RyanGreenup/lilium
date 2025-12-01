@@ -19,7 +19,7 @@ import { tv } from "tailwind-variants";
  * Matches application's base color scheme with subtle border
  */
 export const pathContainerVariants = tv({
-  base: "flex flex-col space-y-0.5 bg-base-100 border-b border-base-300 pb-2"
+  base: "flex flex-col space-y-0.5 bg-base-100 border-b border-base-300 pb-2 max-h-[min(24rem,30dvh)] overflow-auto"
 });
 
 /**
@@ -50,7 +50,7 @@ export const pathItemVariants = tv({
  * Text within breadcrumb items
  */
 export const pathTextVariants = tv({
-  base: "text-sm truncate"
+  base: "text-sm whitespace-nowrap"
 });
 
 /**
@@ -101,7 +101,7 @@ export const dividerVariants = tv({
  * Container for scrollable items list
  */
 export const listContainerVariants = tv({
-  base: "flex flex-col space-y-0.5 overflow-y-auto flex-1"
+  base: "flex flex-col space-y-0.5 overflow-y-auto flex-1 min-h-0"
 });
 
 /**
