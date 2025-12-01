@@ -98,6 +98,8 @@ interface ListViewerProps {
   onPasteChild?: (item: ListItem) => Promise<void>;
   /** Called when user deletes (Delete key) */
   onDelete?: (item: ListItem) => Promise<void>;
+  /** Called when user converts note to folder (Ctrl+Shift+F) */
+  onMakeFolder?: (item: ListItem) => Promise<void>;
 }
 
 const memoryKey = (parentId: string | null): string => parentId ?? "root";
@@ -481,6 +483,11 @@ export function ListViewer(props: ListViewerProps) {
 
     if (matchesKeybind(e, ITEM_KEYBINDINGS.delete.key)) {
       props.onDelete?.(item);
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.makeFolder.key)) {
+      props.onMakeFolder?.(item);
       return true;
     }
 

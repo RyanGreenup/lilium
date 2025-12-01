@@ -111,6 +111,7 @@ export const SidebarTabs = () => {
     handlePaste,
     handlePasteChild,
     handleDelete,
+    handleMakeFolder,
   } = useListItemActions();
 
   const getContextMenuItems = (): ContextMenuItem[] => {
@@ -160,6 +161,12 @@ export const SidebarTabs = () => {
         label: ITEM_KEYBINDINGS.duplicate.label,
         keybind: ITEM_KEYBINDINGS.duplicate.key,
         onClick: () => handleDuplicate(item),
+      },
+      {
+        id: "make-folder",
+        label: ITEM_KEYBINDINGS.makeFolder.label,
+        keybind: ITEM_KEYBINDINGS.makeFolder.key,
+        onClick: () => handleMakeFolder(item),
       },
       {
         id: "cut",
@@ -349,6 +356,7 @@ export const SidebarTabs = () => {
                   onPaste={handlePaste}
                   onPasteChild={handlePasteChild}
                   onDelete={handleDelete}
+                  onMakeFolder={handleMakeFolder}
                 />
               </Suspense>
             </Show>
