@@ -19,7 +19,7 @@ import { tv } from "tailwind-variants";
  * Matches application's base color scheme with subtle border
  */
 export const pathContainerVariants = tv({
-  base: "flex flex-col space-y-0.5 bg-base-100 border-b border-base-300 pb-2"
+  base: "flex flex-col space-y-0.5 bg-base-100 border-b border-base-300 pb-2 max-h-32 overflow-y-auto"
 });
 
 /**

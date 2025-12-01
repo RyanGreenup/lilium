@@ -137,6 +137,7 @@ export function ListViewer(props: ListViewerProps) {
 
   let containerRef!: HTMLDivElement;
   const itemRefs: (HTMLDivElement | undefined)[] = [];
+  const pathItemRefs: (HTMLDivElement | undefined)[] = [];
 
   // Derived state
   const currentParent = createMemo(() => list.history.at(-1) ?? null);
@@ -221,6 +222,19 @@ export function ListViewer(props: ListViewerProps) {
         behavior: 'smooth',
         block: 'nearest',
       });
+    }
+  });
+
+  // Scroll focused path item into view
+  createEffect(() => {
+    if (list.focusZone === "path" && !list.indexButtonFocused) {
+      const pathIndex = list.pathFocusIndex;
+      if (pathItemRefs[pathIndex]) {
+        pathItemRefs[pathIndex]?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+        });
+      }
     }
   });
 
@@ -616,6 +630,7 @@ export function ListViewer(props: ListViewerProps) {
           </Show>
 
           <div
+            ref={(el) => pathItemRefs[0] = el}
             role="listitem"
             aria-current={list.history.length === 0 ? "location" : undefined}
             class={pathItemVariants({
@@ -640,6 +655,7 @@ export function ListViewer(props: ListViewerProps) {
 
                 return (
                   <div
+                    ref={(el) => pathItemRefs[pathIndex()] = el}
                     role="listitem"
                     aria-current={isLast() ? "location" : undefined}
                     class={pathItemVariants({
