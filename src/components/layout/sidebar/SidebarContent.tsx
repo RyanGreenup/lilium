@@ -119,38 +119,38 @@ export const SidebarTabs = () => {
     const item = contextItem();
     if (!item) return [];
 
-    return [
+    const isFolder = item.type === "folder";
+
+    // Build menu items conditionally based on item type
+    const items: ContextMenuItem[] = [
       {
         id: "rename",
         label: ITEM_KEYBINDINGS.rename.label,
         keybind: ITEM_KEYBINDINGS.rename.key,
         onClick: () => handleStartEdit(item),
       },
+      // New sibling - infers type from selected item
       {
         id: "create-sibling",
         label: ITEM_KEYBINDINGS.createSibling.label,
         keybind: ITEM_KEYBINDINGS.createSibling.key,
-        onClick: () => handleCreateSibling(item, "note"),
+        onClick: () => handleCreateSibling(item, item.type),
       },
-      {
-        id: "create-sibling-folder",
-        label: ITEM_KEYBINDINGS.createSiblingFolder.label,
-        keybind: ITEM_KEYBINDINGS.createSiblingFolder.key,
-        onClick: () => handleCreateSibling(item, "folder"),
-      },
-      {
+    ];
+
+    // New child - only for folders, infers type from selected item
+    if (isFolder) {
+      items.push({
         id: "create-child",
         label: ITEM_KEYBINDINGS.createChild.label,
         keybind: ITEM_KEYBINDINGS.createChild.key,
-        onClick: () => handleCreateChild(item, "note"),
-      },
-      {
-        id: "create-child-folder",
-        label: ITEM_KEYBINDINGS.createChildFolder.label,
-        keybind: ITEM_KEYBINDINGS.createChildFolder.key,
-        onClick: () => handleCreateChild(item, "folder"),
-      },
-      { id: "sep1", label: "", separator: true },
+        onClick: () => handleCreateChild(item, item.type),
+      });
+    }
+
+    items.push({ id: "sep1", label: "", separator: true });
+
+    items.push(
       {
         id: "copy-link",
         label: ITEM_KEYBINDINGS.copyLink.label,
@@ -163,18 +163,26 @@ export const SidebarTabs = () => {
         keybind: ITEM_KEYBINDINGS.duplicate.key,
         onClick: () => handleDuplicate(item),
       },
-      {
-        id: "make-folder",
-        label: ITEM_KEYBINDINGS.makeFolder.label,
-        keybind: ITEM_KEYBINDINGS.makeFolder.key,
-        onClick: () => handleMakeFolder(item),
-      },
-      {
+    );
+
+    // Show "Make Folder" for notes, "Make Note" for folders
+    if (isFolder) {
+      items.push({
         id: "make-note",
         label: ITEM_KEYBINDINGS.makeNote.label,
         keybind: ITEM_KEYBINDINGS.makeNote.key,
         onClick: () => handleMakeNote(item),
-      },
+      });
+    } else {
+      items.push({
+        id: "make-folder",
+        label: ITEM_KEYBINDINGS.makeFolder.label,
+        keybind: ITEM_KEYBINDINGS.makeFolder.key,
+        onClick: () => handleMakeFolder(item),
+      });
+    }
+
+    items.push(
       {
         id: "cut",
         label: ITEM_KEYBINDINGS.cut.label,
@@ -187,12 +195,19 @@ export const SidebarTabs = () => {
         keybind: ITEM_KEYBINDINGS.paste.key,
         onClick: () => handlePaste(item),
       },
-      {
+    );
+
+    // Paste child - only for folders
+    if (isFolder) {
+      items.push({
         id: "paste-child",
         label: ITEM_KEYBINDINGS.pasteChild.label,
         keybind: ITEM_KEYBINDINGS.pasteChild.key,
         onClick: () => handlePasteChild(item),
-      },
+      });
+    }
+
+    items.push(
       { id: "sep2", label: "", separator: true },
       {
         id: "delete",
@@ -200,7 +215,9 @@ export const SidebarTabs = () => {
         keybind: ITEM_KEYBINDINGS.delete.key,
         onClick: () => handleDelete(item),
       },
-    ];
+    );
+
+    return items;
   };
 
   const contextMenu = useContextMenu({
