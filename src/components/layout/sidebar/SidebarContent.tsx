@@ -109,6 +109,7 @@ export const SidebarTabs = () => {
     cutItem,
     handleCut,
     handlePaste,
+    handlePasteChild,
     handleDelete,
   } = useListItemActions();
 
@@ -176,7 +177,7 @@ export const SidebarTabs = () => {
         id: "paste-child",
         label: ITEM_KEYBINDINGS.pasteChild.label,
         keybind: ITEM_KEYBINDINGS.pasteChild.key,
-        onClick: () => alert("Paste as child is not implemented yet"),
+        onClick: () => handlePasteChild(item),
       },
       { id: "sep2", label: "", separator: true },
       {
@@ -346,6 +347,7 @@ export const SidebarTabs = () => {
                   cutItemId={() => cutItem()?.id ?? null}
                   onCut={handleCut}
                   onPaste={handlePaste}
+                  onPasteChild={handlePasteChild}
                   onDelete={handleDelete}
                 />
               </Suspense>

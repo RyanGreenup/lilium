@@ -36,6 +36,8 @@ interface UseListItemActionsReturn {
   handleCut: (item: ListItem) => void;
   /** Paste cut item as sibling of target */
   handlePaste: (targetItem: ListItem) => Promise<void>;
+  /** Paste cut item as child of target folder */
+  handlePasteChild: (targetItem: ListItem) => Promise<void>;
   /** Delete an item */
   handleDelete: (item: ListItem) => Promise<void>;
 }
@@ -195,6 +197,31 @@ export function useListItemActions(): UseListItemActionsReturn {
     }
   };
 
+  const handlePasteChild = async (targetItem: ListItem) => {
+    if (targetItem.type === "note") {
+      alert("Cannot paste as child of a note");
+      return;
+    }
+
+    const itemToPaste = cutItem();
+    if (!itemToPaste) return;
+
+    try {
+      // Use target folder's ID as new parent (paste inside folder)
+      const newParentId = targetItem.id;
+      if (itemToPaste.type === "folder") {
+        await moveFolderQuery(itemToPaste.id, newParentId);
+      } else {
+        await moveNoteQuery(itemToPaste.id, newParentId);
+      }
+      revalidate("list-children");
+      setCutItem(null);
+    } catch (error) {
+      console.error("Failed to paste:", error);
+      alert(error instanceof Error ? error.message : "Failed to paste item");
+    }
+  };
+
   const handleDelete = async (item: ListItem) => {
     const message = item.type === "folder"
       ? `Delete "${item.title}" and all its contents?`
@@ -228,6 +255,7 @@ export function useListItemActions(): UseListItemActionsReturn {
     cutItem,
     handleCut,
     handlePaste,
+    handlePasteChild,
     handleDelete,
   };
 }
