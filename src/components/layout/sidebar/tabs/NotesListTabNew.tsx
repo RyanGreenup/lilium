@@ -88,6 +88,12 @@ interface ListViewerProps {
   onCopyLink?: (item: ListItem) => void;
   /** Called when user duplicates an item (Ctrl+D) */
   onDuplicate?: (item: ListItem) => void;
+  /** ID of item currently cut (for visual feedback) */
+  cutItemId?: Accessor<string | null>;
+  /** Called when user cuts an item (Ctrl+X) */
+  onCut?: (item: ListItem) => void;
+  /** Called when user pastes (Ctrl+V) */
+  onPaste?: (item: ListItem) => void;
 }
 
 const memoryKey = (parentId: string | null): string => parentId ?? "root";
@@ -454,6 +460,16 @@ export function ListViewer(props: ListViewerProps) {
       return true;
     }
 
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.cut.key)) {
+      props.onCut?.(item);
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.paste.key)) {
+      props.onPaste?.(item);
+      return true;
+    }
+
     return false;
   };
 
@@ -644,16 +660,17 @@ export function ListViewer(props: ListViewerProps) {
                   }
                   return selectedIndex() === index();
                 };
+                const isCut = () => props.cutItemId?.() === item.id;
 
                 return (
                   <div
                     id={`listitem-${index()}`}
                     role="option"
                     aria-selected={isSelected()}
-                    class={listItemVariants({
+                    class={`${listItemVariants({
                       focused: isFocused(),
                       selected: isSelected(),
-                    })}
+                    })} ${isCut() ? "opacity-50" : ""}`}
                     onClick={() => handleListClick(index())}
                     onDblClick={() => navigateInto(item)}
                     onContextMenu={(e) => {

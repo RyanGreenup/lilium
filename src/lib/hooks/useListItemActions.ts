@@ -7,6 +7,7 @@ import { createNewFolder, duplicateFolderQuery } from "~/lib/db_new/folders/crea
 import { renameNoteQuery } from "~/lib/db_new/notes/update_rename";
 import { renameFolderQuery } from "~/lib/db_new/folders/update_rename";
 import { getChildrenQuery } from "~/lib/db_new/api";
+import { moveNoteQuery } from "~/lib/db_new/notes/update_move";
 
 interface UseListItemActionsReturn {
   /** ID of item currently being edited (for inline rename) */
@@ -26,6 +27,12 @@ interface UseListItemActionsReturn {
   handleCopyLink: (item: ListItem) => Promise<void>;
   /** Duplicate a note */
   handleDuplicate: (item: ListItem) => Promise<void>;
+  /** Currently cut item */
+  cutItem: Accessor<ListItem | null>;
+  /** Cut an item for later pasting */
+  handleCut: (item: ListItem) => void;
+  /** Paste cut item as sibling of target */
+  handlePaste: (targetItem: ListItem) => Promise<void>;
 }
 
 /**
@@ -34,6 +41,7 @@ interface UseListItemActionsReturn {
  */
 export function useListItemActions(): UseListItemActionsReturn {
   const [editingItemId, setEditingItemId] = createSignal<string | null>(null);
+  const [cutItem, setCutItem] = createSignal<ListItem | null>(null);
 
   // Generate a unique title by checking existing siblings
   const generateUniqueTitle = async (
@@ -159,6 +167,29 @@ export function useListItemActions(): UseListItemActionsReturn {
     }
   };
 
+  const handleCut = (item: ListItem) => {
+    if (item.type === "folder") {
+      alert("Cutting folders is not implemented yet");
+      return;
+    }
+    setCutItem(item);
+  };
+
+  const handlePaste = async (targetItem: ListItem) => {
+    const itemToPaste = cutItem();
+    if (!itemToPaste) return;
+
+    try {
+      const newParentId = targetItem.parent_id ?? undefined;
+      await moveNoteQuery(itemToPaste.id, newParentId);
+      revalidate("list-children");
+      setCutItem(null);
+    } catch (error) {
+      console.error("Failed to paste:", error);
+      alert(error instanceof Error ? error.message : "Failed to paste item");
+    }
+  };
+
   return {
     editingItemId,
     setEditingItemId,
@@ -169,5 +200,8 @@ export function useListItemActions(): UseListItemActionsReturn {
     handleCreateChild,
     handleCopyLink,
     handleDuplicate,
+    cutItem,
+    handleCut,
+    handlePaste,
   };
 }

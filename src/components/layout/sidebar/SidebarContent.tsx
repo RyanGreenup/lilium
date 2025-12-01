@@ -106,6 +106,9 @@ export const SidebarTabs = () => {
     handleCreateChild,
     handleCopyLink,
     handleDuplicate,
+    cutItem,
+    handleCut,
+    handlePaste,
   } = useListItemActions();
 
   const getContextMenuItems = (): ContextMenuItem[] => {
@@ -160,19 +163,19 @@ export const SidebarTabs = () => {
         id: "cut",
         label: ITEM_KEYBINDINGS.cut.label,
         keybind: ITEM_KEYBINDINGS.cut.key,
-        onClick: () => alert("TODO: not implemented (yet)"),
+        onClick: () => handleCut(item),
       },
       {
         id: "paste",
         label: ITEM_KEYBINDINGS.paste.label,
         keybind: ITEM_KEYBINDINGS.paste.key,
-        onClick: () => alert("TODO: not implemented (yet)"),
+        onClick: () => handlePaste(item),
       },
       {
         id: "paste-child",
         label: ITEM_KEYBINDINGS.pasteChild.label,
         keybind: ITEM_KEYBINDINGS.pasteChild.key,
-        onClick: () => alert("TODO: not implemented (yet)"),
+        onClick: () => alert("Paste as child is not implemented yet"),
       },
       { id: "sep2", label: "", separator: true },
       {
@@ -339,6 +342,9 @@ export const SidebarTabs = () => {
                   onStartEdit={handleStartEdit}
                   onCopyLink={handleCopyLink}
                   onDuplicate={handleDuplicate}
+                  cutItemId={() => cutItem()?.id ?? null}
+                  onCut={handleCut}
+                  onPaste={handlePaste}
                 />
               </Suspense>
             </Show>
