@@ -33,6 +33,7 @@ import { SidebarSearchContent } from "./tabs/SearchTab";
 import { SlideTransition } from "~/components/Animations/SlideTransition";
 import { Loading } from "~/solid-daisy-components/components/Loading";
 import type { ListItem } from "~/lib/db_new/types";
+import { ITEM_KEYBINDINGS } from "~/lib/keybindings";
 import { renameNoteQuery } from "~/lib/db_new/notes/update_rename";
 import { renameFolderQuery } from "~/lib/db_new/folders/update_rename";
 
@@ -104,58 +105,58 @@ export const SidebarTabs = () => {
     return [
       {
         id: "rename",
-        label: "Rename",
-        keybind: "F2",
+        label: ITEM_KEYBINDINGS.rename.label,
+        keybind: ITEM_KEYBINDINGS.rename.key,
         onClick: () => setEditingItemId(item.id),
       },
       {
         id: "create-sibling",
-        label: "New sibling",
-        keybind: "Ctrl+N",
+        label: ITEM_KEYBINDINGS.createSibling.label,
+        keybind: ITEM_KEYBINDINGS.createSibling.key,
         onClick: () => alert("TODO: not implemented (yet)"),
       },
       {
         id: "create-child",
-        label: "New child",
-        keybind: "Shift+N",
+        label: ITEM_KEYBINDINGS.createChild.label,
+        keybind: ITEM_KEYBINDINGS.createChild.key,
         onClick: () => alert("TODO: not implemented (yet)"),
       },
       { id: "sep1", label: "", separator: true },
       {
         id: "copy-link",
-        label: "Copy Link",
-        keybind: "y",
+        label: ITEM_KEYBINDINGS.copyLink.label,
+        keybind: ITEM_KEYBINDINGS.copyLink.key,
         onClick: () => alert("TODO: not implemented (yet)"),
       },
       {
         id: "duplicate",
-        label: "Duplicate",
-        keybind: "Ctrl+D",
+        label: ITEM_KEYBINDINGS.duplicate.label,
+        keybind: ITEM_KEYBINDINGS.duplicate.key,
         onClick: () => alert("TODO: not implemented (yet)"),
       },
       {
         id: "cut",
-        label: "Cut",
-        keybind: "Ctrl+X",
+        label: ITEM_KEYBINDINGS.cut.label,
+        keybind: ITEM_KEYBINDINGS.cut.key,
         onClick: () => alert("TODO: not implemented (yet)"),
       },
       {
         id: "paste",
-        label: "Paste as sibling",
-        keybind: "Ctrl+V",
+        label: ITEM_KEYBINDINGS.paste.label,
+        keybind: ITEM_KEYBINDINGS.paste.key,
         onClick: () => alert("TODO: not implemented (yet)"),
       },
       {
         id: "paste-child",
-        label: "Paste as child",
-        keybind: "Ctrl+Shift+V",
+        label: ITEM_KEYBINDINGS.pasteChild.label,
+        keybind: ITEM_KEYBINDINGS.pasteChild.key,
         onClick: () => alert("TODO: not implemented (yet)"),
       },
       { id: "sep2", label: "", separator: true },
       {
         id: "delete",
-        label: "Delete",
-        keybind: "Del",
+        label: ITEM_KEYBINDINGS.delete.label,
+        keybind: ITEM_KEYBINDINGS.delete.key,
         onClick: () => alert("TODO: not implemented (yet)"),
       },
     ];

@@ -25,6 +25,7 @@ import {
   getNoteFolderPathQuery,
 } from "~/lib/db_new/api";
 import type { ListItem } from "~/lib/db_new/types";
+import { ITEM_KEYBINDINGS, matchesKeybind } from "~/lib/keybindings";
 import {
   dividerVariants,
   indexButtonVariants,
@@ -388,13 +389,22 @@ export function ListViewer(props: ListViewerProps) {
         selectItem(list.focusedIndex);
       }
     },
-    F2: () => {
-      const currentItems = items();
-      if (list.focusedIndex !== null && currentItems) {
-        const item = currentItems[list.focusedIndex];
-        if (item) props.onStartEdit?.(item);
-      }
-    },
+  };
+
+  // Handle item-level keybindings (rename, etc.) using centralized config
+  const handleItemKeybind = (e: KeyboardEvent): boolean => {
+    const currentItems = items();
+    if (list.focusedIndex === null || !currentItems) return false;
+
+    const item = currentItems[list.focusedIndex];
+    if (!item) return false;
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.rename.key)) {
+      props.onStartEdit?.(item);
+      return true;
+    }
+
+    return false;
   };
 
   const pathKeyActions: Record<string, () => void> = {
@@ -437,6 +447,12 @@ export function ListViewer(props: ListViewerProps) {
     if (e.ctrlKey && e.key === "ArrowDown") {
       e.preventDefault();
       setList("focusZone", "list");
+      return;
+    }
+
+    // Item-level keybindings (rename, etc.) - check before zone handlers
+    if (list.focusZone === "list" && handleItemKeybind(e)) {
+      e.preventDefault();
       return;
     }
 
