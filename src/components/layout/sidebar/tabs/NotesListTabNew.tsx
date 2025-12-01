@@ -25,6 +25,8 @@ import {
   getNoteFolderPathQuery,
 } from "~/lib/db_new/api";
 import type { ListItem } from "~/lib/db_new/types";
+import { ITEM_KEYBINDINGS, LIST_KEYBINDINGS, matchesKeybind } from "~/lib/keybindings";
+import { KeybindingHelp } from "./KeybindingHelp";
 import {
   dividerVariants,
   indexButtonVariants,
@@ -78,6 +80,26 @@ interface ListViewerProps {
   onCancelRename?: () => void;
   /** Called when user initiates rename (F2 key) */
   onStartEdit?: (item: ListItem) => void;
+  /** Called when user creates a sibling item (Ctrl+N or Ctrl+Shift+N) */
+  onCreateSibling?: (item: ListItem, type: "note" | "folder") => void;
+  /** Called when user creates a child item (Shift+N or Alt+Shift+N) */
+  onCreateChild?: (item: ListItem, type: "note" | "folder") => void;
+  /** Called when user copies a link (y key) */
+  onCopyLink?: (item: ListItem) => void;
+  /** Called when user duplicates an item (Ctrl+D) */
+  onDuplicate?: (item: ListItem) => void;
+  /** ID of item currently cut (for visual feedback) */
+  cutItemId?: Accessor<string | null>;
+  /** Called when user cuts an item (Ctrl+X) */
+  onCut?: (item: ListItem) => void;
+  /** Called when user pastes (Ctrl+V) */
+  onPaste?: (item: ListItem) => void;
+  /** Called when user pastes as child (Ctrl+Shift+V) */
+  onPasteChild?: (item: ListItem) => Promise<void>;
+  /** Called when user deletes (Delete key) */
+  onDelete?: (item: ListItem) => Promise<void>;
+  /** Called when user converts note to folder (Ctrl+Shift+F) */
+  onMakeFolder?: (item: ListItem) => Promise<void>;
 }
 
 const memoryKey = (parentId: string | null): string => parentId ?? "root";
@@ -85,8 +107,11 @@ const INDEX_KEY = "0";
 const INDENT_PX = 12;
 
 export function ListViewer(props: ListViewerProps) {
-  const [local] = splitProps(props, ["navigateFoldersOnClick"]);
+  const [local] = splitProps(props, ["navigateFoldersOnClick", "selectionFollowsFocus"]);
   const navigateOnClick = local.navigateFoldersOnClick ?? true;
+
+  // Follow mode: arrow keys select items as you navigate
+  const [followMode, setFollowMode] = createSignal(local.selectionFollowsFocus ?? false);
 
   const [list, setList] = createStore<ListStore>({
     history: [],
@@ -253,13 +278,20 @@ export function ListViewer(props: ListViewerProps) {
 
     const item = currentItems[newIndex] ?? null;
 
-    if (props.selectionFollowsFocus && item) {
-      update({
-        focusedIndex: newIndex,
-        selection: { type: "item", index: newIndex },
-        selectionHistory: [...list.history],
-      });
-      props.onSelect?.(item);
+    if (followMode() && item) {
+      if (item.type === "folder") {
+        // Same behavior as Enter on folder - select its index note
+        setList("focusedIndex", newIndex);
+        selectFolderIndex(newIndex);
+      } else {
+        update({
+          focusedIndex: newIndex,
+          selection: { type: "item", index: newIndex },
+          selectionHistory: [...list.history],
+        });
+        props.onNoteSelect?.(item.id);
+        props.onSelect?.(item);
+      }
     } else {
       setList("focusedIndex", newIndex);
     }
@@ -379,6 +411,7 @@ export function ListViewer(props: ListViewerProps) {
     h: navigateBack,
     Backspace: navigateBack,
     Escape: () => setList("focusZone", "path"),
+    [LIST_KEYBINDINGS.followMode.key]: () => setFollowMode((prev) => !prev),
     Enter: () => {
       if (list.focusedIndex === null) return;
       const item = items()?.[list.focusedIndex];
@@ -388,13 +421,77 @@ export function ListViewer(props: ListViewerProps) {
         selectItem(list.focusedIndex);
       }
     },
-    F2: () => {
-      const currentItems = items();
-      if (list.focusedIndex !== null && currentItems) {
-        const item = currentItems[list.focusedIndex];
-        if (item) props.onStartEdit?.(item);
-      }
-    },
+  };
+
+  // Handle item-level keybindings (rename, etc.) using centralized config
+  const handleItemKeybind = (e: KeyboardEvent): boolean => {
+    const currentItems = items();
+    if (list.focusedIndex === null || !currentItems) return false;
+
+    const item = currentItems[list.focusedIndex];
+    if (!item) return false;
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.rename.key)) {
+      props.onStartEdit?.(item);
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.createSibling.key)) {
+      props.onCreateSibling?.(item, "note");
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.createSiblingFolder.key)) {
+      props.onCreateSibling?.(item, "folder");
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.createChild.key)) {
+      props.onCreateChild?.(item, "note");
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.createChildFolder.key)) {
+      props.onCreateChild?.(item, "folder");
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.copyLink.key)) {
+      props.onCopyLink?.(item);
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.duplicate.key)) {
+      props.onDuplicate?.(item);
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.cut.key)) {
+      props.onCut?.(item);
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.paste.key)) {
+      props.onPaste?.(item);
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.pasteChild.key)) {
+      props.onPasteChild?.(item);
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.delete.key)) {
+      props.onDelete?.(item);
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.makeFolder.key)) {
+      props.onMakeFolder?.(item);
+      return true;
+    }
+
+    return false;
   };
 
   const pathKeyActions: Record<string, () => void> = {
@@ -437,6 +534,12 @@ export function ListViewer(props: ListViewerProps) {
     if (e.ctrlKey && e.key === "ArrowDown") {
       e.preventDefault();
       setList("focusZone", "list");
+      return;
+    }
+
+    // Item-level keybindings (rename, etc.) - check before zone handlers
+    if (list.focusZone === "list" && handleItemKeybind(e)) {
+      e.preventDefault();
       return;
     }
 
@@ -550,7 +653,10 @@ export function ListViewer(props: ListViewerProps) {
         </div>
       </nav>
 
-      <div class={dividerVariants()} />
+      <div class="flex items-center gap-2">
+        <div class={dividerVariants() + " flex-1"} />
+        <KeybindingHelp followModeActive={followMode} />
+      </div>
 
       <div
         class={listContainerVariants()}
@@ -575,16 +681,17 @@ export function ListViewer(props: ListViewerProps) {
                   }
                   return selectedIndex() === index();
                 };
+                const isCut = () => props.cutItemId?.() === item.id;
 
                 return (
                   <div
                     id={`listitem-${index()}`}
                     role="option"
                     aria-selected={isSelected()}
-                    class={listItemVariants({
+                    class={`${listItemVariants({
                       focused: isFocused(),
                       selected: isSelected(),
-                    })}
+                    })} ${isCut() ? "opacity-50" : ""}`}
                     onClick={() => handleListClick(index())}
                     onDblClick={() => navigateInto(item)}
                     onContextMenu={(e) => {
@@ -623,6 +730,8 @@ export function ListViewer(props: ListViewerProps) {
                           } else {
                             props.onCancelRename?.();
                           }
+                          // Restore focus to container for keyboard navigation
+                          containerRef.focus();
                         };
 
                         const handleKeyDown = (e: KeyboardEvent) => {
@@ -632,6 +741,8 @@ export function ListViewer(props: ListViewerProps) {
                           } else if (e.key === "Escape") {
                             e.preventDefault();
                             props.onCancelRename?.();
+                            // Restore focus to container for keyboard navigation
+                            containerRef.focus();
                           }
                           // Stop propagation to prevent list keyboard handlers
                           e.stopPropagation();
