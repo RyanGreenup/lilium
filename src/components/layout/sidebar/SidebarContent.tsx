@@ -105,6 +105,7 @@ export const SidebarTabs = () => {
     handleCreateSibling,
     handleCreateChild,
     handleCopyLink,
+    handleDuplicate,
   } = useListItemActions();
 
   const getContextMenuItems = (): ContextMenuItem[] => {
@@ -153,7 +154,7 @@ export const SidebarTabs = () => {
         id: "duplicate",
         label: ITEM_KEYBINDINGS.duplicate.label,
         keybind: ITEM_KEYBINDINGS.duplicate.key,
-        onClick: () => alert("TODO: not implemented (yet)"),
+        onClick: () => handleDuplicate(item),
       },
       {
         id: "cut",
@@ -337,6 +338,7 @@ export const SidebarTabs = () => {
                   onCreateChild={handleCreateChild}
                   onStartEdit={handleStartEdit}
                   onCopyLink={handleCopyLink}
+                  onDuplicate={handleDuplicate}
                 />
               </Suspense>
             </Show>

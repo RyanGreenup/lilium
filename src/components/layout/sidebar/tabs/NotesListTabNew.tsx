@@ -86,6 +86,8 @@ interface ListViewerProps {
   onCreateChild?: (item: ListItem, type: "note" | "folder") => void;
   /** Called when user copies a link (y key) */
   onCopyLink?: (item: ListItem) => void;
+  /** Called when user duplicates an item (Ctrl+D) */
+  onDuplicate?: (item: ListItem) => void;
 }
 
 const memoryKey = (parentId: string | null): string => parentId ?? "root";
@@ -444,6 +446,11 @@ export function ListViewer(props: ListViewerProps) {
 
     if (matchesKeybind(e, ITEM_KEYBINDINGS.copyLink.key)) {
       props.onCopyLink?.(item);
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.duplicate.key)) {
+      props.onDuplicate?.(item);
       return true;
     }
 

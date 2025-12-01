@@ -2,8 +2,8 @@ import { revalidate } from "@solidjs/router";
 import { createSignal } from "solid-js";
 import type { Accessor, Setter } from "solid-js";
 import type { ListItem } from "~/lib/db_new/types";
-import { createNewNote } from "~/lib/db_new/notes/create";
-import { createNewFolder } from "~/lib/db_new/folders/create";
+import { createNewNote, duplicateNoteQuery } from "~/lib/db_new/notes/create";
+import { createNewFolder, duplicateFolderQuery } from "~/lib/db_new/folders/create";
 import { renameNoteQuery } from "~/lib/db_new/notes/update_rename";
 import { renameFolderQuery } from "~/lib/db_new/folders/update_rename";
 import { getChildrenQuery } from "~/lib/db_new/api";
@@ -24,6 +24,8 @@ interface UseListItemActionsReturn {
   handleCreateChild: (item: ListItem, type: "note" | "folder") => Promise<void>;
   /** Copy a markdown link to clipboard */
   handleCopyLink: (item: ListItem) => Promise<void>;
+  /** Duplicate a note */
+  handleDuplicate: (item: ListItem) => Promise<void>;
 }
 
 /**
@@ -136,6 +138,27 @@ export function useListItemActions(): UseListItemActionsReturn {
     await navigator.clipboard.writeText(link);
   };
 
+  const handleDuplicate = async (item: ListItem) => {
+    try {
+      const parentId = item.parent_id ?? null;
+      const baseTitle = `${item.title} (copy)`;
+      const title = await generateUniqueTitle(baseTitle, parentId);
+
+      let newItem;
+      if (item.type === "folder") {
+        newItem = await duplicateFolderQuery(item.id, title, parentId ?? undefined);
+      } else {
+        newItem = await duplicateNoteQuery(item.id, title);
+      }
+
+      revalidate("list-children");
+      setEditingItemId(newItem.id);
+    } catch (error) {
+      console.error("Failed to duplicate:", error);
+      alert(error instanceof Error ? error.message : "Failed to duplicate item");
+    }
+  };
+
   return {
     editingItemId,
     setEditingItemId,
@@ -145,5 +168,6 @@ export function useListItemActions(): UseListItemActionsReturn {
     handleCreateSibling,
     handleCreateChild,
     handleCopyLink,
+    handleDuplicate,
   };
 }
