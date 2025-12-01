@@ -54,6 +54,7 @@ export const ITEM_KEYBINDINGS = {
   pasteChild: { key: "Ctrl+Shift+V", label: "Paste child", description: "Paste inside folder" },
   delete: { key: "Delete", label: "Delete", description: "Delete item" },
   makeFolder: { key: "Ctrl+Shift+F", label: "Make folder", description: "Convert note to folder" },
+  makeNote: { key: "Ctrl+Shift+G", label: "Make note", description: "Convert folder to note" },
 } as const;
 
 export type ItemAction = keyof typeof ITEM_KEYBINDINGS;

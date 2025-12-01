@@ -12,6 +12,7 @@ import { moveFolderQuery } from "~/lib/db_new/folders/update_move";
 import { deleteNoteQuery } from "~/lib/db_new/notes/delete";
 import { deleteFolderQuery } from "~/lib/db_new/folders/delete";
 import { convertNoteToFolderQuery } from "~/lib/db_new/notes/convert";
+import { convertFolderToNoteQuery } from "~/lib/db_new/folders/convert";
 
 interface UseListItemActionsReturn {
   /** ID of item currently being edited (for inline rename) */
@@ -43,6 +44,8 @@ interface UseListItemActionsReturn {
   handleDelete: (item: ListItem) => Promise<void>;
   /** Convert note to folder */
   handleMakeFolder: (item: ListItem) => Promise<void>;
+  /** Convert folder to note */
+  handleMakeNote: (item: ListItem) => Promise<void>;
 }
 
 /**
@@ -263,6 +266,21 @@ export function useListItemActions(): UseListItemActionsReturn {
     }
   };
 
+  const handleMakeNote = async (item: ListItem) => {
+    if (item.type === "note") {
+      alert("Item is already a note");
+      return;
+    }
+
+    try {
+      await convertFolderToNoteQuery(item.id);
+      revalidate("list-children");
+    } catch (error) {
+      console.error("Failed to convert to note:", error);
+      alert(error instanceof Error ? error.message : "Failed to convert to note");
+    }
+  };
+
   return {
     editingItemId,
     setEditingItemId,
@@ -279,5 +297,6 @@ export function useListItemActions(): UseListItemActionsReturn {
     handlePasteChild,
     handleDelete,
     handleMakeFolder,
+    handleMakeNote,
   };
 }

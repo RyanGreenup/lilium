@@ -100,6 +100,8 @@ interface ListViewerProps {
   onDelete?: (item: ListItem) => Promise<void>;
   /** Called when user converts note to folder (Ctrl+Shift+F) */
   onMakeFolder?: (item: ListItem) => Promise<void>;
+  /** Called when user converts folder to note (Ctrl+Shift+G) */
+  onMakeNote?: (item: ListItem) => Promise<void>;
 }
 
 const memoryKey = (parentId: string | null): string => parentId ?? "root";
@@ -488,6 +490,11 @@ export function ListViewer(props: ListViewerProps) {
 
     if (matchesKeybind(e, ITEM_KEYBINDINGS.makeFolder.key)) {
       props.onMakeFolder?.(item);
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.makeNote.key)) {
+      props.onMakeNote?.(item);
       return true;
     }
 

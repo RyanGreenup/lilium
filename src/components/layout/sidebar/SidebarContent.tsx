@@ -112,6 +112,7 @@ export const SidebarTabs = () => {
     handlePasteChild,
     handleDelete,
     handleMakeFolder,
+    handleMakeNote,
   } = useListItemActions();
 
   const getContextMenuItems = (): ContextMenuItem[] => {
@@ -167,6 +168,12 @@ export const SidebarTabs = () => {
         label: ITEM_KEYBINDINGS.makeFolder.label,
         keybind: ITEM_KEYBINDINGS.makeFolder.key,
         onClick: () => handleMakeFolder(item),
+      },
+      {
+        id: "make-note",
+        label: ITEM_KEYBINDINGS.makeNote.label,
+        keybind: ITEM_KEYBINDINGS.makeNote.key,
+        onClick: () => handleMakeNote(item),
       },
       {
         id: "cut",
@@ -357,6 +364,7 @@ export const SidebarTabs = () => {
                   onPasteChild={handlePasteChild}
                   onDelete={handleDelete}
                   onMakeFolder={handleMakeFolder}
+                  onMakeNote={handleMakeNote}
                 />
               </Suspense>
             </Show>
