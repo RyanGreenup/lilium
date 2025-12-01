@@ -155,8 +155,18 @@ export function useListItemActions(): UseListItemActionsReturn {
   };
 
   const handleCopyLink = async (item: ListItem) => {
-    const link = `[${item.title}](${item.id})`;
-    await navigator.clipboard.writeText(link);
+    if (item.type === "folder") {
+      const indexNoteId = await getIndexNoteIdQuery(item.id);
+      if (!indexNoteId) {
+        alert(`Folder "${item.title}" has no index note. Create a note named "index" inside the folder to enable linking.`);
+        return;
+      }
+      const link = `[${item.title}](${indexNoteId})`;
+      await navigator.clipboard.writeText(link);
+    } else {
+      const link = `[${item.title}](${item.id})`;
+      await navigator.clipboard.writeText(link);
+    }
   };
 
   const handleDuplicate = async (item: ListItem) => {
