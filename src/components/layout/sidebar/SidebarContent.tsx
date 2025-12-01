@@ -1,4 +1,4 @@
-import { revalidate, useNavigate, useParams, useSearchParams } from "@solidjs/router";
+import { useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import {
   ArrowLeft,
   ArrowRight,
@@ -34,8 +34,7 @@ import { SlideTransition } from "~/components/Animations/SlideTransition";
 import { Loading } from "~/solid-daisy-components/components/Loading";
 import type { ListItem } from "~/lib/db_new/types";
 import { ITEM_KEYBINDINGS } from "~/lib/keybindings";
-import { renameNoteQuery } from "~/lib/db_new/notes/update_rename";
-import { renameFolderQuery } from "~/lib/db_new/folders/update_rename";
+import { useListItemActions } from "~/lib/hooks/useListItemActions";
 
 // Delayed fallback component to avoid flickering loading states for fast operations
 function DelayedFallback(props: { delay?: number; children: any }) {
@@ -96,7 +95,16 @@ export const SidebarTabs = () => {
 
   // Context menu state
   const [contextItem, setContextItem] = createSignal<ListItem | null>(null);
-  const [editingItemId, setEditingItemId] = createSignal<string | null>(null);
+
+  // List item actions (create, rename, etc.)
+  const {
+    editingItemId,
+    handleStartEdit,
+    handleCancelRename,
+    handleRename,
+    handleCreateSibling,
+    handleCreateChild,
+  } = useListItemActions();
 
   const getContextMenuItems = (): ContextMenuItem[] => {
     const item = contextItem();
@@ -113,13 +121,25 @@ export const SidebarTabs = () => {
         id: "create-sibling",
         label: ITEM_KEYBINDINGS.createSibling.label,
         keybind: ITEM_KEYBINDINGS.createSibling.key,
-        onClick: () => alert("TODO: not implemented (yet)"),
+        onClick: () => handleCreateSibling(item, "note"),
+      },
+      {
+        id: "create-sibling-folder",
+        label: ITEM_KEYBINDINGS.createSiblingFolder.label,
+        keybind: ITEM_KEYBINDINGS.createSiblingFolder.key,
+        onClick: () => handleCreateSibling(item, "folder"),
       },
       {
         id: "create-child",
         label: ITEM_KEYBINDINGS.createChild.label,
         keybind: ITEM_KEYBINDINGS.createChild.key,
-        onClick: () => alert("TODO: not implemented (yet)"),
+        onClick: () => handleCreateChild(item, "note"),
+      },
+      {
+        id: "create-child-folder",
+        label: ITEM_KEYBINDINGS.createChildFolder.label,
+        keybind: ITEM_KEYBINDINGS.createChildFolder.key,
+        onClick: () => handleCreateChild(item, "folder"),
       },
       { id: "sep1", label: "", separator: true },
       {
@@ -169,31 +189,6 @@ export const SidebarTabs = () => {
   const handleContextMenu = (item: ListItem, event: MouseEvent) => {
     setContextItem(item);
     contextMenu.open(event);
-  };
-
-  const handleRename = async (item: ListItem, newTitle: string) => {
-    try {
-      if (item.type === "folder") {
-        await renameFolderQuery(item.id, newTitle);
-      } else {
-        await renameNoteQuery(item.id, newTitle);
-      }
-      // Revalidate the children query to refresh the list
-      revalidate("list-children");
-    } catch (error) {
-      console.error("Failed to rename:", error);
-      alert("Failed to rename item");
-    } finally {
-      setEditingItemId(null);
-    }
-  };
-
-  const handleCancelRename = () => {
-    setEditingItemId(null);
-  };
-
-  const handleStartEdit = (item: ListItem) => {
-    setEditingItemId(item.id);
   };
 
   const tabs = [
@@ -337,6 +332,8 @@ export const SidebarTabs = () => {
                   editingItemId={editingItemId}
                   onRename={handleRename}
                   onCancelRename={handleCancelRename}
+                  onCreateSibling={handleCreateSibling}
+                  onCreateChild={handleCreateChild}
                   onStartEdit={handleStartEdit}
                 />
               </Suspense>

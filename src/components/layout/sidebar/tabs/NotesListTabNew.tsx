@@ -80,6 +80,10 @@ interface ListViewerProps {
   onCancelRename?: () => void;
   /** Called when user initiates rename (F2 key) */
   onStartEdit?: (item: ListItem) => void;
+  /** Called when user creates a sibling item (Ctrl+N or Ctrl+Shift+N) */
+  onCreateSibling?: (item: ListItem, type: "note" | "folder") => void;
+  /** Called when user creates a child item (Shift+N or Alt+Shift+N) */
+  onCreateChild?: (item: ListItem, type: "note" | "folder") => void;
 }
 
 const memoryKey = (parentId: string | null): string => parentId ?? "root";
@@ -416,6 +420,26 @@ export function ListViewer(props: ListViewerProps) {
       return true;
     }
 
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.createSibling.key)) {
+      props.onCreateSibling?.(item, "note");
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.createSiblingFolder.key)) {
+      props.onCreateSibling?.(item, "folder");
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.createChild.key)) {
+      props.onCreateChild?.(item, "note");
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.createChildFolder.key)) {
+      props.onCreateChild?.(item, "folder");
+      return true;
+    }
+
     return false;
   };
 
@@ -654,6 +678,8 @@ export function ListViewer(props: ListViewerProps) {
                           } else {
                             props.onCancelRename?.();
                           }
+                          // Restore focus to container for keyboard navigation
+                          containerRef.focus();
                         };
 
                         const handleKeyDown = (e: KeyboardEvent) => {
@@ -663,6 +689,8 @@ export function ListViewer(props: ListViewerProps) {
                           } else if (e.key === "Escape") {
                             e.preventDefault();
                             props.onCancelRename?.();
+                            // Restore focus to container for keyboard navigation
+                            containerRef.focus();
                           }
                           // Stop propagation to prevent list keyboard handlers
                           e.stopPropagation();
