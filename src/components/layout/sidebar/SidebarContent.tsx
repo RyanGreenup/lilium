@@ -104,6 +104,7 @@ export const SidebarTabs = () => {
     handleRename,
     handleCreateSibling,
     handleCreateChild,
+    handleCopyLink,
   } = useListItemActions();
 
   const getContextMenuItems = (): ContextMenuItem[] => {
@@ -146,7 +147,7 @@ export const SidebarTabs = () => {
         id: "copy-link",
         label: ITEM_KEYBINDINGS.copyLink.label,
         keybind: ITEM_KEYBINDINGS.copyLink.key,
-        onClick: () => alert("TODO: not implemented (yet)"),
+        onClick: () => handleCopyLink(item),
       },
       {
         id: "duplicate",
@@ -335,6 +336,7 @@ export const SidebarTabs = () => {
                   onCreateSibling={handleCreateSibling}
                   onCreateChild={handleCreateChild}
                   onStartEdit={handleStartEdit}
+                  onCopyLink={handleCopyLink}
                 />
               </Suspense>
             </Show>

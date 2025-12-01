@@ -22,6 +22,8 @@ interface UseListItemActionsReturn {
   handleCreateSibling: (item: ListItem, type: "note" | "folder") => Promise<void>;
   /** Create a child note or folder inside a folder */
   handleCreateChild: (item: ListItem, type: "note" | "folder") => Promise<void>;
+  /** Copy a markdown link to clipboard */
+  handleCopyLink: (item: ListItem) => Promise<void>;
 }
 
 /**
@@ -105,7 +107,7 @@ export function useListItemActions(): UseListItemActionsReturn {
 
   const handleCreateChild = async (item: ListItem, type: "note" | "folder") => {
     if (item.type === "note") {
-      alert("Creating children under notes is not implemented yet");
+      alert("Creating children under notes is not implemented yet. The logic will also need to be shared between Pasting, so we'll implement this cohesively all together");
       return;
     }
 
@@ -129,6 +131,11 @@ export function useListItemActions(): UseListItemActionsReturn {
     }
   };
 
+  const handleCopyLink = async (item: ListItem) => {
+    const link = `[${item.title}](${item.id})`;
+    await navigator.clipboard.writeText(link);
+  };
+
   return {
     editingItemId,
     setEditingItemId,
@@ -137,5 +144,6 @@ export function useListItemActions(): UseListItemActionsReturn {
     handleRename,
     handleCreateSibling,
     handleCreateChild,
+    handleCopyLink,
   };
 }
