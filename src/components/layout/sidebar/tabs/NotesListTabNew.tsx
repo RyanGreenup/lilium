@@ -614,68 +614,70 @@ export function ListViewer(props: ListViewerProps) {
     >
       <nav aria-label="Folder path">
         <div class={pathContainerVariants()} role="list">
-          <Show when={hasNavigatedFromSelection()}>
-            <button
-              class={jumpButtonVariants()}
-              onClick={(e) => {
-                e.stopPropagation();
-                jumpToSelection();
-                // Return focus to container (button click steals focus)
-                containerRef.focus();
-              }}
-            >
-              <ArrowLeft size={14} />
-              <span>Back to selection</span>
-            </button>
-          </Show>
-
-          <div
-            ref={(el) => pathItemRefs[0] = el}
-            role="listitem"
-            aria-current={list.history.length === 0 ? "location" : undefined}
-            class={pathItemVariants({
-              focused: isPathItemFocused(0),
-              current: list.history.length === 0,
-            })}
-            onClick={() => handlePathClick(0)}
-          >
-            <HomeIcon size={16} />
-            <span class={pathTextVariants()}>Home</span>
-            <Show when={list.history.length === 0 && indexNoteId()}>
-              <IndexButton pathIndex={0} />
+          <div class="w-max min-w-full">
+            <Show when={hasNavigatedFromSelection()}>
+              <button
+                class={jumpButtonVariants()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  jumpToSelection();
+                  // Return focus to container (button click steals focus)
+                  containerRef.focus();
+                }}
+              >
+                <ArrowLeft size={14} />
+                <span>Back to selection</span>
+              </button>
             </Show>
+
+            <div
+              ref={(el) => pathItemRefs[0] = el}
+              role="listitem"
+              aria-current={list.history.length === 0 ? "location" : undefined}
+              class={pathItemVariants({
+                focused: isPathItemFocused(0),
+                current: list.history.length === 0,
+              })}
+              onClick={() => handlePathClick(0)}
+            >
+              <HomeIcon size={16} />
+              <span class={pathTextVariants()}>Home</span>
+              <Show when={list.history.length === 0 && indexNoteId()}>
+                <IndexButton pathIndex={0} />
+              </Show>
+            </div>
+
+            <Suspense>
+              <For each={folderPath() ?? []}>
+                {(crumb, index) => {
+                  const pathIndex = () => 1 + index();
+                  const isLast = () =>
+                    index() === (folderPath()?.length ?? 0) - 1;
+
+                  return (
+                    <div
+                      ref={(el) => pathItemRefs[pathIndex()] = el}
+                      role="listitem"
+                      aria-current={isLast() ? "location" : undefined}
+                      class={pathItemVariants({
+                        focused: isPathItemFocused(pathIndex()),
+                        current: isLast(),
+                      })}
+                      style={{ "padding-left": `${(index() + 2) * INDENT_PX}px` }}
+                      onClick={() => handlePathClick(pathIndex())}
+                    >
+                      <ChevronLeft size={12} class="rotate-180 opacity-40" />
+                      <Folder size={14} />
+                      <span class={pathTextVariants()}>{crumb.title}</span>
+                      <Show when={isLast() && indexNoteId()}>
+                        <IndexButton pathIndex={pathIndex()} />
+                      </Show>
+                    </div>
+                  );
+                }}
+              </For>
+            </Suspense>
           </div>
-
-          <Suspense>
-            <For each={folderPath() ?? []}>
-              {(crumb, index) => {
-                const pathIndex = () => 1 + index();
-                const isLast = () =>
-                  index() === (folderPath()?.length ?? 0) - 1;
-
-                return (
-                  <div
-                    ref={(el) => pathItemRefs[pathIndex()] = el}
-                    role="listitem"
-                    aria-current={isLast() ? "location" : undefined}
-                    class={pathItemVariants({
-                      focused: isPathItemFocused(pathIndex()),
-                      current: isLast(),
-                    })}
-                    style={{ "padding-left": `${(index() + 2) * INDENT_PX}px` }}
-                    onClick={() => handlePathClick(pathIndex())}
-                  >
-                    <ChevronLeft size={12} class="rotate-180 opacity-40" />
-                    <Folder size={14} />
-                    <span class={pathTextVariants()}>{crumb.title}</span>
-                    <Show when={isLast() && indexNoteId()}>
-                      <IndexButton pathIndex={pathIndex()} />
-                    </Show>
-                  </div>
-                );
-              }}
-            </For>
-          </Suspense>
         </div>
       </nav>
 
