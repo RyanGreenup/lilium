@@ -1,6 +1,7 @@
 "use server";
 
 import Database from "better-sqlite3";
+import { INDEX_NOTE_TITLE } from "./types";
 
 // Initialize SQLite database for notes app
 export const db = new Database("./.data/notes.sqlite");
@@ -253,8 +254,8 @@ LEFT JOIN folder_path fp ON n.parent_id = fp.id
 export function ensureIndexNote(userId: string): void {
   const existing = db.prepare(`
     SELECT id FROM notes
-    WHERE title = 'index' AND parent_id IS NULL AND user_id = ?
-  `).get(userId);
+    WHERE title = ? AND parent_id IS NULL AND user_id = ?
+  `).get(INDEX_NOTE_TITLE, userId);
 
   if (!existing) {
     const id = Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -263,7 +264,7 @@ export function ensureIndexNote(userId: string): void {
 
     db.prepare(`
       INSERT INTO notes (id, title, content, user_id, parent_id)
-      VALUES (?, 'index', '', ?, NULL)
-    `).run(id, userId);
+      VALUES (?, ?, '', ?, NULL)
+    `).run(id, INDEX_NOTE_TITLE, userId);
   }
 }

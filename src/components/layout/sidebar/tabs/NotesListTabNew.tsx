@@ -94,6 +94,8 @@ interface ListViewerProps {
   onCut?: (item: ListItem) => void;
   /** Called when user pastes (Ctrl+V) */
   onPaste?: (item: ListItem) => void;
+  /** Called when user deletes (Delete key) */
+  onDelete?: (item: ListItem) => Promise<void>;
 }
 
 const memoryKey = (parentId: string | null): string => parentId ?? "root";
@@ -467,6 +469,11 @@ export function ListViewer(props: ListViewerProps) {
 
     if (matchesKeybind(e, ITEM_KEYBINDINGS.paste.key)) {
       props.onPaste?.(item);
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.delete.key)) {
+      props.onDelete?.(item);
       return true;
     }
 

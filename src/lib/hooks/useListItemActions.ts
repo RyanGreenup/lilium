@@ -8,6 +8,9 @@ import { renameNoteQuery } from "~/lib/db_new/notes/update_rename";
 import { renameFolderQuery } from "~/lib/db_new/folders/update_rename";
 import { getChildrenQuery } from "~/lib/db_new/api";
 import { moveNoteQuery } from "~/lib/db_new/notes/update_move";
+import { moveFolderQuery } from "~/lib/db_new/folders/update_move";
+import { deleteNoteQuery } from "~/lib/db_new/notes/delete";
+import { deleteFolderQuery } from "~/lib/db_new/folders/delete";
 
 interface UseListItemActionsReturn {
   /** ID of item currently being edited (for inline rename) */
@@ -33,6 +36,8 @@ interface UseListItemActionsReturn {
   handleCut: (item: ListItem) => void;
   /** Paste cut item as sibling of target */
   handlePaste: (targetItem: ListItem) => Promise<void>;
+  /** Delete an item */
+  handleDelete: (item: ListItem) => Promise<void>;
 }
 
 /**
@@ -168,10 +173,6 @@ export function useListItemActions(): UseListItemActionsReturn {
   };
 
   const handleCut = (item: ListItem) => {
-    if (item.type === "folder") {
-      alert("Cutting folders is not implemented yet");
-      return;
-    }
     setCutItem(item);
   };
 
@@ -181,12 +182,36 @@ export function useListItemActions(): UseListItemActionsReturn {
 
     try {
       const newParentId = targetItem.parent_id ?? undefined;
-      await moveNoteQuery(itemToPaste.id, newParentId);
+      if (itemToPaste.type === "folder") {
+        await moveFolderQuery(itemToPaste.id, newParentId);
+      } else {
+        await moveNoteQuery(itemToPaste.id, newParentId);
+      }
       revalidate("list-children");
       setCutItem(null);
     } catch (error) {
       console.error("Failed to paste:", error);
       alert(error instanceof Error ? error.message : "Failed to paste item");
+    }
+  };
+
+  const handleDelete = async (item: ListItem) => {
+    const message = item.type === "folder"
+      ? `Delete "${item.title}" and all its contents?`
+      : `Delete "${item.title}"?`;
+
+    if (!confirm(message)) return;
+
+    try {
+      if (item.type === "folder") {
+        await deleteFolderQuery(item.id);
+      } else {
+        await deleteNoteQuery(item.id);
+      }
+      revalidate("list-children");
+    } catch (error) {
+      console.error("Failed to delete:", error);
+      alert(error instanceof Error ? error.message : "Failed to delete item");
     }
   };
 
@@ -203,5 +228,6 @@ export function useListItemActions(): UseListItemActionsReturn {
     cutItem,
     handleCut,
     handlePaste,
+    handleDelete,
   };
 }

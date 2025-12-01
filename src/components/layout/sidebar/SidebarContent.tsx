@@ -109,6 +109,7 @@ export const SidebarTabs = () => {
     cutItem,
     handleCut,
     handlePaste,
+    handleDelete,
   } = useListItemActions();
 
   const getContextMenuItems = (): ContextMenuItem[] => {
@@ -120,7 +121,7 @@ export const SidebarTabs = () => {
         id: "rename",
         label: ITEM_KEYBINDINGS.rename.label,
         keybind: ITEM_KEYBINDINGS.rename.key,
-        onClick: () => setEditingItemId(item.id),
+        onClick: () => handleStartEdit(item),
       },
       {
         id: "create-sibling",
@@ -182,7 +183,7 @@ export const SidebarTabs = () => {
         id: "delete",
         label: ITEM_KEYBINDINGS.delete.label,
         keybind: ITEM_KEYBINDINGS.delete.key,
-        onClick: () => alert("TODO: not implemented (yet)"),
+        onClick: () => handleDelete(item),
       },
     ];
   };
@@ -345,6 +346,7 @@ export const SidebarTabs = () => {
                   cutItemId={() => cutItem()?.id ?? null}
                   onCut={handleCut}
                   onPaste={handlePaste}
+                  onDelete={handleDelete}
                 />
               </Suspense>
             </Show>

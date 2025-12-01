@@ -8,7 +8,7 @@ import { query } from "@solidjs/router";
 import { requireUser } from "../../auth";
 import { redirect } from "@solidjs/router";
 import type { Note } from "../../db/types";
-import type { NoteWithoutContent } from "../types";
+import { INDEX_NOTE_TITLE, type NoteWithoutContent } from "../types";
 import { db } from "../index";
 
 /**
@@ -102,9 +102,9 @@ export async function getIndexNote(): Promise<NoteWithoutContent | null> {
       created_at,
       updated_at
     FROM notes
-    WHERE title = 'index' AND parent_id IS NULL AND user_id = ?
+    WHERE title = ? AND parent_id IS NULL AND user_id = ?
   `);
-  const note = stmt.get(user.id) as NoteWithoutContent | undefined;
+  const note = stmt.get(INDEX_NOTE_TITLE, user.id) as NoteWithoutContent | undefined;
   return note || null;
 }
 
