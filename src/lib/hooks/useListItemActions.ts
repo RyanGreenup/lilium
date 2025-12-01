@@ -13,6 +13,7 @@ import { deleteNoteQuery } from "~/lib/db_new/notes/delete";
 import { deleteFolderQuery } from "~/lib/db_new/folders/delete";
 import { convertNoteToFolderQuery } from "~/lib/db_new/notes/convert";
 import { convertFolderToNoteQuery } from "~/lib/db_new/folders/convert";
+import { getIndexNoteIdQuery } from "~/lib/db_new/api";
 
 interface UseListItemActionsReturn {
   /** ID of item currently being edited (for inline rename) */
@@ -120,7 +121,7 @@ export function useListItemActions(): UseListItemActionsReturn {
         newItem = await createNewFolder(title, parentId ?? undefined);
       }
 
-      revalidate("list-children");
+      await revalidate("list-children");
       setEditingItemId(newItem.id);
     } catch (error) {
       console.error("Failed to create item:", error);
@@ -146,7 +147,10 @@ export function useListItemActions(): UseListItemActionsReturn {
         newItem = await createNewFolder(title, parentId);
       }
 
-      revalidate("list-children");
+      // Revalidate and wait for the DOM to update before enabling edit mode
+      await revalidate("list-children");
+      // Wait for the next animation frame to ensure the reactive system has updated the DOM
+      await new Promise(resolve => requestAnimationFrame(resolve));
       setEditingItemId(newItem.id);
     } catch (error) {
       console.error("Failed to create item:", error);
@@ -182,7 +186,10 @@ export function useListItemActions(): UseListItemActionsReturn {
         newItem = await duplicateNoteQuery(item.id, title);
       }
 
-      revalidate("list-children");
+      // Revalidate and wait for the DOM to update before enabling edit mode
+      await revalidate("list-children");
+      // Wait for the next animation frame to ensure the reactive system has updated the DOM
+      await new Promise(resolve => requestAnimationFrame(resolve));
       setEditingItemId(newItem.id);
     } catch (error) {
       console.error("Failed to duplicate:", error);

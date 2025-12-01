@@ -5,9 +5,8 @@
 "use server";
 
 import { randomBytes } from "crypto";
-import { query } from "@solidjs/router";
-import { requireUser } from "../../auth";
 import { redirect } from "@solidjs/router";
+import { requireUser } from "../../auth";
 import type { Folder, Note } from "../types";
 import { INDEX_NOTE_TITLE } from "../types";
 import type { NoteSyntax } from "../../db/types";
@@ -64,15 +63,13 @@ export async function createFolder(
 }
 
 /**
- * Query function to create a new folder (for client-side use)
+ * Server function to create a new folder (for client-side use)
+ * Note: This is NOT wrapped in query() because mutations should not be cached
  */
-export const createNewFolder = query(
-  async (title: string, parentId?: string) => {
-    "use server";
-    return await createFolder(title, parentId);
-  },
-  "create-folder",
-);
+export async function createNewFolder(title: string, parentId?: string) {
+  "use server";
+  return await createFolder(title, parentId);
+}
 
 /**
  * Get note by ID (helper for internal use)
@@ -169,25 +166,23 @@ export async function createFolderWithIndex(
 }
 
 /**
- * Query function to create a folder with index note (for client-side use)
+ * Server function to create a folder with index note (for client-side use)
+ * Note: This is NOT wrapped in query() because mutations should not be cached
  */
-export const createFolderWithIndexQuery = query(
-  async (
-    folderTitle: string,
-    indexContent?: string,
-    syntax?: NoteSyntax,
-    parentId?: string,
-  ) => {
-    "use server";
-    return await createFolderWithIndex(
-      folderTitle,
-      indexContent,
-      syntax,
-      parentId,
-    );
-  },
-  "create-folder-with-index",
-);
+export async function createFolderWithIndexQuery(
+  folderTitle: string,
+  indexContent?: string,
+  syntax?: NoteSyntax,
+  parentId?: string,
+) {
+  "use server";
+  return await createFolderWithIndex(
+    folderTitle,
+    indexContent,
+    syntax,
+    parentId,
+  );
+}
 
 /**
  * Recursively duplicate a folder's contents (internal helper, runs inside transaction)
@@ -200,17 +195,27 @@ function duplicateFolderRecursive(
 ): string {
   // 1. Create the new folder
   const newFolderId = randomBytes(16).toString("hex");
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO folders (id, title, parent_id, user_id)
     VALUES (?, ?, ?, ?)
-  `).run(newFolderId, newTitle, parentId, userId);
+  `,
+  ).run(newFolderId, newTitle, parentId, userId);
 
   // 2. Get all children (folders and notes) of source folder
-  const children = db.prepare(`
+  const children = db
+    .prepare(
+      `
     SELECT id, title, 'folder' as type FROM folders WHERE parent_id = ? AND user_id = ?
     UNION ALL
     SELECT id, title, 'note' as type FROM notes WHERE parent_id = ? AND user_id = ?
-  `).all(sourceId, userId, sourceId, userId) as { id: string; title: string; type: string }[];
+  `,
+    )
+    .all(sourceId, userId, sourceId, userId) as {
+    id: string;
+    title: string;
+    type: string;
+  }[];
 
   // 3. Recursively duplicate each child
   for (const child of children) {
@@ -220,11 +225,13 @@ function duplicateFolderRecursive(
     } else {
       // Duplicate note into new folder
       const newNoteId = randomBytes(16).toString("hex");
-      db.prepare(`
+      db.prepare(
+        `
         INSERT INTO notes (id, title, abstract, content, syntax, parent_id, user_id)
         SELECT ?, title, abstract, content, syntax, ?, user_id
         FROM notes WHERE id = ? AND user_id = ?
-      `).run(newNoteId, newFolderId, child.id, userId);
+      `,
+      ).run(newNoteId, newFolderId, child.id, userId);
     }
   }
 
@@ -263,12 +270,14 @@ export async function duplicateFolder(
 }
 
 /**
- * Query function to duplicate a folder (for client-side use)
+ * Server function to duplicate a folder (for client-side use)
+ * Note: This is NOT wrapped in query() because mutations should not be cached
  */
-export const duplicateFolderQuery = query(
-  async (sourceId: string, newTitle: string, targetParentId?: string) => {
-    "use server";
-    return await duplicateFolder(sourceId, newTitle, targetParentId);
-  },
-  "duplicate-folder",
-);
+export async function duplicateFolderQuery(
+  sourceId: string,
+  newTitle: string,
+  targetParentId?: string,
+) {
+  "use server";
+  return await duplicateFolder(sourceId, newTitle, targetParentId);
+}
