@@ -101,7 +101,7 @@ export const dividerVariants = tv({
  * Container for scrollable items list
  */
 export const listContainerVariants = tv({
-  base: "flex flex-col space-y-0.5 overflow-y-auto flex-1"
+  base: "flex flex-col space-y-0.5 overflow-y-auto flex-1 min-h-0"
 });
 
 /**

@@ -136,6 +136,7 @@ export function ListViewer(props: ListViewerProps) {
   };
 
   let containerRef!: HTMLDivElement;
+  const itemRefs: (HTMLDivElement | undefined)[] = [];
 
   // Derived state
   const currentParent = createMemo(() => list.history.at(-1) ?? null);
@@ -211,6 +212,17 @@ export function ListViewer(props: ListViewerProps) {
       { defer: true },
     ),
   );
+
+  // Scroll focused item into view
+  createEffect(() => {
+    const focusIndex = list.focusedIndex;
+    if (focusIndex !== null && itemRefs[focusIndex]) {
+      itemRefs[focusIndex]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }
+  });
 
   // Focus memory
   const saveFocus = () => {
@@ -581,7 +593,7 @@ export function ListViewer(props: ListViewerProps) {
 
   return (
     <div
-      class="outline-none"
+      class="h-full flex flex-col outline-none"
       ref={containerRef}
       tabIndex={0}
       onKeyDown={handleKeyDown}
@@ -683,6 +695,7 @@ export function ListViewer(props: ListViewerProps) {
 
                 return (
                   <div
+                    ref={(el) => itemRefs[index()] = el}
                     id={`listitem-${index()}`}
                     role="option"
                     aria-selected={isSelected()}
