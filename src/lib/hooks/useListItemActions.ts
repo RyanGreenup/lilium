@@ -201,17 +201,20 @@ export function useListItemActions(): UseListItemActionsReturn {
   };
 
   const handlePasteChild = async (targetItem: ListItem) => {
-    if (targetItem.type === "note") {
-      alert("Cannot paste as child of a note");
-      return;
-    }
-
     const itemToPaste = cutItem();
     if (!itemToPaste) return;
 
     try {
-      // Use target folder's ID as new parent (paste inside folder)
-      const newParentId = targetItem.id;
+      let newParentId: string;
+
+      if (targetItem.type === "note") {
+        // Convert note to folder first, then paste inside the new folder
+        const { folder } = await convertNoteToFolderQuery(targetItem.id);
+        newParentId = folder.id;
+      } else {
+        newParentId = targetItem.id;
+      }
+
       if (itemToPaste.type === "folder") {
         await moveFolderQuery(itemToPaste.id, newParentId);
       } else {
