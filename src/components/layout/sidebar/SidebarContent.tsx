@@ -133,24 +133,31 @@ export const SidebarTabs = () => {
         keybind: ITEM_KEYBINDINGS.rename.key,
         onClick: () => handleStartEdit(item),
       },
-      // New sibling - infers type from selected item
       {
         id: "create-sibling",
         label: ITEM_KEYBINDINGS.createSibling.label,
         keybind: ITEM_KEYBINDINGS.createSibling.key,
-        onClick: () => handleCreateSibling(item, item.type),
+        onClick: () => handleCreateSibling(item, "note"),
       },
-    ];
-
-    // New child - only for folders, infers type from selected item
-    if (isFolder) {
-      items.push({
+      {
+        id: "create-sibling-folder",
+        label: ITEM_KEYBINDINGS.createSiblingFolder.label,
+        keybind: ITEM_KEYBINDINGS.createSiblingFolder.key,
+        onClick: () => handleCreateSibling(item, "folder"),
+      },
+      {
         id: "create-child",
         label: ITEM_KEYBINDINGS.createChild.label,
         keybind: ITEM_KEYBINDINGS.createChild.key,
-        onClick: () => handleCreateChild(item, item.type),
-      });
-    }
+        onClick: () => handleCreateChild(item, "note"),
+      },
+      {
+        id: "create-child-folder",
+        label: ITEM_KEYBINDINGS.createChildFolder.label,
+        keybind: ITEM_KEYBINDINGS.createChildFolder.key,
+        onClick: () => handleCreateChild(item, "folder"),
+      },
+    ];
 
     items.push({ id: "sep1", label: "", separator: true });
 
@@ -199,17 +206,13 @@ export const SidebarTabs = () => {
         keybind: ITEM_KEYBINDINGS.paste.key,
         onClick: () => handlePaste(item),
       },
-    );
-
-    // Paste child - only for folders
-    if (isFolder) {
-      items.push({
+      {
         id: "paste-child",
         label: ITEM_KEYBINDINGS.pasteChild.label,
         keybind: ITEM_KEYBINDINGS.pasteChild.key,
         onClick: () => handlePasteChild(item),
-      });
-    }
+      },
+    );
 
     items.push(
       { id: "sep2", label: "", separator: true },

@@ -81,6 +81,21 @@ export function useListItemActions(): UseListItemActionsReturn {
     return `${baseTitle} (${counter})`;
   };
 
+  /**
+   * Ensures an item is a folder, converting from note if necessary.
+   * Returns the folder ID for subsequent operations.
+   */
+  const ensureFolder = async (
+    item: ListItem
+  ): Promise<{ folderId: string; wasConverted: boolean }> => {
+    if (item.type === "folder") {
+      return { folderId: item.id, wasConverted: false };
+    }
+
+    const { folder } = await convertNoteToFolderQuery(item.id);
+    return { folderId: folder.id, wasConverted: true };
+  };
+
   const handleStartEdit = (item: ListItem) => {
     setEditingItemId(item.id);
   };
@@ -130,13 +145,9 @@ export function useListItemActions(): UseListItemActionsReturn {
   };
 
   const handleCreateChild = async (item: ListItem, type: "note" | "folder") => {
-    if (item.type === "note") {
-      alert("Creating children under notes is not implemented yet. The logic will also need to be shared between Pasting, so we'll implement this cohesively all together");
-      return;
-    }
-
     try {
-      const parentId = item.id;
+      const { folderId: parentId } = await ensureFolder(item);
+
       const baseTitle = type === "note" ? "Untitled" : "New Folder";
       const title = await generateUniqueTitle(baseTitle, parentId);
 
@@ -225,15 +236,7 @@ export function useListItemActions(): UseListItemActionsReturn {
     if (!itemToPaste) return;
 
     try {
-      let newParentId: string;
-
-      if (targetItem.type === "note") {
-        // Convert note to folder first, then paste inside the new folder
-        const { folder } = await convertNoteToFolderQuery(targetItem.id);
-        newParentId = folder.id;
-      } else {
-        newParentId = targetItem.id;
-      }
+      const { folderId: newParentId } = await ensureFolder(targetItem);
 
       if (itemToPaste.type === "folder") {
         await moveFolderQuery(itemToPaste.id, newParentId);
@@ -269,13 +272,14 @@ export function useListItemActions(): UseListItemActionsReturn {
   };
 
   const handleMakeFolder = async (item: ListItem) => {
-    if (item.type === "folder") {
-      alert("Item is already a folder");
-      return;
-    }
-
     try {
-      await convertNoteToFolderQuery(item.id);
+      const { wasConverted } = await ensureFolder(item);
+
+      if (!wasConverted) {
+        alert("Item is already a folder");
+        return;
+      }
+
       revalidate("list-children");
     } catch (error) {
       console.error("Failed to convert to folder:", error);
