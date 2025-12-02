@@ -75,6 +75,8 @@ interface ListViewerProps {
   onNoteSelect?: (noteId: string) => void;
   /** Called when user right-clicks an item */
   onContextMenu?: (item: ListItem, event: MouseEvent) => void;
+  /** Called when user right-clicks empty area (not on an item) */
+  onEmptyAreaContextMenu?: (parentId: string | null, event: MouseEvent) => void;
   /** ID of item currently being renamed (controlled from parent) */
   editingItemId?: Accessor<string | null>;
   /** Called when rename is confirmed (Enter/blur) */
@@ -769,6 +771,13 @@ export function ListViewer(props: ListViewerProps) {
             ? `listitem-${list.focusedIndex}`
             : undefined
         }
+        onContextMenu={(e) => {
+          // Only fire if clicking directly on container, not on a child item
+          if (e.target === e.currentTarget && props.onEmptyAreaContextMenu) {
+            e.preventDefault();
+            props.onEmptyAreaContextMenu(currentParent(), e);
+          }
+        }}
       >
         <ErrorBoundary fallback={<p>Error loading items</p>}>
           <Suspense fallback={<p>...</p>}>

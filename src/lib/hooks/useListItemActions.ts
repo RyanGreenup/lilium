@@ -29,6 +29,8 @@ interface UseListItemActionsReturn {
   handleCreateSibling: (item: ListItem, type: "note" | "folder") => Promise<void>;
   /** Create a child note or folder inside a folder */
   handleCreateChild: (item: ListItem, type: "note" | "folder") => Promise<void>;
+  /** Create a note or folder directly in a folder (for empty area context menu) */
+  handleCreateInFolder: (parentId: string | null, type: "note" | "folder") => Promise<void>;
   /** Copy a markdown link to clipboard */
   handleCopyLink: (item: ListItem) => Promise<void>;
   /** Duplicate a note */
@@ -162,6 +164,30 @@ export function useListItemActions(): UseListItemActionsReturn {
       await revalidate("list-children");
       // Wait for the next animation frame to ensure the reactive system has updated the DOM
       await new Promise(resolve => requestAnimationFrame(resolve));
+      setEditingItemId(newItem.id);
+    } catch (error) {
+      console.error("Failed to create item:", error);
+      alert(error instanceof Error ? error.message : "Failed to create item");
+    }
+  };
+
+  const handleCreateInFolder = async (
+    parentId: string | null,
+    type: "note" | "folder",
+  ) => {
+    try {
+      const baseTitle = type === "note" ? "Untitled" : "New Folder";
+      const title = await generateUniqueTitle(baseTitle, parentId);
+
+      let newItem;
+      if (type === "note") {
+        newItem = await createNewNote(title, "", parentId ?? undefined);
+      } else {
+        newItem = await createNewFolder(title, parentId ?? undefined);
+      }
+
+      await revalidate("list-children");
+      await new Promise((resolve) => requestAnimationFrame(resolve));
       setEditingItemId(newItem.id);
     } catch (error) {
       console.error("Failed to create item:", error);
@@ -310,6 +336,7 @@ export function useListItemActions(): UseListItemActionsReturn {
     handleRename,
     handleCreateSibling,
     handleCreateChild,
+    handleCreateInFolder,
     handleCopyLink,
     handleDuplicate,
     cutItem,
