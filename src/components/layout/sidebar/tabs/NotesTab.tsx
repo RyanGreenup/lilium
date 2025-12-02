@@ -23,7 +23,6 @@ import {
   type NavigationItem,
 } from "~/lib/hooks/useNoteNavigation";
 import { useNoteContext } from "~/lib/hooks/useNoteContext";
-import { useNoteParents } from "~/lib/hooks/useNoteParents";
 import { Alert } from "~/solid-daisy-components/components/Alert";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { Input } from "~/solid-daisy-components/components/Input";
