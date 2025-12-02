@@ -56,6 +56,7 @@ export const pathTextVariants = tv({
 /**
  * Inline button to view folder index note
  * Uses primary color when selected to indicate active state
+ * Shows dashed border when no index exists (create affordance)
  */
 export const indexButtonVariants = tv({
   base: [
@@ -71,6 +72,10 @@ export const indexButtonVariants = tv({
     selected: {
       true: "bg-primary text-primary-content",
       false: "text-base-content/60"
+    },
+    exists: {
+      true: "",
+      false: "border border-dashed border-base-content/30 text-base-content/40"
     }
   }
 });

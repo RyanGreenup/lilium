@@ -1,9 +1,10 @@
-import { createAsync } from "@solidjs/router";
+import { createAsync, revalidate } from "@solidjs/router";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
 import HomeIcon from "lucide-solid/icons/home";
+import Plus from "lucide-solid/icons/plus";
 import {
   type Accessor,
   batch,
@@ -24,6 +25,7 @@ import {
   getIndexNoteIdQuery,
   getNoteFolderPathQuery,
 } from "~/lib/db_new/api";
+import { createNewNote } from "~/lib/db_new/notes/create";
 import type { ListItem } from "~/lib/db_new/types";
 import { ITEM_KEYBINDINGS, LIST_KEYBINDINGS, matchesKeybind } from "~/lib/keybindings";
 import { KeybindingHelp } from "./KeybindingHelp";
@@ -38,6 +40,7 @@ import {
   pathItemVariants,
   pathTextVariants,
 } from "./listStyle";
+import { Tooltip } from "~/solid-daisy-components/components/Tooltip";
 
 // Selection as discriminated union
 type Selection =
@@ -390,6 +393,30 @@ export function ListViewer(props: ListViewerProps) {
     props.onSelectIndex?.(noteId);
   };
 
+  // Select existing index note, or create one if it doesn't exist
+  const selectOrCreateIndex = async () => {
+    const noteId = indexNoteId();
+    if (noteId) {
+      // Existing index - navigate to it
+      selectIndex();
+      return;
+    }
+
+    // Create new index note in current folder
+    try {
+      const parentId = currentParent() ?? undefined;
+      const newNote = await createNewNote("index", "", parentId);
+      // Revalidate both queries so UI updates
+      await Promise.all([
+        revalidate("list-children"),
+        revalidate("index-note-id"),
+      ]);
+      props.onNoteSelect?.(newNote.id);
+    } catch (error) {
+      console.error("Failed to create index note:", error);
+    }
+  };
+
   // Select a folder's index note without changing the sidebar view
   // This allows "Enter on folder" to select its index while staying in current folder
   const selectFolderIndex = async (index: number) => {
@@ -578,7 +605,7 @@ export function ListViewer(props: ListViewerProps) {
     // Global shortcuts
     if (e.key === INDEX_KEY) {
       e.preventDefault();
-      selectIndex();
+      selectOrCreateIndex();
       return;
     }
     if (e.ctrlKey && e.key === "ArrowUp") {
@@ -616,25 +643,41 @@ export function ListViewer(props: ListViewerProps) {
   const isIndexButtonFocused = () =>
     list.focusZone === "path" && list.indexButtonFocused;
 
-  const IndexButton = (btnProps: { pathIndex: number }) => (
-    <button
-      class={indexButtonVariants({
-        focused: isIndexButtonFocused(),
-        selected: indexSelected(),
-      })}
-      onClick={(e) => {
-        e.stopPropagation();
-        update({ focusZone: "path", pathFocusIndex: btnProps.pathIndex, indexButtonFocused: true });
-        selectIndex();
-        // Return focus to container (button click steals focus)
-        containerRef.focus();
-      }}
-      title={`View folder index (press ${INDEX_KEY})`}
-      aria-label="View folder index"
-    >
-      <FileText size={14} aria-hidden="true" />
-    </button>
-  );
+  const IndexButton = (btnProps: { pathIndex: number }) => {
+    const exists = () => !!indexNoteId();
+    const tip = () =>
+      exists()
+        ? `View index (${INDEX_KEY})`
+        : `Create index page (${INDEX_KEY})`;
+
+    return (
+      <Tooltip tip={tip()} placement="left" class="ml-auto">
+        <button
+          class={indexButtonVariants({
+            focused: isIndexButtonFocused(),
+            selected: indexSelected(),
+            exists: exists(),
+          })}
+          onClick={(e) => {
+            e.stopPropagation();
+            update({
+              focusZone: "path",
+              pathFocusIndex: btnProps.pathIndex,
+              indexButtonFocused: true,
+            });
+            selectOrCreateIndex();
+            // Return focus to container (button click steals focus)
+            containerRef.focus();
+          }}
+          aria-label={tip()}
+        >
+          <Show when={exists()} fallback={<Plus size={14} aria-hidden="true" />}>
+            <FileText size={14} aria-hidden="true" />
+          </Show>
+        </button>
+      </Tooltip>
+    );
+  };
 
   return (
     <div
@@ -673,7 +716,7 @@ export function ListViewer(props: ListViewerProps) {
             >
               <HomeIcon size={16} />
               <span class={pathTextVariants()}>Home</span>
-              <Show when={list.history.length === 0 && indexNoteId()}>
+              <Show when={list.history.length === 0}>
                 <IndexButton pathIndex={0} />
               </Show>
             </div>
@@ -700,7 +743,7 @@ export function ListViewer(props: ListViewerProps) {
                       <ChevronLeft size={12} class="rotate-180 opacity-40" />
                       <Folder size={14} />
                       <span class={pathTextVariants()}>{crumb.title}</span>
-                      <Show when={isLast() && indexNoteId()}>
+                      <Show when={isLast()}>
                         <IndexButton pathIndex={pathIndex()} />
                       </Show>
                     </div>
