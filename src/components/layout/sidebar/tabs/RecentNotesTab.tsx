@@ -1,8 +1,7 @@
 import { createAsync, useSearchParams, useNavigate } from "@solidjs/router";
-import { Suspense, Show, For } from "solid-js";
+import { Suspense, Show } from "solid-js";
 import { ContentList, ContentItemData } from "../shared/ContentItem";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
-import { useNoteParents } from "~/lib/hooks/useNoteParents";
 
 // Server function to get recent notes
 const getRecentNotesData = async () => {
@@ -16,8 +15,7 @@ interface RecentNotesTabProps {
 }
 
 export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
-  const { note, noteId } = useCurrentNote();
-  const parents = useNoteParents(noteId);
+  const { noteId } = useCurrentNote();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 

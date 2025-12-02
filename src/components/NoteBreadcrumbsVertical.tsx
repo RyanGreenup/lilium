@@ -2,10 +2,11 @@ import { createAsync } from "@solidjs/router";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import { Accessor, For, Show, createMemo } from "solid-js";
 import { getNoteByIdQuery } from "~/lib/db/notes/read";
+import { getIndexNoteIdQuery } from "~/lib/db_new/api";
 import { useCurrentNoteChildren } from "~/lib/hooks/useCurrentDirectory";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { useNoteNavigation } from "~/lib/hooks/useNoteNavigation";
-import { useNoteParents } from "~/lib/hooks/useNoteParents";
+import { useNoteFolderPath } from "~/lib/hooks/useNoteFolderPath";
 import { Badge } from "~/solid-daisy-components/components/Badge";
 import { Button } from "~/solid-daisy-components/components/Button";
 import { HomeIconBreadcrumbs } from "./NoteBreadcrumbs";
@@ -22,11 +23,19 @@ export function NoteBreadcrumbsVerticalById(
     if (!id) return null;
     return await getNoteByIdQuery(id);
   });
-  const parents = useNoteParents(props.noteId);
+  const folderPathResult = useNoteFolderPath(props.noteId);
   const { navigateToNote, navigateToRoot } = useNoteNavigation();
   const { children } = useCurrentNoteChildren();
 
   const hasChildren = createMemo(() => (children()?.length ?? 0) > 0);
+
+  // Navigate to a folder's index note (if one exists)
+  const handleFolderClick = async (folderId: string) => {
+    const indexNoteId = await getIndexNoteIdQuery(folderId);
+    if (indexNoteId) {
+      navigateToNote(indexNoteId);
+    }
+  };
 
   return (
     <Show when={note()}>
@@ -42,8 +51,9 @@ export function NoteBreadcrumbsVerticalById(
           </Button>
         </div>
 
-        <For each={parents()}>
-          {(parent, index) => (
+        {/* Folder path items */}
+        <For each={folderPathResult()?.folderPath || []}>
+          {(folder, index) => (
             <div
               class="flex items-center space-x-2"
               style={`margin-left: ${Math.min((index() + 1) * 0.5, 2.5)}rem`}
@@ -55,10 +65,10 @@ export function NoteBreadcrumbsVerticalById(
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => navigateToNote(parent.id)}
+                  onClick={() => handleFolderClick(folder.id)}
                   class="justify-start px-2 py-1 h-auto min-h-0 w-full"
                 >
-                  {parent.title}
+                  {folder.title}
                 </Button>
               </div>
             </div>
