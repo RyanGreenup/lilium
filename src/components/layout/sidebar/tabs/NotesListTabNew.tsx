@@ -102,6 +102,14 @@ interface ListViewerProps {
   onMakeFolder?: (item: ListItem) => Promise<void>;
   /** Called when user converts folder to note (Ctrl+Shift+G) */
   onMakeNote?: (item: ListItem) => Promise<void>;
+  /** Persisted history from parent (survives tab switches) */
+  persistedHistory?: string[];
+  /** Called when history changes */
+  onHistoryChange?: (history: string[]) => void;
+  /** Persisted focus memory from parent */
+  persistedFocusMemory?: Record<string, number | undefined>;
+  /** Called when focus memory changes */
+  onFocusMemoryChange?: (memory: Record<string, number | undefined>) => void;
 }
 
 const memoryKey = (parentId: string | null): string => parentId ?? "root";
@@ -116,12 +124,12 @@ export function ListViewer(props: ListViewerProps) {
   const [followMode, setFollowMode] = createSignal(local.selectionFollowsFocus ?? false);
 
   const [list, setList] = createStore<ListStore>({
-    history: [],
-    focusMemory: {},
+    history: props.persistedHistory ?? [],
+    focusMemory: props.persistedFocusMemory ?? {},
     focusedIndex: null,
     selection: { type: "none" },
     focusZone: "list",
-    pathFocusIndex: 0,
+    pathFocusIndex: props.persistedHistory?.length ?? 0,
     indexButtonFocused: false,
     selectionHistory: null,
     autoSelectingIndex: false,
@@ -134,6 +142,20 @@ export function ListViewer(props: ListViewerProps) {
       Object.entries(changes).forEach(([k, v]) => setList(k as keyof ListStore, v as never));
     });
   };
+
+  // Sync history changes to parent (for persistence across tab switches)
+  createEffect(on(
+    () => list.history,
+    (history) => props.onHistoryChange?.([...history]),
+    { defer: true }
+  ));
+
+  // Sync focus memory changes to parent (for persistence across tab switches)
+  createEffect(on(
+    () => list.focusMemory,
+    (memory) => props.onFocusMemoryChange?.({ ...memory }),
+    { defer: true }
+  ));
 
   let containerRef!: HTMLDivElement;
   const itemRefs: (HTMLDivElement | undefined)[] = [];
@@ -180,6 +202,7 @@ export function ListViewer(props: ListViewerProps) {
   });
 
   // Auto-expand to note's folder when URL changes (external navigation)
+  // Note: No `defer` - runs on mount to ensure consistent behavior when tab was hidden during navigation
   createEffect(
     on(
       () => props.currentNoteId?.(),
@@ -210,7 +233,6 @@ export function ListViewer(props: ListViewerProps) {
           });
         }
       },
-      { defer: true },
     ),
   );
 

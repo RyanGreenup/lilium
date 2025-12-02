@@ -93,6 +93,10 @@ export const SidebarTabs = () => {
   // Persistent search state across tab navigation
   const [searchTerm, setSearchTerm] = createSignal("");
 
+  // Persistent notes list state across tab navigation
+  const [notesHistory, setNotesHistory] = createSignal<string[]>([]);
+  const [notesFocusMemory, setNotesFocusMemory] = createSignal<Record<string, number | undefined>>({});
+
   // Context menu state
   const [contextItem, setContextItem] = createSignal<ListItem | null>(null);
 
@@ -382,6 +386,10 @@ export const SidebarTabs = () => {
                   onDelete={handleDelete}
                   onMakeFolder={handleMakeFolder}
                   onMakeNote={handleMakeNote}
+                  persistedHistory={notesHistory()}
+                  onHistoryChange={setNotesHistory}
+                  persistedFocusMemory={notesFocusMemory()}
+                  onFocusMemoryChange={setNotesFocusMemory}
                 />
               </Suspense>
             </Show>
