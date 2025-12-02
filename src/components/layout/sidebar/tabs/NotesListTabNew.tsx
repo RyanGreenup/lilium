@@ -486,14 +486,23 @@ export function ListViewer(props: ListViewerProps) {
       return true;
     }
 
-    // Create sibling/child - infer type from selected item
     if (matchesKeybind(e, ITEM_KEYBINDINGS.createSibling.key)) {
-      props.onCreateSibling?.(item, item.type);
+      props.onCreateSibling?.(item, "note");
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.createSiblingFolder.key)) {
+      props.onCreateSibling?.(item, "folder");
       return true;
     }
 
     if (matchesKeybind(e, ITEM_KEYBINDINGS.createChild.key)) {
-      props.onCreateChild?.(item, item.type);
+      props.onCreateChild?.(item, "note");
+      return true;
+    }
+
+    if (matchesKeybind(e, ITEM_KEYBINDINGS.createChildFolder.key)) {
+      props.onCreateChild?.(item, "folder");
       return true;
     }
 
