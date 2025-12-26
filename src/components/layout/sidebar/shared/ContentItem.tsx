@@ -146,12 +146,13 @@ export const ContentList = (props: ContentListProps) => {
     }
   });
 
-  // Auto-focus first item when items change and keyboard nav is enabled
+  // Reset focus when items become empty (don't auto-focus first item - wait for keyboard interaction)
   createEffect(() => {
     const items = props.items;
-    if (props.enableKeyboardNav && items.length > 0 && focusedIndex() === -1) {
-      setFocusedIndex(0);
-    } else if (items.length === 0) {
+    if (items.length === 0) {
+      setFocusedIndex(-1);
+    } else if (focusedIndex() >= items.length) {
+      // Reset if focused index is out of bounds
       setFocusedIndex(-1);
     }
   });
@@ -192,9 +193,16 @@ export const ContentList = (props: ContentListProps) => {
       () => {
         const items = props.items;
         const currentIndex = focusedIndex();
-        const nextIndex = currentIndex + 1;
-        if (nextIndex < items.length) {
-          setFocusedIndex(nextIndex);
+        if (currentIndex === -1) {
+          // First keyboard interaction - focus first item
+          if (items.length > 0) {
+            setFocusedIndex(0);
+          }
+        } else {
+          const nextIndex = currentIndex + 1;
+          if (nextIndex < items.length) {
+            setFocusedIndex(nextIndex);
+          }
         }
       },
       { ref: () => containerRef },
@@ -203,10 +211,18 @@ export const ContentList = (props: ContentListProps) => {
     useKeybinding(
       { key: "ArrowUp" },
       () => {
+        const items = props.items;
         const currentIndex = focusedIndex();
-        const nextIndex = currentIndex - 1;
-        if (nextIndex >= 0) {
-          setFocusedIndex(nextIndex);
+        if (currentIndex === -1) {
+          // First keyboard interaction - focus last item
+          if (items.length > 0) {
+            setFocusedIndex(items.length - 1);
+          }
+        } else {
+          const nextIndex = currentIndex - 1;
+          if (nextIndex >= 0) {
+            setFocusedIndex(nextIndex);
+          }
         }
       },
       { ref: () => containerRef },
