@@ -6,7 +6,7 @@ interface RelatedTabProps {
 }
 
 export default function RelatedTab(props: RelatedTabProps = {}) {
-  let containerRef: HTMLDivElement | undefined;
+  let containerRef!: HTMLDivElement | undefined;
   const relatedContent: ContentItemData[] = [
     {
       id: "1",
@@ -57,8 +57,9 @@ export default function RelatedTab(props: RelatedTabProps = {}) {
     const trigger = props.focusTrigger?.();
     if (trigger && containerRef) {
       // Focus on next tick after render
+      const ref = containerRef;
       setTimeout(() => {
-        containerRef.focus();
+        ref.focus();
       }, 0);
     }
   });
