@@ -25,10 +25,8 @@ import { useFollowMode } from "~/lib/hooks/useFollowMode";
 import { FollowModeToggle } from "~/components/shared/FollowModeToggle";
 import {
   searchNotesQuery,
-  searchNotesSimpleQuery,
-  searchNotesAdvancedQuery,
-} from "~/lib/db/notes/search";
-import type { Note } from "~/lib/db/types";
+} from "~/lib/db_new/notes/search";
+import type { Note } from "~/lib/db_new/types";
 
 interface SidebarSearchContentProps {
   focusTrigger?: () => string | null;

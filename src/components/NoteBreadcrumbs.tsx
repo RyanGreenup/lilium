@@ -1,6 +1,6 @@
 import { createAsync } from "@solidjs/router";
 import { Accessor, For, Show } from "solid-js";
-import { getNoteByIdQuery } from "~/lib/db/notes/read";
+import { getNoteByIdQuery } from "~/lib/db_new/notes/read";
 import { getIndexNoteIdQuery } from "~/lib/db_new/api";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { useNoteNavigation } from "~/lib/hooks/useNoteNavigation";
@@ -73,6 +73,6 @@ export default function NoteBreadcrumbs() {
 A Simple orb to represent home in breadcrumbs
 */
 export const HomeIconBreadcrumbs = () => (
-  
+
   <div class="w-2.5 h-2.5 bg-primary rounded-full opacity-70" />
 );
