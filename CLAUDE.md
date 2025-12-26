@@ -170,3 +170,4 @@ The project includes database seeding scripts:
 - Component library uses tree-shaking for optimal bundle size
 
 This architecture emphasizes type safety, user security, and reactive data flow while maintaining clean separation between client and server concerns.
+- Ensure `bun run typecheck` passes after every single change.
