@@ -32,7 +32,7 @@ import RelatedTab from "./tabs/RelatedTab";
 import { SidebarSearchContent } from "./tabs/SearchTab";
 import { SlideTransition } from "~/components/Animations/SlideTransition";
 import { Loading } from "~/solid-daisy-components/components/Loading";
-import type { ListItem } from "~/lib/db_new/types";
+import type { ListItem } from "~/lib/db/types";
 import { ITEM_KEYBINDINGS } from "~/lib/keybindings";
 import { useListItemActions } from "~/lib/hooks/useListItemActions";
 

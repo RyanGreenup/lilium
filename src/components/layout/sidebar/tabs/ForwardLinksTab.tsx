@@ -2,8 +2,8 @@ import { createAsync, useSearchParams, useNavigate } from "@solidjs/router";
 import { Suspense, Show } from "solid-js";
 import { ContentList, ContentItemData } from "../shared/ContentItem";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
-import { getForwardLinksQuery } from "~/lib/db_new/notes/search";
-import { getDisplayTitle } from "~/lib/db_new/notes/utils";
+import { getForwardLinksQuery } from "~/lib/db/notes/search";
+import { getDisplayTitle } from "~/lib/db/notes/utils";
 
 interface ForwardLinksTabProps {
   focusTrigger?: () => string | null;

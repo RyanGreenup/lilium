@@ -9,8 +9,8 @@ import { Accessor, JSXElement, Show } from "solid-js";
 import { SidebarTabs } from "~/components/layout/sidebar/SidebarContent";
 import { UserDropdown } from "~/components/UserDrowDown";
 import { getUser } from "~/lib/auth";
-import { getIndexNoteQuery } from "~/lib/db_new/notes/read";
-import type { NoteWithoutContent } from "~/lib/db_new/types";
+import { getIndexNoteQuery } from "~/lib/db/notes/read";
+import type { NoteWithoutContent } from "~/lib/db/types";
 import { Alert } from "~/solid-daisy-components/components/Alert";
 import {
   BottomDock,

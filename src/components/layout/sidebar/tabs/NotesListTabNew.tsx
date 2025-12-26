@@ -24,9 +24,9 @@ import {
   getFolderPathQuery,
   getIndexNoteIdQuery,
   getNoteFolderPathQuery,
-} from "~/lib/db_new/api";
-import { createNewNote } from "~/lib/db_new/notes/create";
-import type { ListItem } from "~/lib/db_new/types";
+} from "~/lib/db/api";
+import { createNewNote } from "~/lib/db/notes/create";
+import type { ListItem } from "~/lib/db/types";
 import {
   ITEM_KEYBINDINGS,
   LIST_KEYBINDINGS,

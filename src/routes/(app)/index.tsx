@@ -6,8 +6,8 @@ import Folder from "lucide-solid/icons/folder";
 
 import { For, Suspense, Show } from "solid-js";
 import { getUser } from "~/lib/auth";
-import { getNotesStatsQuery } from "~/lib/db_new/noteStats";
-import { getRecentNotesQuery } from "~/lib/db_new/notes/search";
+import { getNotesStatsQuery } from "~/lib/db/noteStats";
+import { getRecentNotesQuery } from "~/lib/db/notes/search";
 
 import { Badge } from "~/solid-daisy-components/components/Badge";
 import { Card } from "~/solid-daisy-components/components/Card";

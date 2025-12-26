@@ -1,5 +1,5 @@
 /**
- * Note statistics functions for db_new schema
+ * Note statistics functions for db schema
  */
 
 "use server";

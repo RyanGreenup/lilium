@@ -1,7 +1,7 @@
 import { createAsync } from "@solidjs/router";
 import { Accessor, For, Show } from "solid-js";
-import { getNoteByIdQuery } from "~/lib/db_new/notes/read";
-import { getIndexNoteIdQuery } from "~/lib/db_new/api";
+import { getNoteByIdQuery } from "~/lib/db/notes/read";
+import { getIndexNoteIdQuery } from "~/lib/db/api";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { useNoteNavigation } from "~/lib/hooks/useNoteNavigation";
 import { useNoteFolderPath } from "~/lib/hooks/useNoteFolderPath";

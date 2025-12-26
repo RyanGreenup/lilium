@@ -9,7 +9,7 @@
  */
 
 // Re-export types for convenience
-export type { Note } from "./db_new/types";
+export type { Note } from "./db/types";
 
 
 

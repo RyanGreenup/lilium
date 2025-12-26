@@ -1,19 +1,19 @@
 import { revalidate } from "@solidjs/router";
 import { createSignal } from "solid-js";
 import type { Accessor, Setter } from "solid-js";
-import type { ListItem } from "~/lib/db_new/types";
-import { createNewNote, duplicateNoteQuery } from "~/lib/db_new/notes/create";
-import { createNewFolder, duplicateFolderQuery } from "~/lib/db_new/folders/create";
-import { renameNoteQuery } from "~/lib/db_new/notes/update_rename";
-import { renameFolderQuery } from "~/lib/db_new/folders/update_rename";
-import { getChildrenQuery } from "~/lib/db_new/api";
-import { moveNoteQuery } from "~/lib/db_new/notes/update_move";
-import { moveFolderQuery } from "~/lib/db_new/folders/update_move";
-import { deleteNoteQuery } from "~/lib/db_new/notes/delete";
-import { deleteFolderQuery } from "~/lib/db_new/folders/delete";
-import { convertNoteToFolderQuery } from "~/lib/db_new/notes/convert";
-import { convertFolderToNoteQuery } from "~/lib/db_new/folders/convert";
-import { getIndexNoteIdQuery } from "~/lib/db_new/api";
+import type { ListItem } from "~/lib/db/types";
+import { createNewNote, duplicateNoteQuery } from "~/lib/db/notes/create";
+import { createNewFolder, duplicateFolderQuery } from "~/lib/db/folders/create";
+import { renameNoteQuery } from "~/lib/db/notes/update_rename";
+import { renameFolderQuery } from "~/lib/db/folders/update_rename";
+import { getChildrenQuery } from "~/lib/db/api";
+import { moveNoteQuery } from "~/lib/db/notes/update_move";
+import { moveFolderQuery } from "~/lib/db/folders/update_move";
+import { deleteNoteQuery } from "~/lib/db/notes/delete";
+import { deleteFolderQuery } from "~/lib/db/folders/delete";
+import { convertNoteToFolderQuery } from "~/lib/db/notes/convert";
+import { convertFolderToNoteQuery } from "~/lib/db/folders/convert";
+import { getIndexNoteIdQuery } from "~/lib/db/api";
 
 interface UseListItemActionsReturn {
   /** ID of item currently being edited (for inline rename) */
