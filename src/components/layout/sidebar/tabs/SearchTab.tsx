@@ -25,10 +25,8 @@ import { useFollowMode } from "~/lib/hooks/useFollowMode";
 import { FollowModeToggle } from "~/components/shared/FollowModeToggle";
 import {
   searchNotesQuery,
-  searchNotesSimpleQuery,
-  searchNotesAdvancedQuery,
-} from "~/lib/db/notes/search";
-import type { Note } from "~/lib/db/types";
+} from "~/lib/db_new/notes/search";
+import type { Note } from "~/lib/db_new/types";
 
 interface SidebarSearchContentProps {
   focusTrigger?: () => string | null;
@@ -240,7 +238,7 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
   };
 
   return (
-    <div class="space-y-4">
+    <div class="flex flex-col h-full">
       <div class="p-4 space-y-4">
         <input
           ref={searchInputRef}
@@ -252,9 +250,9 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
           onKeyDown={handleSearchKeyDown}
         />
 
-        <Collapsible 
-          class="p-0" 
-          title={<>Search Settings <Kbd size="xs">Ctrl+,</Kbd></>}
+        <Collapsible
+          class="p-0"
+          title={"Search Settings"}
           expanded={settingsExpanded()}
           onToggle={setSettingsExpanded}
         >
@@ -352,7 +350,7 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
 
       {/* Search Results */}
       <Show when={searchTerm().length >= 2}>
-        <div>
+        <div class="flex-1 min-h-0 flex flex-col">
           <div class="px-4 pb-2">
             <h3 class="text-sm font-medium text-base-content/70">
               Results for "{searchTerm()}"
@@ -373,7 +371,7 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
               </div>
             }
           >
-            <div ref={resultsContainerRef} class="p-4 space-y-3 max-h-96 overflow-y-auto">
+            <div ref={resultsContainerRef} class="p-4 space-y-3 flex-1 min-h-0 overflow-y-auto">
               <Show 
                 when={formattedResults().length === 0}
                 fallback={

@@ -1,35 +1,22 @@
 import { createAsync, useSearchParams, useNavigate } from "@solidjs/router";
-import { Suspense, Show, For } from "solid-js";
+import { Suspense, Show } from "solid-js";
 import { ContentList, ContentItemData } from "../shared/ContentItem";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
-import { useNoteParents } from "~/lib/hooks/useNoteParents";
-
-// Server function to get recent notes
-const getRecentNotesData = async () => {
-  "use server";
-  const { getRecentNotes } = await import("~/lib/db/notes/search");
-  return await getRecentNotes(10);
-};
+import { getRecentNotesQuery } from "~/lib/db_new/notes/search";
 
 interface RecentNotesTabProps {
   focusTrigger?: () => string | null;
 }
 
+const N_RECENT_NOTES = 20;
+
 export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
-  const { note, noteId } = useCurrentNote();
-  const parents = useNoteParents(noteId);
+  const { noteId } = useCurrentNote();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   // Get recent notes from the database
-  const recentNotesData = createAsync(async () => {
-    try {
-      return await getRecentNotesData();
-    } catch (error) {
-      console.error("Failed to fetch recent notes:", error);
-      return [];
-    }
-  });
+  const recentNotesData = createAsync(() => getRecentNotesQuery(N_RECENT_NOTES));
 
   // Function to navigate while preserving search params
   const navigateToNote = (noteId: string) => {

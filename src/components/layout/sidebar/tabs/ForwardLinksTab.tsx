@@ -2,13 +2,8 @@ import { createAsync, useSearchParams, useNavigate } from "@solidjs/router";
 import { Suspense, Show } from "solid-js";
 import { ContentList, ContentItemData } from "../shared/ContentItem";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
+import { getForwardLinksQuery } from "~/lib/db_new/notes/search";
 
-// Server function to get forward links
-const getForwardLinksData = async (noteId: string) => {
-  "use server";
-  const { getForwardLinks } = await import("~/lib/db/notes/search");
-  return await getForwardLinks(noteId);
-};
 
 interface ForwardLinksTabProps {
   focusTrigger?: () => string | null;
@@ -20,16 +15,10 @@ export default function ForwardLinksTab(props: ForwardLinksTabProps = {}) {
   const navigate = useNavigate();
 
   // Get forward links from the database
-  const forwardLinksData = createAsync(async () => {
+  const forwardLinksData = createAsync(() => {
     const currentNoteId = noteId();
-    if (!currentNoteId) return [];
-
-    try {
-      return await getForwardLinksData(currentNoteId);
-    } catch (error) {
-      console.error("Failed to fetch forward links:", error);
-      return [];
-    }
+    if (!currentNoteId) return Promise.resolve([]);
+    return getForwardLinksQuery(currentNoteId);
   });
 
   // Function to navigate while preserving search params

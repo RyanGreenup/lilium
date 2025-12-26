@@ -1,5 +1,5 @@
 /**
- * Note statistics functions
+ * Note statistics functions for db_new schema
  */
 
 "use server";
@@ -9,30 +9,32 @@ import { redirect } from "@solidjs/router";
 import { requireUser } from "../auth";
 import { db } from "./index";
 
+export interface NotesStats {
+  total_notes: number;
+  total_folders: number;
+  recent_notes: number;
+  syntax_breakdown: { syntax: string; count: number }[];
+}
+
 /**
  * Get summary statistics
  */
-export async function getNotesStats() {
+export async function getNotesStats(): Promise<NotesStats> {
   const user = await requireUser();
   if (!user.id) {
     throw redirect("/login");
   }
 
   const totalNotesStmt = db.prepare(
-    "SELECT COUNT(*) as count FROM notes WHERE user_id = ?",
+    "SELECT COUNT(*) as count FROM notes WHERE user_id = ?"
   );
-  const totalTagsStmt = db.prepare(
-    "SELECT COUNT(*) as count FROM tags WHERE user_id = ?",
+  const totalFoldersStmt = db.prepare(
+    "SELECT COUNT(*) as count FROM folders WHERE user_id = ?"
   );
   const recentNotesStmt = db.prepare(`
     SELECT COUNT(*) as count
     FROM notes
     WHERE user_id = ? AND updated_at >= datetime('now', '-7 days')
-  `);
-  const foldersStmt = db.prepare(`
-    SELECT COUNT(*) as count
-    FROM note_child_counts
-    WHERE user_id = ? AND child_count > 0
   `);
   const syntaxStatsStmt = db.prepare(`
     SELECT syntax, COUNT(*) as count
@@ -43,9 +45,8 @@ export async function getNotesStats() {
   `);
 
   const totalNotes = totalNotesStmt.get(user.id) as { count: number };
-  const totalTags = totalTagsStmt.get(user.id) as { count: number };
+  const totalFolders = totalFoldersStmt.get(user.id) as { count: number };
   const recentNotes = recentNotesStmt.get(user.id) as { count: number };
-  const folders = foldersStmt.get(user.id) as { count: number };
   const syntaxStats = syntaxStatsStmt.all(user.id) as {
     syntax: string;
     count: number;
@@ -53,9 +54,8 @@ export async function getNotesStats() {
 
   return {
     total_notes: totalNotes.count,
-    total_tags: totalTags.count,
+    total_folders: totalFolders.count,
     recent_notes: recentNotes.count,
-    folders: folders.count,
     syntax_breakdown: syntaxStats,
   };
 }
@@ -67,4 +67,3 @@ export const getNotesStatsQuery = query(async () => {
   "use server";
   return await getNotesStats();
 }, "notes-stats");
-

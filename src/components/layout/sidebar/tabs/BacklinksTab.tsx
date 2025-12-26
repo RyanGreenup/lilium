@@ -2,13 +2,7 @@ import { createAsync, useSearchParams, useNavigate } from "@solidjs/router";
 import { Suspense, Show } from "solid-js";
 import { ContentList, ContentItemData } from "../shared/ContentItem";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
-
-// Server function to get backlinks
-const getBacklinksData = async (noteId: string) => {
-  "use server";
-  const { getBacklinks } = await import("~/lib/db/notes/search");
-  return await getBacklinks(noteId);
-};
+import { getBacklinksQuery } from "~/lib/db_new/notes/search";
 
 interface BacklinksTabProps {
   focusTrigger?: () => string | null;
@@ -20,16 +14,10 @@ export default function BacklinksTab(props: BacklinksTabProps = {}) {
   const navigate = useNavigate();
 
   // Get backlinks from the database
-  const backlinksData = createAsync(async () => {
+  const backlinksData = createAsync(() => {
     const currentNoteId = noteId();
-    if (!currentNoteId) return [];
-
-    try {
-      return await getBacklinksData(currentNoteId);
-    } catch (error) {
-      console.error("Failed to fetch backlinks:", error);
-      return [];
-    }
+    if (!currentNoteId) return Promise.resolve([]);
+    return getBacklinksQuery(currentNoteId);
   });
 
   // Function to navigate while preserving search params

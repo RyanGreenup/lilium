@@ -12,8 +12,16 @@
     "strict": true,
     "types": ["vinxi/types/client"],
     "isolatedModules": true,
+    "skipLibCheck": true,
     "paths": {
       "~/*": ["./src/*"]
     }
-  }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "src/solid-daisy-components",
+    "node_modules"
+  ]
 }

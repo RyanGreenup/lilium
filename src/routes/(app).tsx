@@ -1,14 +1,16 @@
-import { A, RouteDefinition } from "@solidjs/router";
+import { A, createAsync, RouteDefinition } from "@solidjs/router";
 import BookOpen from "lucide-solid/icons/book-open";
-
+import FileText from "lucide-solid/icons/file-text";
+import Home from "lucide-solid/icons/home";
 import Menu from "lucide-solid/icons/menu";
 
 import ToggleLeft from "lucide-solid/icons/toggle-left";
-import { JSXElement, Show } from "solid-js";
+import { Accessor, JSXElement, Show } from "solid-js";
 import { SidebarTabs } from "~/components/layout/sidebar/SidebarContent";
-import { Logo } from "~/components/Logo";
 import { UserDropdown } from "~/components/UserDrowDown";
 import { getUser } from "~/lib/auth";
+import { getIndexNoteQuery } from "~/lib/db_new/notes/read";
+import type { NoteWithoutContent } from "~/lib/db_new/types";
 import { Alert } from "~/solid-daisy-components/components/Alert";
 import {
   BottomDock,
@@ -23,20 +25,21 @@ import {
   ToggleButton,
 } from "~/solid-daisy-components/components/Layouts/ResponsiveDrawer";
 
-const SHOW_HOME = false;
-
 // Route Guard
 export const route = {
   preload() {
     getUser();
+    getIndexNoteQuery();
   },
 } satisfies RouteDefinition;
 
 export default function MainLayout(props: { children: JSXElement }) {
+  const indexNote = createAsync(() => getIndexNoteQuery());
+
   return (
     <Layout class="text-base-content">
       <Navbar class="navbar bg-base-200 shadow-lg mt-[-0.25rem]">
-        <NavbarContent />
+        <NavbarContent indexNote={indexNote} />
       </Navbar>
       <MainWrapper>
         <Sidebar class="bg-base-200">
@@ -57,19 +60,27 @@ export default function MainLayout(props: { children: JSXElement }) {
   );
 }
 
-const NavbarContent = () => (
+const NavbarContent = (props: {
+  indexNote: Accessor<NoteWithoutContent | null | undefined>;
+}) => (
   <>
     <div class="navbar-start">
       <div class="dropdown">
         <SidebarToggle />
       </div>
-      <Show when={SHOW_HOME}>
-      <A href="/" class="btn btn-ghost text-xl">
-        <div class="flex items-center gap-2">
-          <Logo class="h-8 w-8" />
-          {/*<span>Lilium</span>*/}
-        </div>
+      <A href="/" class="btn btn-square btn-ghost" title="Dashboard">
+        <Home class="w-5 h-5" />
       </A>
+      <Show when={props.indexNote()}>
+        {(note) => (
+          <A
+            href={`/note/${note().id}`}
+            class="btn btn-square btn-ghost"
+            title="Index Note"
+          >
+            <FileText class="w-5 h-5" />
+          </A>
+        )}
       </Show>
     </div>
 
