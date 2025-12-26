@@ -35,8 +35,8 @@ docker-compose.yml
 .DS_Store
 Thumbs.db
 
-# Data (if you want to exclude local dev data)
-# .data/
+# Data directory - excluded to prevent stale databases from being baked into image
+.data/
 
 # Misc
 *.log
