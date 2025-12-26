@@ -7,20 +7,22 @@
 import { query, redirect } from "@solidjs/router";
 import { requireUser } from "../../auth";
 import { db } from "../index";
-import type { Note } from "../types";
+import type { Note, NoteWithParentFolderTitle } from "../types";
 
 /**
  * Search notes using FTS5 full-text search
  */
-export async function searchNotes(searchQuery: string, folderId?: string): Promise<Note[]> {
+export async function searchNotes(searchQuery: string, folderId?: string): Promise<NoteWithParentFolderTitle[]> {
   const user = await requireUser();
   if (!user.id) {
     throw redirect("/login");
   }
 
   let sql = `
-    SELECT n.* FROM notes n
+    SELECT n.*, f.title as parent_folder_title
+    FROM notes n
     INNER JOIN notes_fts fts ON n.id = fts.id
+    LEFT JOIN folders f ON n.parent_id = f.id
     WHERE notes_fts MATCH ? AND fts.user_id = ?
   `;
 
@@ -34,7 +36,7 @@ export async function searchNotes(searchQuery: string, folderId?: string): Promi
   sql += ` ORDER BY bm25(notes_fts), n.updated_at DESC`;
 
   const stmt = db.prepare(sql);
-  return stmt.all(...params) as Note[];
+  return stmt.all(...params) as NoteWithParentFolderTitle[];
 }
 
 /**
@@ -48,7 +50,7 @@ export const searchNotesQuery = query(async (searchQuery: string, folderId?: str
 /**
  * Get recently modified notes
  */
-export async function getRecentNotes(limit: number = 10): Promise<Note[]> {
+export async function getRecentNotes(limit: number = 10): Promise<NoteWithParentFolderTitle[]> {
   const user = await requireUser();
   if (!user.id) {
     throw redirect("/login");
@@ -56,22 +58,24 @@ export async function getRecentNotes(limit: number = 10): Promise<Note[]> {
 
   const stmt = db.prepare(`
     SELECT
-      id,
-      title,
-      abstract,
-      content,
-      syntax,
-      parent_id,
-      user_id,
-      created_at,
-      updated_at
-    FROM notes
-    WHERE user_id = ?
-    ORDER BY updated_at DESC
+      n.id,
+      n.title,
+      n.abstract,
+      n.content,
+      n.syntax,
+      n.parent_id,
+      n.user_id,
+      n.created_at,
+      n.updated_at,
+      f.title as parent_folder_title
+    FROM notes n
+    LEFT JOIN folders f ON n.parent_id = f.id
+    WHERE n.user_id = ?
+    ORDER BY n.updated_at DESC
     LIMIT ?
   `);
 
-  return stmt.all(user.id, limit) as Note[];
+  return stmt.all(user.id, limit) as NoteWithParentFolderTitle[];
 }
 
 /**
@@ -85,24 +89,26 @@ export const getRecentNotesQuery = query(async (limit?: number) => {
 /**
  * Get backlinks - notes that reference the specified note ID in their content
  */
-export async function getBacklinks(noteId: string): Promise<Note[]> {
+export async function getBacklinks(noteId: string): Promise<NoteWithParentFolderTitle[]> {
   const user = await requireUser();
   if (!user.id) {
     throw redirect("/login");
   }
 
   const stmt = db.prepare(`
-    SELECT * FROM notes
-    WHERE user_id = ? AND id != ? AND (
-      title LIKE ? OR
-      content LIKE ? OR
-      abstract LIKE ?
+    SELECT n.*, f.title as parent_folder_title
+    FROM notes n
+    LEFT JOIN folders f ON n.parent_id = f.id
+    WHERE n.user_id = ? AND n.id != ? AND (
+      n.title LIKE ? OR
+      n.content LIKE ? OR
+      n.abstract LIKE ?
     )
-    ORDER BY updated_at DESC
+    ORDER BY n.updated_at DESC
   `);
 
   const searchTerm = `%${noteId}%`;
-  return stmt.all(user.id, noteId, searchTerm, searchTerm, searchTerm) as Note[];
+  return stmt.all(user.id, noteId, searchTerm, searchTerm, searchTerm) as NoteWithParentFolderTitle[];
 }
 
 /**
@@ -117,7 +123,7 @@ export const getBacklinksQuery = query(async (noteId: string) => {
  * Get forward links - notes that the current note references in its content
  * This extracts note IDs from the current note's content and finds those notes
  */
-export async function getForwardLinks(noteId: string): Promise<Note[]> {
+export async function getForwardLinks(noteId: string): Promise<NoteWithParentFolderTitle[]> {
   const user = await requireUser();
   if (!user.id) {
     throw redirect("/login");
@@ -157,12 +163,14 @@ export async function getForwardLinks(noteId: string): Promise<Note[]> {
   // Build query to find all referenced notes that exist
   const placeholders = uniqueIds.map(() => '?').join(',');
   const forwardLinksStmt = db.prepare(`
-    SELECT * FROM notes
-    WHERE user_id = ? AND id IN (${placeholders})
-    ORDER BY updated_at DESC
+    SELECT n.*, f.title as parent_folder_title
+    FROM notes n
+    LEFT JOIN folders f ON n.parent_id = f.id
+    WHERE n.user_id = ? AND n.id IN (${placeholders})
+    ORDER BY n.updated_at DESC
   `);
 
-  return forwardLinksStmt.all(user.id, ...uniqueIds) as Note[];
+  return forwardLinksStmt.all(user.id, ...uniqueIds) as NoteWithParentFolderTitle[];
 }
 
 /**

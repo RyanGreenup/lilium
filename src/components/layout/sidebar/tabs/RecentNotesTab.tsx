@@ -3,6 +3,7 @@ import { Suspense, Show } from "solid-js";
 import { ContentList, ContentItemData } from "../shared/ContentItem";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { getRecentNotesQuery } from "~/lib/db_new/notes/search";
+import { getDisplayTitle } from "~/lib/db_new/notes/utils";
 
 interface RecentNotesTabProps {
   focusTrigger?: () => string | null;
@@ -46,7 +47,7 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
     return notes.map(
       (note): ContentItemData => ({
         id: note.id,
-        title: note.title,
+        title: getDisplayTitle(note),
         abstract: note.abstract || "",
         path: `/note/${note.id}`,
         onClick: () => navigateToNote(note.id),

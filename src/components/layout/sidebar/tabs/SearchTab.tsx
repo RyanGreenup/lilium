@@ -24,7 +24,8 @@ import { ContentItem, ContentItemData } from "../shared/ContentItem";
 import { useFollowMode } from "~/lib/hooks/useFollowMode";
 import { FollowModeToggle } from "~/components/shared/FollowModeToggle";
 import { searchNotesQuery } from "~/lib/db_new/notes/search";
-import type { Note } from "~/lib/db_new/types";
+import { getDisplayTitle } from "~/lib/db_new/notes/utils";
+import type { NoteWithParentFolderTitle } from "~/lib/db_new/types";
 
 interface SidebarSearchContentProps {
   focusTrigger?: () => string | null;
@@ -137,7 +138,7 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
 
   // Separate search execution from reactive search term
   const [searchQuery, setSearchQuery] = createSignal("");
-  const [searchResults, setSearchResults] = createSignal<Note[]>([]);
+  const [searchResults, setSearchResults] = createSignal<NoteWithParentFolderTitle[]>([]);
 
   // Debounced search effect
   createEffect(() => {
@@ -178,9 +179,9 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
     if (!results) return [];
 
     return results.map(
-      (note: Note): ContentItemData => ({
+      (note): ContentItemData => ({
         id: note.id,
-        title: note.title,
+        title: getDisplayTitle(note),
         abstract: note.abstract || "",
         path: `/note/${note.id}`,
       }),

@@ -69,17 +69,10 @@ export type ListItem = FolderListItem | NoteListItem;
 export const INDEX_NOTE_TITLE = "index";
 
 /**
- * Check if a note is an index note
- *
- * Index notes are special notes that serve as the default preview
- * for their parent folder. They are displayed automatically when
- * a user navigates to the folder.
- *
- * @param note - The note to check (or just its title)
- * @returns true if the note is an index note
+ * Note with parent folder title included (from LEFT JOIN)
  */
-export function isIndexNote(note: Note | NoteWithoutContent | { title: string }): boolean {
-  return note.title === INDEX_NOTE_TITLE;
+export interface NoteWithParentFolderTitle extends Note {
+  parent_folder_title?: string | null;
 }
 
 ////////////////////////////////////////////////////////////
