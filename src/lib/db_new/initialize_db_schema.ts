@@ -208,6 +208,62 @@ function createPathViews(db: Database.Database) {
 function createMaterializedPathViews(db: Database.Database) {
   createMvTables(db);
   createMvTriggers(db);
+  populateMvTablesIfEmpty(db);
+}
+
+function populateMvTablesIfEmpty(db: Database.Database) {
+  // Check if mv_folder_paths is empty
+  const folderPathsCount = db
+    .prepare("SELECT COUNT(*) as count FROM mv_folder_paths")
+    .get() as { count: number };
+
+  if (folderPathsCount.count === 0) {
+    // Populate folder paths using recursive CTE
+    db.exec(`
+      INSERT INTO mv_folder_paths (folder_id, full_path, user_id)
+      WITH RECURSIVE folder_path AS (
+        -- Base case: root folders
+        SELECT
+          id,
+          title AS full_path,
+          user_id
+        FROM folders
+        WHERE parent_id IS NULL
+
+        UNION ALL
+
+        -- Recursive case: nested folders
+        SELECT
+          f.id,
+          fp.full_path || '/' || f.title,
+          f.user_id
+        FROM folders f
+        INNER JOIN folder_path fp ON f.parent_id = fp.id
+      )
+      SELECT id, full_path, user_id FROM folder_path;
+    `);
+  }
+
+  // Check if mv_note_paths is empty
+  const notePathsCount = db
+    .prepare("SELECT COUNT(*) as count FROM mv_note_paths")
+    .get() as { count: number };
+
+  if (notePathsCount.count === 0) {
+    // Populate note paths using cached folder paths
+    db.exec(`
+      INSERT INTO mv_note_paths (note_id, full_path, user_id)
+      SELECT
+        n.id,
+        CASE
+          WHEN n.parent_id IS NULL THEN n.title || '.' || n.syntax
+          ELSE fp.full_path || '/' || n.title || '.' || n.syntax
+        END,
+        n.user_id
+      FROM notes n
+      LEFT JOIN mv_folder_paths fp ON n.parent_id = fp.folder_id;
+    `);
+  }
 }
 
 // {{{4 Views
