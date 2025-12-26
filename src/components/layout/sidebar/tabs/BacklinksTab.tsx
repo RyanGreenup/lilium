@@ -65,7 +65,7 @@ export default function BacklinksTab(props: BacklinksTabProps = {}) {
             </span>
           </Show>
         </h4>
-        
+
         <ContentList
           items={transformedBacklinks()}
           showPath={true}

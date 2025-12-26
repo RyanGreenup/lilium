@@ -43,7 +43,13 @@ const DiscussionMessageComponent = (props: DiscussionMessageProps) => {
   };
 
   const classList = () => {
-    const classes = [`p-3`, `bg-base-200`, `rounded-lg`, `border-l-4`, getStatusColor()];
+    const classes = [
+      `p-3`,
+      `bg-base-200`,
+      `rounded-lg`,
+      `border-l-4`,
+      getStatusColor(),
+    ];
     if (props.isFocused) {
       classes.push("ring-2", "ring-primary", "ring-inset");
     }
@@ -51,7 +57,7 @@ const DiscussionMessageComponent = (props: DiscussionMessageProps) => {
   };
 
   return (
-    <div 
+    <div
       class={classList()}
       onClick={props.onFocus}
       tabIndex={props.isFocused ? 0 : -1}
@@ -60,7 +66,11 @@ const DiscussionMessageComponent = (props: DiscussionMessageProps) => {
         <div class="flex items-center gap-2">
           {getStatusIcon()}
           <span class="text-xs text-base-content/60">
-            {props.message.timestamp.toLocaleDateString()} {props.message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {props.message.timestamp.toLocaleDateString()}{" "}
+            {props.message.timestamp.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
           </span>
         </div>
         <button
@@ -106,28 +116,32 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
   const [messages, setMessages] = createSignal<DiscussionMessage[]>([
     {
       id: "1",
-      content: "Need to add more citations for the machine learning section. The claims about neural network efficiency need peer-reviewed sources.",
+      content:
+        "Need to add more citations for the machine learning section. The claims about neural network efficiency need peer-reviewed sources.",
       timestamp: new Date("2024-01-15T14:30:00"),
-      status: "pending"
+      status: "pending",
     },
     {
       id: "2",
-      content: "Review the algorithm complexity analysis in section 3. The Big O notation explanation might be confusing for beginners.",
+      content:
+        "Review the algorithm complexity analysis in section 3. The Big O notation explanation might be confusing for beginners.",
       timestamp: new Date("2024-01-14T09:15:00"),
-      status: "in_progress"
+      status: "in_progress",
     },
     {
       id: "3",
-      content: "Add practical Python examples for the data structures section. Code snippets would make the concepts clearer.",
+      content:
+        "Add practical Python examples for the data structures section. Code snippets would make the concepts clearer.",
       timestamp: new Date("2024-01-13T16:45:00"),
-      status: "resolved"
+      status: "resolved",
     },
     {
       id: "4",
-      content: "Consider adding a glossary section for technical terms. Some readers might need definitions for specialized vocabulary.",
+      content:
+        "Consider adding a glossary section for technical terms. Some readers might need definitions for specialized vocabulary.",
       timestamp: new Date("2024-01-12T11:20:00"),
-      status: "pending"
-    }
+      status: "pending",
+    },
   ]);
 
   const [newMessage, setNewMessage] = createSignal("");
@@ -141,7 +155,7 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
         id: Date.now().toString(),
         content: newMessage().trim(),
         timestamp: new Date(),
-        status: "pending"
+        status: "pending",
       };
       setMessages([message, ...messages()]);
       setNewMessage("");
@@ -149,13 +163,11 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
   };
 
   const deleteMessage = (id: string) => {
-    setMessages(messages().filter(m => m.id !== id));
+    setMessages(messages().filter((m) => m.id !== id));
   };
 
   const changeStatus = (id: string, status: DiscussionMessage["status"]) => {
-    setMessages(messages().map(m =>
-      m.id === id ? { ...m, status } : m
-    ));
+    setMessages(messages().map((m) => (m.id === id ? { ...m, status } : m)));
   };
 
   // Handle external focus requests
@@ -179,7 +191,7 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
         setFocusedMessageIndex(currentIndex + 1);
       }
     },
-    { ref: () => containerRef }
+    { ref: () => containerRef },
   );
 
   useKeybinding(
@@ -196,7 +208,7 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
         }
       }
     },
-    { ref: () => containerRef }
+    { ref: () => containerRef },
   );
 
   useKeybinding(
@@ -207,7 +219,7 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
         textareaRef.focus();
       }
     },
-    { ref: () => containerRef }
+    { ref: () => containerRef },
   );
 
   // Status toggle keybindings for focused message
@@ -222,7 +234,7 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
         }
       }
     },
-    { ref: () => containerRef }
+    { ref: () => containerRef },
   );
 
   useKeybinding(
@@ -236,7 +248,7 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
         }
       }
     },
-    { ref: () => containerRef }
+    { ref: () => containerRef },
   );
 
   useKeybinding(
@@ -250,7 +262,7 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
         }
       }
     },
-    { ref: () => containerRef }
+    { ref: () => containerRef },
   );
 
   // Delete focused message
@@ -263,7 +275,7 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
         if (message) {
           deleteMessage(message.id);
           // Adjust focus after deletion
-          const newMessages = messages().filter(m => m.id !== message.id);
+          const newMessages = messages().filter((m) => m.id !== message.id);
           if (newMessages.length === 0) {
             setFocusedMessageIndex(-1);
             if (textareaRef) {
@@ -276,7 +288,7 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
         }
       }
     },
-    { ref: () => containerRef }
+    { ref: () => containerRef },
   );
 
   // Handle Tab key from textarea to first message
@@ -293,14 +305,16 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
   };
 
   return (
-    <div 
+    <div
       ref={containerRef}
       tabIndex={0}
       class="p-4 space-y-4 outline-none focus:outline-none"
     >
       {/* Add new message form */}
       <div class="space-y-2">
-        <h3 class="text-sm font-medium text-base-content/70">Improvement Notes</h3>
+        <h3 class="text-sm font-medium text-base-content/70">
+          Improvement Notes
+        </h3>
         <div class="space-y-2">
           <textarea
             ref={textareaRef}
@@ -313,7 +327,8 @@ export default function DiscussionTab(props: DiscussionTabProps = {}) {
           />
           <div class="flex justify-between items-center">
             <span class="text-xs text-base-content/60">
-              Ctrl+Enter to add • Tab to navigate • 1/2/3 to change status • Del to delete
+              Ctrl+Enter to add • Tab to navigate • 1/2/3 to change status • Del
+              to delete
             </span>
             <button
               class="btn btn-primary btn-sm"

@@ -95,14 +95,17 @@ export const SidebarTabs = () => {
 
   // Persistent notes list state across tab navigation
   const [notesHistory, setNotesHistory] = createSignal<string[]>([]);
-  const [notesFocusMemory, setNotesFocusMemory] = createSignal<Record<string, number | undefined>>({});
+  const [notesFocusMemory, setNotesFocusMemory] = createSignal<
+    Record<string, number | undefined>
+  >({});
 
   // Context menu state - discriminated union for clarity
   type ContextMenuTarget =
     | { type: "item"; item: ListItem }
     | { type: "emptyArea"; parentId: string | null };
 
-  const [contextTarget, setContextTarget] = createSignal<ContextMenuTarget | null>(null);
+  const [contextTarget, setContextTarget] =
+    createSignal<ContextMenuTarget | null>(null);
 
   // List item actions (create, rename, etc.)
   const {
@@ -178,7 +181,10 @@ export const SidebarTabs = () => {
     contextMenu.open(event);
   };
 
-  const handleEmptyAreaContextMenu = (parentId: string | null, event: MouseEvent) => {
+  const handleEmptyAreaContextMenu = (
+    parentId: string | null,
+    event: MouseEvent,
+  ) => {
     setContextTarget({ type: "emptyArea", parentId });
     contextMenu.open(event);
   };

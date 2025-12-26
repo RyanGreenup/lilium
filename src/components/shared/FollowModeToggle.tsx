@@ -14,7 +14,9 @@ export interface FollowModeToggleProps {
  */
 export function FollowModeToggle(props: FollowModeToggleProps) {
   return (
-    <div class={`px-4 py-2 bg-base-100 rounded-lg border border-base-300 ${props.class || ""}`}>
+    <div
+      class={`px-4 py-2 bg-base-100 rounded-lg border border-base-300 ${props.class || ""}`}
+    >
       <div class="flex items-center justify-between">
         <label class="label cursor-pointer p-0">
           <span class="label-text text-sm font-medium">

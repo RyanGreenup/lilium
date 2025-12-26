@@ -72,7 +72,7 @@ export function KeybindingHelp(props: KeybindingHelpProps) {
                 { opacity: 0, transform: "scale(0.95) translateY(-4px)" },
                 { opacity: 1, transform: "scale(1) translateY(0)" },
               ],
-              { duration: 150, easing: "cubic-bezier(0.4, 0, 0.2, 1)" }
+              { duration: 150, easing: "cubic-bezier(0.4, 0, 0.2, 1)" },
             );
             a.finished.then(done);
           }}
@@ -82,7 +82,7 @@ export function KeybindingHelp(props: KeybindingHelpProps) {
                 { opacity: 1, transform: "scale(1) translateY(0)" },
                 { opacity: 0, transform: "scale(0.95) translateY(-4px)" },
               ],
-              { duration: 100, easing: "cubic-bezier(0.4, 0, 0.2, 1)" }
+              { duration: 100, easing: "cubic-bezier(0.4, 0, 0.2, 1)" },
             );
             a.finished.then(done);
           }}
@@ -131,7 +131,9 @@ export function KeybindingHelp(props: KeybindingHelpProps) {
                       </span>
                       <span class="text-base-content/70">{kb.description}</span>
                       <Show when={kb.key === "f" && props.followModeActive()}>
-                        <span class="ml-auto text-primary text-[10px] font-medium">ON</span>
+                        <span class="ml-auto text-primary text-[10px] font-medium">
+                          ON
+                        </span>
                       </Show>
                     </div>
                   )}

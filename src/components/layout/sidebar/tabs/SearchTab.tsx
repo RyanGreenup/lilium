@@ -23,9 +23,7 @@ import { Kbd } from "~/solid-daisy-components/components/Kbd";
 import { ContentItem, ContentItemData } from "../shared/ContentItem";
 import { useFollowMode } from "~/lib/hooks/useFollowMode";
 import { FollowModeToggle } from "~/components/shared/FollowModeToggle";
-import {
-  searchNotesQuery,
-} from "~/lib/db_new/notes/search";
+import { searchNotesQuery } from "~/lib/db_new/notes/search";
 import type { Note } from "~/lib/db_new/types";
 
 interface SidebarSearchContentProps {
@@ -43,7 +41,7 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
   >(undefined);
   const [pathDisplay, setPathDisplay] = createSignal(0); // 0: Absolute, 1: Relative, 2: Title
   const [settingsExpanded, setSettingsExpanded] = createSignal(false);
-  
+
   // Use external search term if provided, otherwise local state
   const localSearchSignal = createSignal("");
   const searchTerm = props.searchTerm || localSearchSignal[0];
@@ -51,10 +49,10 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
 
   // Create ref for search input
   let searchInputRef: HTMLInputElement | undefined;
-  
+
   // Virtual focus for results navigation (keeps input focused)
   const [virtualFocusIndex, setVirtualFocusIndex] = createSignal(-1);
-  
+
   // Refs for scroll management
   let resultsContainerRef: HTMLDivElement | undefined;
   const itemRefs: (HTMLDivElement | undefined)[] = [];
@@ -96,27 +94,26 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
     if (focusIndex >= 0 && itemRefs[focusIndex] && resultsContainerRef) {
       const focusedElement = itemRefs[focusIndex];
       const container = resultsContainerRef;
-      
+
       if (focusedElement) {
         // Calculate if element is visible
         const containerRect = container.getBoundingClientRect();
         const elementRect = focusedElement.getBoundingClientRect();
-        
+
         // Check if element is outside the visible area
         const isAboveViewport = elementRect.top < containerRect.top;
         const isBelowViewport = elementRect.bottom > containerRect.bottom;
-        
+
         if (isAboveViewport || isBelowViewport) {
           focusedElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'nearest',
-            inline: 'nearest'
+            behavior: "smooth",
+            block: "nearest",
+            inline: "nearest",
           });
         }
       }
     }
   });
-
 
   const pathDisplayOptions = [
     { id: 0, label: "Absolute" },
@@ -145,7 +142,7 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
   // Debounced search effect
   createEffect(() => {
     const term = searchTerm();
-    
+
     if (!term || term.length < 2) {
       setSearchQuery("");
       setSearchResults([]);
@@ -202,9 +199,9 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
   const handleSearchKeyDown = (e: KeyboardEvent) => {
     const results = formattedResults();
     const hasResults = results.length > 0;
-    
+
     if (!hasResults) return;
-    
+
     if (e.key === "ArrowDown") {
       e.preventDefault();
       const currentIndex = virtualFocusIndex();
@@ -273,7 +270,13 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
               </span>
             </VStack>
 
-            <VStack label={<>Follow Mode <Kbd size="xs">Ctrl+F</Kbd></>}>
+            <VStack
+              label={
+                <>
+                  Follow Mode <Kbd size="xs">Ctrl+F</Kbd>
+                </>
+              }
+            >
               <Toggle
                 size="sm"
                 color="primary"
@@ -371,17 +374,20 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
               </div>
             }
           >
-            <div ref={resultsContainerRef} class="p-4 space-y-3 flex-1 min-h-0 overflow-y-auto">
-              <Show 
+            <div
+              ref={resultsContainerRef}
+              class="p-4 space-y-3 flex-1 min-h-0 overflow-y-auto"
+            >
+              <Show
                 when={formattedResults().length === 0}
                 fallback={
                   <div class="space-y-2">
                     <For each={formattedResults()}>
                       {(item, index) => (
-                        <div ref={(el) => itemRefs[index()] = el}>
-                          <ContentItem 
-                            item={item} 
-                            showPath={pathDisplay() !== 2} 
+                        <div ref={(el) => (itemRefs[index()] = el)}>
+                          <ContentItem
+                            item={item}
+                            showPath={pathDisplay() !== 2}
                             isFocused={virtualFocusIndex() === index()}
                           />
                         </div>

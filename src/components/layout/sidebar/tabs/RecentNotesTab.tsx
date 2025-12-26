@@ -16,7 +16,9 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
   const navigate = useNavigate();
 
   // Get recent notes from the database
-  const recentNotesData = createAsync(() => getRecentNotesQuery(N_RECENT_NOTES));
+  const recentNotesData = createAsync(() =>
+    getRecentNotesQuery(N_RECENT_NOTES),
+  );
 
   // Function to navigate while preserving search params
   const navigateToNote = (noteId: string) => {
@@ -51,7 +53,6 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
       }),
     );
   };
-
 
   return (
     <div class="flex flex-col h-full space-y-4">

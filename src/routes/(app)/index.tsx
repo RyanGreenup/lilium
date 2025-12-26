@@ -19,7 +19,6 @@ import {
   Stats,
 } from "~/solid-daisy-components/components/Stat";
 
-
 export const route = {
   preload() {
     getUser();
@@ -27,7 +26,6 @@ export const route = {
     getRecentNotesQuery(20);
   },
 } satisfies RouteDefinition;
-
 
 export default function Home() {
   const stats = createAsync(() => getNotesStatsQuery());
@@ -48,7 +46,9 @@ export default function Home() {
     <div class="space-y-8 overflow-x-auto">
       {/* Statistics Cards */}
       <div class="flex justify-center">
-        <Suspense fallback={<div class="loading loading-spinner loading-lg"></div>}>
+        <Suspense
+          fallback={<div class="loading loading-spinner loading-lg"></div>}
+        >
           <Show when={stats()}>
             {(statsData) => (
               <Stats class="shadow">
@@ -87,7 +87,9 @@ export default function Home() {
           <Clock class="w-6 h-6 mr-3" />
           Recent Notes
         </h2>
-        <Suspense fallback={<div class="loading loading-spinner loading-lg"></div>}>
+        <Suspense
+          fallback={<div class="loading loading-spinner loading-lg"></div>}
+        >
           <Show when={recentNotes()}>
             {(notes) => (
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -110,14 +112,19 @@ export default function Home() {
                           </p>
                         </Show>
                         <div class="flex justify-between items-center text-xs text-base-content/60 gap-8">
-                          <span class="font-mono text-xs truncate">/notes/{note.id}</span>
+                          <span class="font-mono text-xs truncate">
+                            /notes/{note.id}
+                          </span>
                           <div class="text-right">
                             <div>{formatDate(note.updated_at)}</div>
                             <div>{formatTime(note.updated_at)}</div>
                           </div>
                         </div>
                         <Card.Actions class="justify-end mt-4">
-                          <A class="btn btn-primary btn-sm" href={`/note/${note.id}`}>
+                          <A
+                            class="btn btn-primary btn-sm"
+                            href={`/note/${note.id}`}
+                          >
                             Open
                           </A>
                         </Card.Actions>

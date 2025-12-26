@@ -27,7 +27,11 @@ import {
 } from "~/lib/db_new/api";
 import { createNewNote } from "~/lib/db_new/notes/create";
 import type { ListItem } from "~/lib/db_new/types";
-import { ITEM_KEYBINDINGS, LIST_KEYBINDINGS, matchesKeybind } from "~/lib/keybindings";
+import {
+  ITEM_KEYBINDINGS,
+  LIST_KEYBINDINGS,
+  matchesKeybind,
+} from "~/lib/keybindings";
 import { KeybindingHelp } from "./KeybindingHelp";
 import {
   dividerVariants,
@@ -122,11 +126,16 @@ const INDEX_KEY = "0";
 const INDENT_PX = 12;
 
 export function ListViewer(props: ListViewerProps) {
-  const [local] = splitProps(props, ["navigateFoldersOnClick", "selectionFollowsFocus"]);
+  const [local] = splitProps(props, [
+    "navigateFoldersOnClick",
+    "selectionFollowsFocus",
+  ]);
   const navigateOnClick = local.navigateFoldersOnClick ?? true;
 
   // Follow mode: arrow keys select items as you navigate
-  const [followMode, setFollowMode] = createSignal(local.selectionFollowsFocus ?? false);
+  const [followMode, setFollowMode] = createSignal(
+    local.selectionFollowsFocus ?? false,
+  );
 
   const [list, setList] = createStore<ListStore>({
     history: props.persistedHistory ?? [],
@@ -144,23 +153,29 @@ export function ListViewer(props: ListViewerProps) {
   // Batch update helper
   const update = (changes: Partial<ListStore>) => {
     batch(() => {
-      Object.entries(changes).forEach(([k, v]) => setList(k as keyof ListStore, v as never));
+      Object.entries(changes).forEach(([k, v]) =>
+        setList(k as keyof ListStore, v as never),
+      );
     });
   };
 
   // Sync history changes to parent (for persistence across tab switches)
-  createEffect(on(
-    () => list.history,
-    (history) => props.onHistoryChange?.([...history]),
-    { defer: true }
-  ));
+  createEffect(
+    on(
+      () => list.history,
+      (history) => props.onHistoryChange?.([...history]),
+      { defer: true },
+    ),
+  );
 
   // Sync focus memory changes to parent (for persistence across tab switches)
-  createEffect(on(
-    () => list.focusMemory,
-    (memory) => props.onFocusMemoryChange?.({ ...memory }),
-    { defer: true }
-  ));
+  createEffect(
+    on(
+      () => list.focusMemory,
+      (memory) => props.onFocusMemoryChange?.({ ...memory }),
+      { defer: true },
+    ),
+  );
 
   let containerRef!: HTMLDivElement;
   const itemRefs: (HTMLDivElement | undefined)[] = [];
@@ -246,8 +261,8 @@ export function ListViewer(props: ListViewerProps) {
     const focusIndex = list.focusedIndex;
     if (focusIndex !== null && itemRefs[focusIndex]) {
       itemRefs[focusIndex]?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
+        behavior: "smooth",
+        block: "nearest",
       });
     }
   });
@@ -258,8 +273,8 @@ export function ListViewer(props: ListViewerProps) {
       const pathIndex = list.pathFocusIndex;
       if (pathItemRefs[pathIndex]) {
         pathItemRefs[pathIndex]?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
+          behavior: "smooth",
+          block: "nearest",
         });
       }
     }
@@ -277,7 +292,12 @@ export function ListViewer(props: ListViewerProps) {
 
   // Navigation actions
   const applyNavigation = (history: string[], focusedIndex: number | null) => {
-    update({ history, focusedIndex, pathFocusIndex: history.length, indexButtonFocused: false });
+    update({
+      history,
+      focusedIndex,
+      pathFocusIndex: history.length,
+      indexButtonFocused: false,
+    });
   };
 
   const navigateToFolder = (folderId: string | null) => {
@@ -313,7 +333,8 @@ export function ListViewer(props: ListViewerProps) {
     saveFocus();
     update({
       history: [...ctx],
-      focusedIndex: list.selection.type === "item" ? list.selection.index : null,
+      focusedIndex:
+        list.selection.type === "item" ? list.selection.index : null,
       pathFocusIndex: ctx.length,
       indexButtonFocused: false,
       focusZone: "list",
@@ -327,9 +348,14 @@ export function ListViewer(props: ListViewerProps) {
 
     const curr = list.focusedIndex ?? -1;
     const len = currentItems.length;
-    const newIndex = direction === "up"
-      ? (curr <= 0 ? len - 1 : curr - 1)
-      : (curr >= len - 1 ? 0 : curr + 1);
+    const newIndex =
+      direction === "up"
+        ? curr <= 0
+          ? len - 1
+          : curr - 1
+        : curr >= len - 1
+          ? 0
+          : curr + 1;
 
     const item = currentItems[newIndex] ?? null;
 
@@ -356,9 +382,14 @@ export function ListViewer(props: ListViewerProps) {
   const navigatePathFocus = (direction: "up" | "down") => {
     const count = pathItemCount();
     const curr = list.pathFocusIndex;
-    const newIndex = direction === "up"
-      ? (curr <= 0 ? count - 1 : curr - 1)
-      : (curr >= count - 1 ? 0 : curr + 1);
+    const newIndex =
+      direction === "up"
+        ? curr <= 0
+          ? count - 1
+          : curr - 1
+        : curr >= count - 1
+          ? 0
+          : curr + 1;
     update({ indexButtonFocused: false, pathFocusIndex: newIndex });
   };
 
@@ -376,7 +407,10 @@ export function ListViewer(props: ListViewerProps) {
     }
 
     // For folders (when navigateFoldersOnClick is false), keep old behavior
-    update({ selection: { type: "item", index }, selectionHistory: [...list.history] });
+    update({
+      selection: { type: "item", index },
+      selectionHistory: [...list.history],
+    });
     props.onSelect?.(item);
   };
 
@@ -391,7 +425,10 @@ export function ListViewer(props: ListViewerProps) {
       return;
     }
 
-    update({ selection: { type: "index" }, selectionHistory: [...list.history] });
+    update({
+      selection: { type: "index" },
+      selectionHistory: [...list.history],
+    });
     props.onSelectIndex?.(noteId);
   };
 
@@ -457,7 +494,11 @@ export function ListViewer(props: ListViewerProps) {
   };
 
   const handlePathClick = (index: number) => {
-    update({ focusZone: "path", pathFocusIndex: index, indexButtonFocused: false });
+    update({
+      focusZone: "path",
+      pathFocusIndex: index,
+      indexButtonFocused: false,
+    });
     activatePathItem(index);
     // Ensure container has focus for keyboard navigation (clicking current folder won't trigger the effect)
     containerRef.focus();
@@ -585,21 +626,25 @@ export function ListViewer(props: ListViewerProps) {
     j: () => navigatePathFocus("down"),
     ArrowRight: handlePathRight,
     l: handlePathRight,
-    ArrowLeft: () => list.indexButtonFocused
-      ? setList("indexButtonFocused", false)
-      : setList("focusZone", "list"),
-    h: () => list.indexButtonFocused
-      ? setList("indexButtonFocused", false)
-      : setList("focusZone", "list"),
+    ArrowLeft: () =>
+      list.indexButtonFocused
+        ? setList("indexButtonFocused", false)
+        : setList("focusZone", "list"),
+    h: () =>
+      list.indexButtonFocused
+        ? setList("indexButtonFocused", false)
+        : setList("focusZone", "list"),
     Escape: () => update({ indexButtonFocused: false, focusZone: "list" }),
-    Enter: () => list.indexButtonFocused
-      ? selectIndex()
-      : activatePathItem(list.pathFocusIndex),
+    Enter: () =>
+      list.indexButtonFocused
+        ? selectIndex()
+        : activatePathItem(list.pathFocusIndex),
   };
 
   function handlePathRight() {
     if (list.indexButtonFocused) selectIndex();
-    else if (isOnCurrentFolder() && indexNoteId()) setList("indexButtonFocused", true);
+    else if (isOnCurrentFolder() && indexNoteId())
+      setList("indexButtonFocused", true);
     else activatePathItem(list.pathFocusIndex);
   }
 
@@ -673,7 +718,10 @@ export function ListViewer(props: ListViewerProps) {
           }}
           aria-label={tip()}
         >
-          <Show when={exists()} fallback={<Plus size={14} aria-hidden="true" />}>
+          <Show
+            when={exists()}
+            fallback={<Plus size={14} aria-hidden="true" />}
+          >
             <FileText size={14} aria-hidden="true" />
           </Show>
         </button>
@@ -707,7 +755,7 @@ export function ListViewer(props: ListViewerProps) {
             </Show>
 
             <div
-              ref={(el) => pathItemRefs[0] = el}
+              ref={(el) => (pathItemRefs[0] = el)}
               role="listitem"
               aria-current={list.history.length === 0 ? "location" : undefined}
               class={pathItemVariants({
@@ -732,14 +780,16 @@ export function ListViewer(props: ListViewerProps) {
 
                   return (
                     <div
-                      ref={(el) => pathItemRefs[pathIndex()] = el}
+                      ref={(el) => (pathItemRefs[pathIndex()] = el)}
                       role="listitem"
                       aria-current={isLast() ? "location" : undefined}
                       class={pathItemVariants({
                         focused: isPathItemFocused(pathIndex()),
                         current: isLast(),
                       })}
-                      style={{ "padding-left": `${(index() + 2) * INDENT_PX}px` }}
+                      style={{
+                        "padding-left": `${(index() + 2) * INDENT_PX}px`,
+                      }}
                       onClick={() => handlePathClick(pathIndex())}
                     >
                       <ChevronLeft size={12} class="rotate-180 opacity-40" />
@@ -796,7 +846,7 @@ export function ListViewer(props: ListViewerProps) {
 
                 return (
                   <div
-                    ref={(el) => itemRefs[index()] = el}
+                    ref={(el) => (itemRefs[index()] = el)}
                     id={`listitem-${index()}`}
                     role="option"
                     aria-selected={isSelected()}
@@ -832,7 +882,9 @@ export function ListViewer(props: ListViewerProps) {
                       }
                     >
                       {(() => {
-                        const [editValue, setEditValue] = createSignal(item.title);
+                        const [editValue, setEditValue] = createSignal(
+                          item.title,
+                        );
                         let inputRef: HTMLInputElement | undefined;
 
                         const handleSave = () => {

@@ -4,7 +4,6 @@ import { ContentList, ContentItemData } from "../shared/ContentItem";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { getForwardLinksQuery } from "~/lib/db_new/notes/search";
 
-
 interface ForwardLinksTabProps {
   focusTrigger?: () => string | null;
 }
@@ -66,7 +65,7 @@ export default function ForwardLinksTab(props: ForwardLinksTabProps = {}) {
             </span>
           </Show>
         </h4>
-        
+
         <ContentList
           items={transformedForwardLinks()}
           showPath={true}
