@@ -79,8 +79,11 @@ export default function NoteEditor() {
     }
   };
 
-  const formatDate = (isoString: string) => {
-    return new Date(isoString).toLocaleString();
+  const formatDate = (dateString: string) => {
+    // SQLite stores UTC timestamps without timezone indicator
+    // Append 'Z' to explicitly parse as UTC, then toLocaleString converts to user's local time
+    const utcDate = dateString.endsWith("Z") ? dateString : dateString + "Z";
+    return new Date(utcDate).toLocaleString();
   };
 
   const handleFileUpload = async (file: File) => {

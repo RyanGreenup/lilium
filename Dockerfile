@@ -1,5 +1,8 @@
 FROM node:lts
 
+# Set timezone
+ENV TZ=Australia/Sydney
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 WORKDIR /app
 
@@ -7,7 +10,7 @@ WORKDIR /app
 # Install the dependencies #################################
 ############################################################
 RUN apt update
-RUN apt install  -y python3 make g++ libsqlite3-dev pandoc
+RUN apt install  -y python3 make g++ libsqlite3-dev pandoc tzdata
 # RUN wget 'https://github.com/jgm/pandoc/releases/download/3.8.2.1/pandoc-3.8.2.1-1-amd64.deb' > /tmp/ && dpkg -i pandoc-3.8.2.1-1-amd64.deb
 RUN npm install -g rust-just
 # NOTE could also use snap

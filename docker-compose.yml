@@ -9,6 +9,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      - TZ=Australia/Sydney
     volumes:
       - ./.data:/app/.data:Z
       - ./${ASSETS_DIR}:/app/${ASSETS_DIR}:Z
