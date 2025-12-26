@@ -52,9 +52,9 @@ export const POST = async ({ request }: APIEvent) => {
     const userDir = join(ASSETS_DIR, `user_${user.id}`);
     try {
       await mkdir(userDir, { recursive: true, mode: 0o755 });
-    } catch (error) {
-      if (error.code !== "EEXIST") {
-        console.error("Failed to create user directory:", error);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") {
+        console.error("Failed to create user directory:", err);
         return new Response(
           JSON.stringify({ error: "Failed to create user directory" }),
           {

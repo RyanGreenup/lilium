@@ -7,8 +7,8 @@
 import { query } from "@solidjs/router";
 import { requireUser } from "../../auth";
 import { redirect } from "@solidjs/router";
-import type { Note } from "../../db/types";
-import { INDEX_NOTE_TITLE, type NoteWithoutContent } from "../types";
+import type { Note, NoteWithoutContent } from "../types";
+import { INDEX_NOTE_TITLE } from "../types";
 import { db } from "../index";
 
 /**
@@ -115,3 +115,29 @@ export const getIndexNoteQuery = query(async () => {
   "use server";
   return await getIndexNote();
 }, "index-note");
+
+/**
+ * Get the full path for a note from the materialized view
+ */
+export async function getNotePath(noteId: string): Promise<string | null> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  const stmt = db.prepare(`
+    SELECT full_path
+    FROM mv_note_paths
+    WHERE note_id = ? AND user_id = ?
+  `);
+  const result = stmt.get(noteId, user.id) as { full_path: string } | undefined;
+  return result?.full_path || null;
+}
+
+/**
+ * Query function to get note path (for client-side use)
+ */
+export const getNotePathQuery = query(async (noteId: string) => {
+  "use server";
+  return await getNotePath(noteId);
+}, "note-path");

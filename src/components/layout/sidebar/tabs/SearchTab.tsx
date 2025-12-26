@@ -252,7 +252,7 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
 
         <Collapsible
           class="p-0"
-          title={<span>Search Settings <Kbd size="xs">Ctrl+,</Kbd></span>}
+          title={"Search Settings"}
           expanded={settingsExpanded()}
           onToggle={setSettingsExpanded}
         >

@@ -17,5 +17,11 @@
       "~/*": ["./src/*"]
     }
   },
-  "exclude": ["src/solid-daisy-components"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "src/solid-daisy-components",
+    "node_modules"
+  ]
 }

@@ -7,8 +7,7 @@
 import { randomBytes } from "crypto";
 import { redirect } from "@solidjs/router";
 import { requireUser } from "../../auth";
-import type { Note } from "../types";
-import type { NoteSyntax } from "../../db/types";
+import type { Note, NoteSyntax } from "../types";
 import { db } from "../index";
 
 /**
