@@ -31,7 +31,7 @@ import { Kbd } from "~/solid-daisy-components/components/Kbd";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import { createNewNote, duplicateNoteQuery } from "~/lib/db_new/notes/create";
 import { updateNoteTitle, moveNoteQuery } from "~/lib/db/notes/update";
-import { deleteNoteQuery } from "~/lib/db/notes/delete";
+import { deleteNoteQuery } from "~/lib/db_new/notes/delete";
 import { Note } from "~/lib/db/types";
 import { Card } from "~/solid-daisy-components/components/Card";
 import { useFollowMode } from "~/lib/hooks/useFollowMode";
@@ -370,7 +370,7 @@ const CompactHeader = (props: {
         </Button>
       </Show>
     </div>
-    
+
     <div class="flex items-center space-x-2">
       <span class="text-xs text-base-content/60">Follow</span>
       <Toggle
@@ -915,7 +915,7 @@ function NotesTabContent(props: NotesTabProps = {}) {
               followMode={followMode}
               setFollowMode={setFollowMode}
             />
-            
+
             <Show when={cutNoteId()}>
               <CutIndicator
                 noteTitle={
