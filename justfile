@@ -39,3 +39,11 @@ fuse:
     cp -r .data .data.bak.$(date +%s)
     @echo mount on local machine with 'sshfs -o Cipher=none   -o compression=no user@vidar:/media/Applications/Javascript/lilium/{{dir}} {{dir}}'
     lilium_fuse .data/notes.sqlite {{dir}}
+
+check:
+    # Format
+    npx prettier --write src/**/*.ts
+    npx prettier --write src/**/*.tsx
+
+    # Format
+    bun run typecheck
