@@ -6,7 +6,7 @@ import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 // Server function to get backlinks
 const getBacklinksData = async (noteId: string) => {
   "use server";
-  const { getBacklinks } = await import("~/lib/db/notes/search");
+  const { getBacklinks } = await import("~/lib/db_new/notes/search");
   return await getBacklinks(noteId);
 };
 
@@ -77,7 +77,7 @@ export default function BacklinksTab(props: BacklinksTabProps = {}) {
             </span>
           </Show>
         </h4>
-        
+
         <ContentList
           items={transformedBacklinks()}
           showPath={true}

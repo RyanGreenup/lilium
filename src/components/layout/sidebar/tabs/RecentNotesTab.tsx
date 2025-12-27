@@ -6,7 +6,7 @@ import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 // Server function to get recent notes
 const getRecentNotesData = async () => {
   "use server";
-  const { getRecentNotes } = await import("~/lib/db/notes/search");
+  const { getRecentNotes } = await import("~/lib/db_new/notes/search");
   return await getRecentNotes(10);
 };
 

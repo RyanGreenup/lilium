@@ -6,7 +6,7 @@ import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 // Server function to get forward links
 const getForwardLinksData = async (noteId: string) => {
   "use server";
-  const { getForwardLinks } = await import("~/lib/db/notes/search");
+  const { getForwardLinks } = await import("~/lib/db_new/notes/search");
   return await getForwardLinks(noteId);
 };
 
@@ -77,7 +77,7 @@ export default function ForwardLinksTab(props: ForwardLinksTabProps = {}) {
             </span>
           </Show>
         </h4>
-        
+
         <ContentList
           items={transformedForwardLinks()}
           showPath={true}
