@@ -34,8 +34,11 @@ export function NoteBreadcrumbsById(props: NoteBreadcrumbsByIdProps) {
     <Show when={note()}>
       <Breadcrumbs>
         <Breadcrumbs.Item>
-          <a onClick={navigateToRoot} class="hover:text-primary cursor-pointer p-2">
-            <HomeIconBreadcrumbs/>
+          <a
+            onClick={navigateToRoot}
+            class="hover:text-primary cursor-pointer p-2"
+          >
+            <HomeIconBreadcrumbs />
           </a>
         </Breadcrumbs.Item>
 
@@ -67,12 +70,9 @@ export default function NoteBreadcrumbs() {
   return <NoteBreadcrumbsById noteId={noteId} />;
 }
 
-
-
 /**
 A Simple orb to represent home in breadcrumbs
 */
 export const HomeIconBreadcrumbs = () => (
-  
   <div class="w-2.5 h-2.5 bg-primary rounded-full opacity-70" />
 );

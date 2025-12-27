@@ -7,7 +7,7 @@ export const GlobalMathRenderer = () => {
         import("katex"),
         import("katex/dist/contrib/auto-render.min.js"),
       ]);
-      
+
       await import("katex/dist/katex.min.css");
 
       renderMathInElement.default(document.body, {
@@ -25,17 +25,17 @@ export const GlobalMathRenderer = () => {
   onMount(() => {
     // Initial render
     renderMath();
-    
+
     // Set up observer for dynamic content
     const observer = new MutationObserver(() => {
       setTimeout(renderMath, 100);
     });
-    
+
     observer.observe(document.body, {
       childList: true,
       subtree: true,
     });
-    
+
     return () => observer.disconnect();
   });
 
