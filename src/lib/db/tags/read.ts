@@ -42,18 +42,3 @@ export async function getTags(): Promise<Tag[]> {
   return stmt.all(user.id) as Tag[];
 }
 
-/**
- * Query function to get tag by ID (for client-side use)
- */
-export const getTagByIdQuery = query(async (tagId: string) => {
-  "use server";
-  return await getTagById(tagId);
-}, "tag-by-id");
-
-/**
- * Query function to get all tags (for client-side use)
- */
-export const getTagsQuery = query(async () => {
-  "use server";
-  return await getTags();
-}, "all-tags");
