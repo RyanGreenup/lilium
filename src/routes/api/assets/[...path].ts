@@ -33,7 +33,7 @@ export const GET = async ({ params }: APIEvent) => {
       await mkdir(userDir, { recursive: true, mode: 0o755 });
     } catch (error) {
       // Directory might already exist, that's fine
-      if (error.code !== 'EEXIST') {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
         console.error("Failed to create user directory:", error);
         return new Response("Failed to access user directory", { status: 500 });
       }

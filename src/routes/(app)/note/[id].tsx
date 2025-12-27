@@ -376,7 +376,7 @@ export default function NoteEditor() {
           <div class="px-4 py-2 bg-base-100 border-b border-base-300">
             <div class="flex items-center justify-between text-xs text-base-content/60">
               <span class="font-mono truncate mr-4">
-                {currentNote()?.path || ""}
+                {currentNote()?.id || ""}
               </span>
               <span class="whitespace-nowrap text-xs">
                 Modified{" "}
@@ -417,7 +417,7 @@ export default function NoteEditor() {
                 onInput={(e) => updateNote("content", e.currentTarget.value)}
                 class="flex-1 p-6 textarea textarea-ghost resize-none border-none focus:outline-none text-sm font-mono leading-relaxed"
                 placeholder="Start writing your note..."
-                style={{ "field-sizing": "content" }}
+                style={{ "field-sizing": "content" } as any}
               />
             </Show>
           </div>

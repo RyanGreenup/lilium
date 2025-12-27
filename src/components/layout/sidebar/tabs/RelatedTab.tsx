@@ -56,9 +56,10 @@ export default function RelatedTab(props: RelatedTabProps = {}) {
   createEffect(() => {
     const trigger = props.focusTrigger?.();
     if (trigger && containerRef) {
+      const ref = containerRef;
       // Focus on next tick after render
       setTimeout(() => {
-        containerRef.focus();
+        ref.focus();
       }, 0);
     }
   });

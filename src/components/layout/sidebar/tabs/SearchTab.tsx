@@ -252,9 +252,9 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
           onKeyDown={handleSearchKeyDown}
         />
 
-        <Collapsible 
-          class="p-0" 
-          title={<>Search Settings <Kbd size="xs">Ctrl+,</Kbd></>}
+        <Collapsible
+          class="p-0"
+          title={"Search Settings"}
           expanded={settingsExpanded()}
           onToggle={setSettingsExpanded}
         >

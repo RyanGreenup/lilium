@@ -18,7 +18,7 @@ export function useNoteContext() {
     const currentNote = note();
     const parentId = currentNote?.parent_id;
     // Fetch children of parent, or root items (null parent would be a root level item)
-    return getChildrenWithFolderStatusQuery(parentId ?? null);
+    return getChildrenWithFolderStatusQuery(parentId ?? undefined);
   });
 
   // Determine if current note is a folder (has children)
