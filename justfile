@@ -4,8 +4,7 @@ dev:
     # echo 1024 | doas tee /proc/sys/fs/inotify/max_user_instances
     # doas sysctl fs.inotify.max_user_watches=10000000
     # Requires SESSION_SECRET in .env file
-    mkdir -p .data && \
-    npm run dev -- --host
+    PORT=30847 npm run dev -- --host
 
 run_build:
     # Requires SESSION_SECRET in .env file
