@@ -54,3 +54,8 @@ assets
 .data.bak.Sun Nov 30 09:17:06 PM AEDT 2025
 .backups
 .data.bak.Mon Dec  1 10:12:01 PM AEDT 2025
+.snapshots
+.data.bak.before_path_mv/notes.sqlite
+.data.bak.before_path_mv/users.sqlite
+.data.bak.before_path_mv/app.sqlite
+.data/notes_back_2025-12-25-1159.sqlite
