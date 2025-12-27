@@ -2,13 +2,7 @@ import { createAsync, useSearchParams, useNavigate } from "@solidjs/router";
 import { Suspense, Show } from "solid-js";
 import { ContentList, ContentItemData } from "../shared/ContentItem";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
-
-// Server function to get forward links
-const getForwardLinksData = async (noteId: string) => {
-  "use server";
-  const { getForwardLinks } = await import("~/lib/db_new/notes/search");
-  return await getForwardLinks(noteId);
-};
+import { getForwardLinksForDisplay } from "~/lib/sidebar";
 
 interface ForwardLinksTabProps {
   focusTrigger?: () => string | null;
@@ -19,51 +13,29 @@ export default function ForwardLinksTab(props: ForwardLinksTabProps = {}) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Get forward links from the database
   const forwardLinksData = createAsync(async () => {
-    const currentNoteId = noteId();
-    if (!currentNoteId) return [];
-
-    try {
-      return await getForwardLinksData(currentNoteId);
-    } catch (error) {
-      console.error("Failed to fetch forward links:", error);
-      return [];
-    }
+    const id = noteId();
+    if (!id) return [];
+    return await getForwardLinksForDisplay(id);
   });
 
-  // Function to navigate while preserving search params
   const navigateToNote = (noteId: string) => {
-    const currentParams = new URLSearchParams();
-
-    // Preserve all current search parameters
+    const params = new URLSearchParams();
     Object.entries(searchParams).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        value.forEach((v) => currentParams.append(key, v));
+        value.forEach((v) => params.append(key, v));
       } else if (value !== undefined) {
-        currentParams.set(key, value);
+        params.set(key, value);
       }
     });
-
-    const searchString = currentParams.toString();
-    const url = `/note/${noteId}${searchString ? `?${searchString}` : ""}`;
-    navigate(url);
+    const search = params.toString();
+    navigate(`/note/${noteId}${search ? `?${search}` : ""}`);
   };
 
-  // Transform database notes to ContentItemData format
-  const transformedForwardLinks = () => {
-    const notes = forwardLinksData();
-    if (!notes) return [];
-
-    return notes.map(
-      (note): ContentItemData => ({
-        id: note.id,
-        title: note.title,
-        abstract: note.abstract || "",
-        path: `/note/${note.id}`,
-        onClick: () => navigateToNote(note.id),
-      }),
-    );
+  const items = (): ContentItemData[] => {
+    const data = forwardLinksData();
+    if (!data) return [];
+    return data.map((item) => ({ ...item, onClick: () => navigateToNote(item.id) }));
   };
 
   return (
@@ -71,15 +43,12 @@ export default function ForwardLinksTab(props: ForwardLinksTabProps = {}) {
       <div>
         <h4 class="text-sm font-medium text-base-content/70 mb-2">
           Forward Links
-          <Show when={transformedForwardLinks().length > 0}>
-            <span class="text-xs text-base-content/50 ml-2">
-              ({transformedForwardLinks().length})
-            </span>
+          <Show when={items().length > 0}>
+            <span class="text-xs text-base-content/50 ml-2">({items().length})</span>
           </Show>
         </h4>
-
         <ContentList
-          items={transformedForwardLinks()}
+          items={items()}
           showPath={true}
           enableKeyboardNav={true}
           focusTrigger={props.focusTrigger}

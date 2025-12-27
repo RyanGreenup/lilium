@@ -19,10 +19,7 @@ import { Select } from "~/solid-daisy-components/components/Select";
 import { Kbd } from "~/solid-daisy-components/components/Kbd";
 import { ContentItem, ContentItemData } from "../shared/ContentItem";
 import { useFollowMode } from "~/lib/hooks/useFollowMode";
-import {
-  searchNotesQuery,
-} from "~/lib/db_new/notes/search";
-import type { Note } from "~/lib/db_new/types";
+import { searchNotesWithDisplayTitlesQuery } from "~/lib/db_new/notes/search";
 
 interface SidebarSearchContentProps {
   focusTrigger?: () => string | null;
@@ -136,7 +133,7 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
 
   // Separate search execution from reactive search term
   const [searchQuery, setSearchQuery] = createSignal("");
-  const [searchResults, setSearchResults] = createSignal<Note[]>([]);
+  const [searchResults, setSearchResults] = createSignal<ContentItemData[]>([]);
 
   // Debounced search effect
   createEffect(() => {
@@ -163,7 +160,7 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
       return;
     }
     try {
-      const results = await searchNotesQuery(query);
+      const results = await searchNotesWithDisplayTitlesQuery(query);
       setSearchResults(results || []);
     } catch (error) {
       console.error("Search error:", error);
@@ -171,20 +168,8 @@ export const SidebarSearchContent = (props: SidebarSearchContentProps = {}) => {
     }
   });
 
-  // Convert Note objects to ContentItemData format
-  const formattedResults = createMemo(() => {
-    const results = searchResults();
-    if (!results) return [];
-
-    return results.map(
-      (note: Note): ContentItemData => ({
-        id: note.id,
-        title: note.title,
-        abstract: note.abstract || "",
-        path: `/note/${note.id}`,
-      }),
-    );
-  });
+  // Search results are already formatted as ContentItemData
+  const formattedResults = () => searchResults();
 
   const handleSearchInput = (e: Event) => {
     const target = e.currentTarget as HTMLInputElement;

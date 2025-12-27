@@ -184,3 +184,17 @@ export const searchNotesQuery = query(
   },
   "search-notes",
 );
+
+/**
+ * Query function to search notes with display titles resolved
+ * Index notes will display their parent folder's title instead of "index"
+ */
+export const searchNotesWithDisplayTitlesQuery = query(
+  async (searchQuery: string, parentId?: string) => {
+    "use server";
+    const { transformNotesForDisplay } = await import("./display");
+    const notes = await searchNotes(searchQuery, parentId);
+    return await transformNotesForDisplay(notes);
+  },
+  "search-notes-display",
+);
