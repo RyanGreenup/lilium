@@ -1,4 +1,13 @@
-import type { NoteSyntax } from "../db/types";
+export type NoteSyntax =
+  | "md"
+  | "org"
+  | "html"
+  | "jsx"
+  | "ipynb"
+  | "dw"
+  | "mw"
+  | "tex"
+  | "typ";
 
 export interface Folder {
   id: string;

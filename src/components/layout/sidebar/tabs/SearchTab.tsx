@@ -22,7 +22,7 @@ import { useFollowMode } from "~/lib/hooks/useFollowMode";
 import {
   searchNotesQuery,
 } from "~/lib/db_new/notes/search";
-import type { Note } from "~/lib/db/types";
+import type { Note } from "~/lib/db_new/types";
 
 interface SidebarSearchContentProps {
   focusTrigger?: () => string | null;

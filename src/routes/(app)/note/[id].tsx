@@ -3,7 +3,7 @@ import { createSignal, createEffect, Show, Suspense } from "solid-js";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 import { updateNoteQuery } from "~/lib/db_new/notes/update";
-import { SYNTAX_OPTIONS, type Note, type NoteSyntax } from "~/lib/db/types";
+import { SYNTAX_OPTIONS, type Note, type NoteSyntax } from "~/lib/db_new/types";
 import Save from "lucide-solid/icons/save";
 import Eye from "lucide-solid/icons/eye";
 import ChevronUp from "lucide-solid/icons/chevron-up";

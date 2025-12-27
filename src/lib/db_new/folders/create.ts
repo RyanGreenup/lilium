@@ -9,7 +9,7 @@ import { redirect } from "@solidjs/router";
 import { requireUser } from "../../auth";
 import type { Folder, Note } from "../types";
 import { INDEX_NOTE_TITLE } from "../types";
-import type { NoteSyntax } from "../../db/types";
+import type { NoteSyntax } from "../../db_new/types";
 import { db } from "../index";
 
 /**
