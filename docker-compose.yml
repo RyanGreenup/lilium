@@ -12,6 +12,10 @@ services:
       - ./${ASSETS_DIR}:/app/${ASSETS_DIR}:Z
     security_opt:
       - label=type:container_runtime_t
+
+################################################################################
+## Watch and Rebuild ###########################################################
+################################################################################
     develop:
       watch:
         # Rebuild when source files change
