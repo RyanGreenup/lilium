@@ -16,5 +16,8 @@
     "paths": {
       "~/*": ["./src/*"]
     }
-  }
+  },
+  "exclude": [
+      "./src/solid-daisy-components"
+  ]
 }
