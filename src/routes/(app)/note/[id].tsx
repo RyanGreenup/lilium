@@ -1,4 +1,4 @@
-import { useParams } from "@solidjs/router";
+import { createAsync, useParams } from "@solidjs/router";
 import { createSignal, createEffect, Show, Suspense } from "solid-js";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
@@ -18,9 +18,16 @@ import { Textarea } from "~/solid-daisy-components/components/Textarea";
 import { Input } from "~/solid-daisy-components/components/Input";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import NoteBreadcrumbs from "~/components/NoteBreadcrumbs";
+import { getNotePathQuery } from "~/lib/db_new/notes/path";
 
 export default function NoteEditor() {
   const { note, noteId, noteExists, noteLoaded } = useCurrentNote();
+
+  // Fetch note path reactively
+  const notePath = createAsync(() => {
+    const id = noteId();
+    return id ? getNotePathQuery(id) : Promise.resolve(null);
+  });
 
   const [isEditing, setIsEditing] = createSignal(false);
   const [unsavedChanges, setUnsavedChanges] = createSignal(false);
@@ -376,7 +383,7 @@ export default function NoteEditor() {
           <div class="px-4 py-2 bg-base-100 border-b border-base-300">
             <div class="flex items-center justify-between text-xs text-base-content/60">
               <span class="font-mono truncate mr-4">
-                {currentNote()?.id || ""}
+                {notePath() || currentNote()?.id || ""}
               </span>
               <span class="whitespace-nowrap text-xs">
                 Modified{" "}
