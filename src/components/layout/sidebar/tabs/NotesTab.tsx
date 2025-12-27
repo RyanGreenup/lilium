@@ -29,7 +29,7 @@ import { Input } from "~/solid-daisy-components/components/Input";
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Kbd } from "~/solid-daisy-components/components/Kbd";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
-import { createNewNote, duplicateNoteQuery } from "~/lib/db/notes/create";
+import { createNewNote, duplicateNoteQuery } from "~/lib/db_new/notes/create";
 import { updateNoteTitle, moveNoteQuery } from "~/lib/db/notes/update";
 import { deleteNoteQuery } from "~/lib/db/notes/delete";
 import { Note } from "~/lib/db/types";
@@ -562,7 +562,6 @@ function NotesTabContent(props: NotesTabProps = {}) {
 
       // Invalidate relevant caches to show the new note
       revalidate([
-        createNewNote.key,
         "children-with-folder-status",
         "note-by-id",
       ]);
@@ -590,7 +589,6 @@ function NotesTabContent(props: NotesTabProps = {}) {
 
       // Invalidate relevant caches to show the new note
       revalidate([
-        createNewNote.key,
         "children-with-folder-status",
         "note-by-id",
       ]);
@@ -818,7 +816,6 @@ function NotesTabContent(props: NotesTabProps = {}) {
       if (newNote) {
         // Revalidate to refresh the display
         revalidate([
-          duplicateNoteQuery.key,
           "children-with-folder-status",
           "note-by-id",
         ]);
