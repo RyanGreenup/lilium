@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   lilium:
     build: .
@@ -14,3 +12,23 @@ services:
       - ./${ASSETS_DIR}:/app/${ASSETS_DIR}:Z
     security_opt:
       - label=type:container_runtime_t
+    develop:
+      watch:
+        # Rebuild when source files change
+        - action: rebuild
+          path: ./src
+          ignore:
+            - "**/*.test.ts"
+            - "**/*.test.tsx"
+        # Rebuild when package dependencies change
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: bun.lock
+        # Rebuild when config files change
+        - action: rebuild
+          path: app.config.ts
+        - action: rebuild
+          path: tailwind.config.cjs
+        - action: rebuild
+          path: postcss.config.cjs

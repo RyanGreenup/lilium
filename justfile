@@ -22,6 +22,8 @@ admin:
     SUDO_MODE="true" \
     just dev
 
+watch:
+    docker compose up --watch
 
 dir := "$HOME/Notes/fuse_notes"
 remote-fuse:
