@@ -37,7 +37,7 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
 
   return (
     <Suspense fallback={<div class="loading loading-spinner loading-sm"></div>}>
-      <div>
+      <div class="h-full flex flex-col">
         <h4 class="text-sm font-medium text-base-content/70 mb-2">
           Recent Notes
           <Show when={items().length > 0}>
@@ -46,14 +46,16 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
             </span>
           </Show>
         </h4>
-        <ContentList
-          items={items()}
-          showPath={true}
-          enableKeyboardNav={true}
-          focusTrigger={props.focusTrigger}
-          emptyMessage="No recent notes found"
-          showFollowMode={false}
-        />
+        <div class="flex-1 min-h-0 overflow-y-auto">
+          <ContentList
+            items={items()}
+            showPath={true}
+            enableKeyboardNav={true}
+            focusTrigger={props.focusTrigger}
+            emptyMessage="No recent notes found"
+            showFollowMode={false}
+          />
+        </div>
       </div>
     </Suspense>
   );

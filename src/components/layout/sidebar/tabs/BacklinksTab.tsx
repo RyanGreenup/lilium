@@ -40,21 +40,23 @@ export default function BacklinksTab(props: BacklinksTabProps = {}) {
 
   return (
     <Suspense fallback={<div class="loading loading-spinner loading-sm"></div>}>
-      <div>
+      <div class="h-full flex flex-col">
         <h4 class="text-sm font-medium text-base-content/70 mb-2">
           Backlinks
           <Show when={items().length > 0}>
             <span class="text-xs text-base-content/50 ml-2">({items().length})</span>
           </Show>
         </h4>
-        <ContentList
-          items={items()}
-          showPath={true}
-          enableKeyboardNav={true}
-          focusTrigger={props.focusTrigger}
-          emptyMessage="No backlinks found for this note"
-          showFollowMode={false}
-        />
+        <div class="flex-1 min-h-0 overflow-y-auto">
+          <ContentList
+            items={items()}
+            showPath={true}
+            enableKeyboardNav={true}
+            focusTrigger={props.focusTrigger}
+            emptyMessage="No backlinks found for this note"
+            showFollowMode={false}
+          />
+        </div>
       </div>
     </Suspense>
   );
