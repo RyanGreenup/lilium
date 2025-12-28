@@ -306,7 +306,7 @@ export const SidebarTabs = () => {
 
       <div class="mt-4 relative flex-1 min-h-0">
         {/* Notes Tab */}
-        <div class="h-full" hidden={activeTab() !== 0}>
+        <div class="h-full" classList={{ hidden: activeTab() !== 0 }}>
           <Suspense fallback={<SidebarLoadingIndicator />}>
             <ListViewer
               focusTrigger={notesFocusTrigger}
@@ -338,14 +338,14 @@ export const SidebarTabs = () => {
         </div>
 
         {/* Recent Tab */}
-        <div class="h-full" hidden={activeTab() !== 1}>
+        <div class="h-full" classList={{ hidden: activeTab() !== 1 }}>
           <Suspense fallback={<SidebarLoadingIndicator />}>
             <RecentNotesTab focusTrigger={recentFocusTrigger} />
           </Suspense>
         </div>
 
         {/* Search Tab */}
-        <div class="h-full" hidden={activeTab() !== 2}>
+        <div class="h-full" classList={{ hidden: activeTab() !== 2 }}>
           <Suspense fallback={<SidebarLoadingIndicator />}>
             <SidebarSearchContent
               focusTrigger={searchFocusTrigger}
@@ -356,28 +356,28 @@ export const SidebarTabs = () => {
         </div>
 
         {/* Backlinks Tab */}
-        <div class="h-full" hidden={activeTab() !== 3}>
+        <div class="h-full" classList={{ hidden: activeTab() !== 3 }}>
           <Suspense fallback={<SidebarLoadingIndicator />}>
             <BacklinksTab focusTrigger={backlinksFocusTrigger} />
           </Suspense>
         </div>
 
         {/* Forward Links Tab */}
-        <div class="h-full" hidden={activeTab() !== 4}>
+        <div class="h-full" classList={{ hidden: activeTab() !== 4 }}>
           <Suspense fallback={<SidebarLoadingIndicator />}>
             <ForwardLinksTab focusTrigger={forwardLinksFocusTrigger} />
           </Suspense>
         </div>
 
         {/* Related Tab */}
-        <div class="h-full" hidden={activeTab() !== 5}>
+        <div class="h-full" classList={{ hidden: activeTab() !== 5 }}>
           <Suspense fallback={<SidebarLoadingIndicator />}>
             <RelatedTab focusTrigger={relatedFocusTrigger} />
           </Suspense>
         </div>
 
         {/* Discussion Tab */}
-        <div class="h-full" hidden={activeTab() !== 6}>
+        <div class="h-full" classList={{ hidden: activeTab() !== 6 }}>
           <Suspense fallback={<SidebarLoadingIndicator />}>
             <DiscussionTab focusTrigger={discussionFocusTrigger} />
           </Suspense>
