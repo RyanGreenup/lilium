@@ -4,6 +4,7 @@ import ChevronLeft from "lucide-solid/icons/chevron-left";
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
 import HomeIcon from "lucide-solid/icons/home";
+import MoreVertical from "lucide-solid/icons/more-vertical";
 import Plus from "lucide-solid/icons/plus";
 import {
   type Accessor,
@@ -883,14 +884,29 @@ export function ListViewer(props: ListViewerProps) {
                     <Show
                       when={props.editingItemId?.() === item.id}
                       fallback={
-                        <span
-                          class={listItemNameVariants({
-                            focused: isFocused(),
-                            selected: isSelected(),
-                          })}
-                        >
-                          {item.title}
-                        </span>
+                        <div class="flex items-center gap-1 flex-1 min-w-0">
+                          <span
+                            class={listItemNameVariants({
+                              focused: isFocused(),
+                              selected: isSelected(),
+                            })}
+                          >
+                            {item.title}
+                          </span>
+                          <Show when={props.onContextMenu}>
+                            <button
+                              class="p-1 rounded hover:bg-base-300 transition-colors opacity-50 hover:opacity-100 ml-auto flex-shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                props.onContextMenu?.(item, e);
+                                containerRef.focus();
+                              }}
+                              aria-label="Item actions"
+                            >
+                              <MoreVertical size={14} aria-hidden="true" />
+                            </button>
+                          </Show>
+                        </div>
                       }
                     >
                       {(() => {
