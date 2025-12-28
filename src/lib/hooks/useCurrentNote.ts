@@ -8,24 +8,25 @@ import { createMemo } from "solid-js";
 import { Note } from "~/lib/db";
 import { getNoteByIdQuery } from "~/lib/db/notes/read";
 
-/**
- * Hook to get the current note based on route params or search params
- * Returns the note object, the note ID, and a boolean indicating if the note exists
- */
-export function useCurrentNote(): {
+export interface UseNoteByIdResult {
   note: AccessorWithLatest<Note | null | undefined>;
   noteId: () => string | undefined;
   noteExists: () => boolean;
   noteLoaded: () => boolean;
-} {
-  const params = useParams();
-  const [searchParams] = useSearchParams();
+}
 
-  // Make noteId reactive to route changes
-  const noteId = createMemo(() => {
-    const rawId = params.id || searchParams.id;
-    return Array.isArray(rawId) ? rawId[0] : rawId;
-  });
+/**
+ * Hook to fetch and track note state given a reactive ID accessor
+ *
+ * This is the core note-fetching logic, separated from route handling.
+ * Use this directly when you have a known note ID.
+ *
+ * @param idAccessor - Accessor that provides the note ID to fetch
+ */
+export function useNoteById(
+  idAccessor: () => string | null | undefined,
+): UseNoteByIdResult {
+  const noteId = createMemo(() => idAccessor() ?? undefined);
 
   // Fetch the note data when we have an ID (reactive to ID changes)
   const note = createAsync(() => {
@@ -53,4 +54,29 @@ export function useCurrentNote(): {
     noteExists,
     noteLoaded,
   };
+}
+
+/**
+ * Hook to get the current note based on route params or search params
+ *
+ * This is a route-aware wrapper around useNoteById that derives the note ID
+ * from URL parameters.
+ *
+ * @param idOverride - Optional accessor that provides a fixed note ID, bypassing route params
+ */
+export function useCurrentNote(
+  idOverride?: () => string | null,
+): UseNoteByIdResult {
+  const params = useParams();
+  const [searchParams] = useSearchParams();
+
+  // Derive noteId from route params, search params, or override
+  const derivedId = createMemo(() => {
+    const overrideId = idOverride?.();
+    if (overrideId) return overrideId;
+    const rawId = params.id || searchParams.id;
+    return Array.isArray(rawId) ? rawId[0] : rawId;
+  });
+
+  return useNoteById(derivedId);
 }

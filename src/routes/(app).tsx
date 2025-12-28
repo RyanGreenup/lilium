@@ -141,49 +141,14 @@ const DockContent = () => (
   </div>
 );
 
-const RightDrawerContent = () => (
-  <div class="flex mt-12 justify-center p-12">
-    <Alert color="info" class="w-full max-w-md">
-      <div class="flex flex-col gap-4">
-        <h3 class="font-semibold text-lg">TODO Today's Journal</h3>
+const RightDrawerContent = () => {
+  const latestJournal = createAsync(() => getLatestJournalPageQuery());
 
-        <div class="space-y-2">
-          <h4 class="font-medium">Quick Tasks</h4>
-          <ul class="list-disc list-inside text-sm space-y-1">
-            <li>
-              <A href="/tasks" class="link">
-                Review daily goals
-              </A>
-            </li>
-            <li>
-              <A href="/notes" class="link">
-                Update project notes
-              </A>
-            </li>
-            <li>
-              <A href="/calendar" class="link">
-                Check upcoming meetings
-              </A>
-            </li>
-          </ul>
-        </div>
-
-        <div class="mt-4">
-          <h4 class="font-medium mb-2">Quick Calendar</h4>
-          <div class="bg-base-100 p-2 rounded text-center text-sm text-base-content">
-            <div class="font-semibold">
-              {new Date().toLocaleDateString("en-US", { weekday: "long" })}
-            </div>
-            <div class="text-2xl font-bold ">{new Date().getDate()}</div>
-            <div>
-              {new Date().toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-    </Alert>
-  </div>
-);
+  return (
+    <div class=" overflow-y-auto h-full">
+      <Show when={latestJournal()}>
+        {(journal) => <NoteEditor noteId={journal().id} />}
+      </Show>
+    </div>
+  );
+};

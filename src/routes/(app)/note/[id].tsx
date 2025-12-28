@@ -1,6 +1,6 @@
 import { createAsync, useParams } from "@solidjs/router";
 import { createSignal, createEffect, Show, Suspense } from "solid-js";
-import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
+import { useCurrentNote, useNoteById } from "~/lib/hooks/useCurrentNote";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 import { updateNoteQuery } from "~/lib/db/notes/update";
 import { SYNTAX_OPTIONS, type Note, type NoteSyntax } from "~/lib/db/types";
@@ -21,8 +21,15 @@ import NoteBreadcrumbs from "~/components/NoteBreadcrumbs";
 import { getNotePathQuery } from "~/lib/db/notes/path";
 import { LinkPalette, useLinkPalette } from "~/components/palette";
 
-export default function NoteEditor() {
-  const { note, noteId, noteExists, noteLoaded } = useCurrentNote();
+interface NoteEditorProps {
+  noteId?: string | null;
+}
+
+export default function NoteEditor(props: NoteEditorProps = {}) {
+  // Use useNoteById directly when given a fixed ID, otherwise use route-aware useCurrentNote
+  const { note, noteId, noteExists, noteLoaded } = props.noteId
+    ? useNoteById(() => props.noteId)
+    : useCurrentNote();
 
   // Fetch note path reactively
   const notePath = createAsync(() => {
