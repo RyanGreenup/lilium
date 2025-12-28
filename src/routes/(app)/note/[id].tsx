@@ -81,7 +81,9 @@ export default function NoteEditor() {
   };
 
   const formatDate = (isoString: string) => {
-    return new Date(isoString).toLocaleString();
+    // Append 'Z' if missing to ensure UTC interpretation
+    const utcString = isoString.endsWith("Z") ? isoString : isoString + "Z";
+    return new Date(utcString).toLocaleString();
   };
 
   const handleFileUpload = async (file: File) => {
