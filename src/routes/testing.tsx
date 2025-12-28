@@ -1,16 +1,19 @@
-import { For, createSignal, createMemo, Accessor, Setter } from "solid-js";
 import {
-  Search,
-  FileText,
-  Settings,
-  User,
-  FolderOpen,
-  Tag,
-  Plus,
-} from "lucide-solid";
+  For,
+  Show,
+  Suspense,
+  createSignal,
+  createMemo,
+  createEffect,
+  Accessor,
+  Setter,
+} from "solid-js";
+import { createAsync, query } from "@solidjs/router";
+import { Search, FileText, Folder } from "lucide-solid";
 import Fuse from "fuse.js";
 import { tv } from "tailwind-variants";
 import { Kbd } from "~/solid-daisy-components/components/Kbd";
+import type { NoteWithPath } from "~/lib/db/notes/search";
 
 const paletteStyles = tv({
   slots: {
@@ -24,15 +27,15 @@ const paletteStyles = tv({
     list: "max-h-80 overflow-y-auto py-2",
     item: "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors",
     itemIcon: "",
-    itemContent: "flex-1",
-    itemName: "font-medium",
-    itemCategory: "ml-2 text-xs text-base-content/40",
-    itemShortcut: "text-base-content/50",
+    itemContent: "flex-1 min-w-0",
+    itemTitle: "font-medium truncate",
+    itemPath: "text-xs text-base-content/40 truncate",
     empty: "px-4 py-8 text-center text-base-content/50",
     footer:
       "flex items-center justify-between px-4 py-2 border-t border-base-content/10 text-xs text-base-content/40",
     footerHints: "flex items-center gap-4",
     footerHint: "flex items-center gap-1",
+    toggle: "flex items-center gap-2",
   },
   variants: {
     selected: {
@@ -50,98 +53,104 @@ const paletteStyles = tv({
 
 const styles = paletteStyles();
 
-const commands = [
-  { id: 1, name: "New Note", shortcut: "⌘N", icon: Plus, category: "Notes" },
-  {
-    id: 2,
-    name: "Open Note",
-    shortcut: "⌘O",
-    icon: FileText,
-    category: "Notes",
-  },
-  {
-    id: 3,
-    name: "Open Folder",
-    shortcut: "⌘⇧O",
-    icon: FolderOpen,
-    category: "Notes",
-  },
-  { id: 4, name: "Manage Tags", shortcut: "⌘T", icon: Tag, category: "Notes" },
-  {
-    id: 5,
-    name: "Settings",
-    shortcut: "⌘,",
-    icon: Settings,
-    category: "System",
-  },
-  { id: 6, name: "Profile", shortcut: "⌘P", icon: User, category: "System" },
-];
-
-const fuse = new Fuse(commands, {
-  keys: ["name", "category"],
-  threshold: 0.4,
-});
-
-type Command = (typeof commands)[number];
+// Server function to fetch notes
+const getNotesForPalette = query(async (parentId: string | null = null) => {
+  "use server";
+  const { searchNotesForPalette } = await import("~/lib/db/notes/search");
+  return await searchNotesForPalette("", { parentId, limit: 500 });
+}, "notes-for-palette");
 
 const SearchInput = (props: {
   query: Accessor<string>;
   setQuery: Setter<string>;
+  searchFullPath: Accessor<boolean>;
+  setSearchFullPath: Setter<boolean>;
+  onKeyDown: (e: KeyboardEvent) => void;
 }) => {
   return (
     <div class={styles.searchContainer()}>
       <Search size={20} class={styles.searchIcon()} />
       <input
         type="text"
-        placeholder="Type a command or search..."
+        placeholder="Search notes..."
         class={styles.searchInput()}
         value={props.query()}
         onInput={(e) => props.setQuery(e.currentTarget.value)}
+        onKeyDown={props.onKeyDown}
       />
+      <label class={styles.toggle()}>
+        <input
+          type="checkbox"
+          class="toggle toggle-xs"
+          checked={props.searchFullPath()}
+          onChange={(e) => props.setSearchFullPath(e.currentTarget.checked)}
+        />
+        <span class="text-xs whitespace-nowrap">Path</span>
+      </label>
       <Kbd size="sm">esc</Kbd>
     </div>
   );
 };
 
-const CommandItem = (props: {
-  command: Command;
+const NoteItem = (props: {
+  note: NoteWithPath;
   selected: boolean;
   onSelect: () => void;
+  ref?: (el: HTMLDivElement) => void;
 }) => {
   const itemStyles = () => paletteStyles({ selected: props.selected });
+  const isFolder = () => props.note.title === "index";
+
   return (
-    <div class={itemStyles().item()} onMouseEnter={props.onSelect}>
-      <props.command.icon size={18} class={itemStyles().itemIcon()} />
+    <div
+      ref={props.ref}
+      class={itemStyles().item()}
+      onMouseEnter={props.onSelect}
+    >
+      <Show
+        when={isFolder()}
+        fallback={<FileText size={18} class={itemStyles().itemIcon()} />}
+      >
+        <Folder size={18} class={itemStyles().itemIcon()} />
+      </Show>
       <div class={styles.itemContent()}>
-        <span class={styles.itemName()}>{props.command.name}</span>
-        <span class={styles.itemCategory()}>{props.command.category}</span>
+        <div class={styles.itemTitle()}>{props.note.title}</div>
+        <div class={styles.itemPath()}>{props.note.display_path}</div>
       </div>
-      <Kbd size="sm" class={styles.itemShortcut()}>
-        {props.command.shortcut}
-      </Kbd>
     </div>
   );
 };
 
-const CommandList = (props: {
-  commands: Command[];
+const NoteList = (props: {
+  notes: NoteWithPath[];
   selectedIndex: Accessor<number>;
   setSelectedIndex: Setter<number>;
 }) => {
+  const itemRefs: HTMLDivElement[] = [];
+
+  createEffect(() => {
+    const idx = props.selectedIndex();
+    const el = itemRefs[idx];
+    if (el) {
+      el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  });
+
   return (
     <div class={styles.list()}>
-      <For each={props.commands}>
-        {(command, index) => (
-          <CommandItem
-            command={command}
+      <For each={props.notes}>
+        {(note, index) => (
+          <NoteItem
+            note={note}
             selected={index() === props.selectedIndex()}
             onSelect={() => props.setSelectedIndex(index())}
+            ref={(el) => (itemRefs[index()] = el)}
           />
         )}
       </For>
 
-      {props.commands.length === 0 && (
-        <div class={styles.empty()}>No commands found</div>
+      {props.notes.length === 0 && (
+        <div class={styles.empty()}>No notes found</div>
       )}
     </div>
   );
@@ -154,41 +163,131 @@ const PaletteFooter = (props: { count: number }) => {
         <span class={styles.footerHint()}>
           <Kbd size="xs">↑</Kbd>
           <Kbd size="xs">↓</Kbd>
-          to navigate
+          navigate
         </span>
         <span class={styles.footerHint()}>
           <Kbd size="xs">↵</Kbd>
-          to select
+          select
+        </span>
+        <span class={styles.footerHint()}>
+          <Kbd size="xs">^/</Kbd>
+          path
         </span>
       </div>
-      <span>{props.count} commands</span>
+      <span>{props.count} notes</span>
     </div>
   );
 };
 
-export default function CommandPalette() {
+function NotePaletteContent(props: { notes: NoteWithPath[] }) {
   const [query, setQuery] = createSignal("");
   const [selectedIndex, setSelectedIndex] = createSignal(0);
+  const [searchFullPath, setSearchFullPath] = createSignal(true);
 
-  const filteredCommands = createMemo(() => {
-    const q = query();
-    if (!q) return commands;
-    return fuse.search(q).map((result) => result.item);
+  // Create fuse instance that updates when searchFullPath changes
+  const fuse = createMemo(() => {
+    const keys = searchFullPath() ? ["display_path", "title"] : ["title"];
+    return new Fuse(props.notes, {
+      keys,
+      threshold: 0.4,
+    });
   });
+
+  const filteredNotes = createMemo(() => {
+    const q = query();
+    if (!q) return props.notes.slice(0, 25);
+    return fuse()
+      .search(q, { limit: 25 })
+      .map((result) => result.item);
+  });
+
+  // Reset selection when query changes (not when search mode toggles)
+  createMemo((prevQuery) => {
+    const q = query();
+    if (q !== prevQuery) {
+      setSelectedIndex(0);
+    }
+    return q;
+  }, "");
+
+  const moveUp = () => {
+    setSelectedIndex((i) => Math.max(0, i - 1));
+  };
+
+  const moveDown = () => {
+    setSelectedIndex((i) => Math.min(filteredNotes().length - 1, i + 1));
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Ctrl+/ to toggle path search
+    if (e.ctrlKey && e.key === "/") {
+      e.preventDefault();
+      setSearchFullPath((v) => !v);
+      return;
+    }
+
+    // Up: ArrowUp, Ctrl+K, Ctrl+P
+    if (
+      e.key === "ArrowUp" ||
+      (e.ctrlKey && e.key === "k") ||
+      (e.ctrlKey && e.key === "p")
+    ) {
+      e.preventDefault();
+      moveUp();
+      return;
+    }
+
+    // Down: ArrowDown, Ctrl+J, Ctrl+N
+    if (
+      e.key === "ArrowDown" ||
+      (e.ctrlKey && e.key === "j") ||
+      (e.ctrlKey && e.key === "n")
+    ) {
+      e.preventDefault();
+      moveDown();
+      return;
+    }
+  };
+
+  return (
+    <>
+      <SearchInput
+        query={query}
+        setQuery={setQuery}
+        searchFullPath={searchFullPath}
+        setSearchFullPath={setSearchFullPath}
+        onKeyDown={handleKeyDown}
+      />
+
+      <NoteList
+        notes={filteredNotes()}
+        selectedIndex={selectedIndex}
+        setSelectedIndex={setSelectedIndex}
+      />
+
+      <PaletteFooter count={filteredNotes().length} />
+    </>
+  );
+}
+
+export default function NotePalette() {
+  // For testing, we use null parentId (root level, all notes)
+  const notes = createAsync(() => getNotesForPalette(null));
 
   return (
     <div class="min-h-screen bg-base-300 flex items-center justify-center p-4">
       <div class={styles.wrapper()}>
-        {/* Search Input */}
-        <SearchInput query={query} setQuery={setQuery} />
-
-        <CommandList
-          commands={filteredCommands()}
-          selectedIndex={selectedIndex}
-          setSelectedIndex={setSelectedIndex}
-        />
-
-        <PaletteFooter count={filteredCommands().length} />
+        <Suspense
+          fallback={
+            <div class="px-4 py-8 text-center text-base-content/50">
+              Loading notes...
+            </div>
+          }
+        >
+          <Show when={notes()}>
+            {(loadedNotes) => <NotePaletteContent notes={loadedNotes()} />}
+          </Show>
+        </Suspense>
       </div>
     </div>
   );
