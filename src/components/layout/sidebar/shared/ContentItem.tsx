@@ -162,27 +162,12 @@ export const ContentList = (props: ContentListProps) => {
     if (!props.enableKeyboardNav) return;
 
     const focusIndex = focusedIndex();
-    if (focusIndex >= 0 && itemRefs[focusIndex] && containerRef) {
-      const focusedElement = itemRefs[focusIndex];
-      const container = containerRef;
-
-      if (focusedElement) {
-        // Calculate if element is visible
-        const containerRect = container.getBoundingClientRect();
-        const elementRect = focusedElement.getBoundingClientRect();
-
-        // Check if element is outside the visible area
-        const isAboveViewport = elementRect.top < containerRect.top;
-        const isBelowViewport = elementRect.bottom > containerRect.bottom;
-
-        if (isAboveViewport || isBelowViewport) {
-          focusedElement.scrollIntoView({
-            behavior: "smooth",
-            block: "nearest",
-            inline: "nearest",
-          });
-        }
-      }
+    if (focusIndex >= 0 && itemRefs[focusIndex]) {
+      // scrollIntoView with block: "nearest" only scrolls if item is out of view
+      itemRefs[focusIndex]?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
     }
   });
 

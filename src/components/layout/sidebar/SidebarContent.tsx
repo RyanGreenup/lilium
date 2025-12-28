@@ -229,8 +229,8 @@ export const SidebarTabs = () => {
       setSearchParams({ sidebar: tab.key });
     }
 
-    // Trigger focus for keybindings and search tab clicks
-    const shouldFocus = fromKeybinding || tabId === 2;
+    // Trigger focus when switching tabs to enable immediate keyboard navigation
+    const shouldFocus = true;
     if (shouldFocus) {
       const triggerId = Date.now().toString();
       if (tabId === 1) {

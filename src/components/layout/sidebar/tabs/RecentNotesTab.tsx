@@ -29,29 +29,32 @@ export default function RecentNotesTab(props: RecentNotesTabProps = {}) {
   const items = (): ContentItemData[] => {
     const data = recentNotesData();
     if (!data) return [];
-    return data.map((item) => ({ ...item, onClick: () => navigateToNote(item.id) }));
+    return data.map((item) => ({
+      ...item,
+      onClick: () => navigateToNote(item.id),
+    }));
   };
 
   return (
-    <div class="flex flex-col h-full space-y-4">
-      <Suspense fallback={<div class="loading loading-spinner loading-sm"></div>}>
-        <div class="flex flex-col flex-1 min-h-0">
-          <h4 class="text-sm font-medium text-base-content/70 mb-2 flex-shrink-0">
-            Recent Notes
-            <Show when={items().length > 0}>
-              <span class="text-xs text-base-content/50 ml-2">({items().length})</span>
-            </Show>
-          </h4>
-          <ContentList
-            items={items()}
-            showPath={true}
-            enableKeyboardNav={true}
-            focusTrigger={props.focusTrigger}
-            emptyMessage="No recent notes found"
-            showFollowMode={false}
-          />
-        </div>
-      </Suspense>
-    </div>
+    <Suspense fallback={<div class="loading loading-spinner loading-sm"></div>}>
+      <div>
+        <h4 class="text-sm font-medium text-base-content/70 mb-2">
+          Recent Notes
+          <Show when={items().length > 0}>
+            <span class="text-xs text-base-content/50 ml-2">
+              ({items().length})
+            </span>
+          </Show>
+        </h4>
+        <ContentList
+          items={items()}
+          showPath={true}
+          enableKeyboardNav={true}
+          focusTrigger={props.focusTrigger}
+          emptyMessage="No recent notes found"
+          showFollowMode={false}
+        />
+      </div>
+    </Suspense>
   );
 }
