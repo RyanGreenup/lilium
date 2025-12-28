@@ -19,6 +19,7 @@ import { Input } from "~/solid-daisy-components/components/Input";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import NoteBreadcrumbs from "~/components/NoteBreadcrumbs";
 import { getNotePathQuery } from "~/lib/db/notes/path";
+import { LinkPalette, useLinkPalette } from "~/components/palette";
 
 export default function NoteEditor() {
   const { note, noteId, noteExists, noteLoaded } = useCurrentNote();
@@ -174,6 +175,23 @@ export default function NoteEditor() {
   useKeybinding({ key: "s", ctrl: true }, saveNote);
   useKeybinding({ key: "/", ctrl: true }, focusTextarea);
   useKeybinding({ key: "u", ctrl: true }, handleUploadKeybind);
+
+  // Link palette for inserting links to notes (Ctrl+K when editing)
+  // NOTE: parentId is null for global search. In the future, this may be
+  // connected to a URL parameter for virtual root functionality.
+  const linkPalette = useLinkPalette({
+    syntax: () => currentNote()?.syntax ?? defaultSyntax,
+    parentId: () => null, // Global search - FUTURE: may use URL param for virtual root
+    onInsertLink: (linkText) => insertTextAtCursor(linkText),
+  });
+
+  // Ctrl+K to open link palette (only when editing)
+  const handleLinkPaletteKeybind = () => {
+    if (isEditing()) {
+      linkPalette.open();
+    }
+  };
+  useKeybinding({ key: "k", ctrl: true }, handleLinkPaletteKeybind);
 
   return (
     <Show
@@ -462,6 +480,9 @@ export default function NoteEditor() {
             </div>
           </div>
         </div>
+
+        {/* Link Palette - triggered with Ctrl+K when editing */}
+        <LinkPalette {...linkPalette.paletteProps} />
       </Show>
     </Show>
   );

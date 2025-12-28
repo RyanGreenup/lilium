@@ -179,13 +179,14 @@ export async function searchNotesForPalette(
   const params: (string | number)[] = [];
 
   if (parentId) {
-    // Get descendants of the parent by matching path prefix
-    // Also compute relative path by removing the parent's path prefix
+    // Get descendants of the parent folder by matching path prefix
+    // The parentId is a FOLDER id, so we look up its path from mv_folder_paths
+    // Then find all notes whose paths start with that folder's path
     sql = `
       WITH parent_path AS (
         SELECT full_path || '/' as prefix
-        FROM mv_note_paths
-        WHERE note_id = ? AND user_id = ?
+        FROM mv_folder_paths
+        WHERE folder_id = ? AND user_id = ?
       )
       SELECT
         n.id, n.title, n.abstract, n.content, n.syntax,
