@@ -97,10 +97,15 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
   const handleFileUpload = async (file: File) => {
     if (!file) return;
 
+    // Prompt user for filename, defaulting to original
+    const customName = window.prompt("Enter filename for upload:", file.name);
+    if (customName === null) return; // User cancelled
+
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("customName", customName || file.name);
 
       const response = await fetch("/api/upload", {
         method: "POST",
