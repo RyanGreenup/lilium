@@ -69,6 +69,15 @@ export type ListItem = FolderListItem | NoteListItem;
 export const INDEX_NOTE_TITLE = "index";
 
 /**
+ * Path prefix for journal pages
+ *
+ * Journal pages are daily notes stored under this path. Each journal page
+ * uses YYYY-MM-DD format for its title (e.g., "2024-01-15"), allowing
+ * chronological sorting and lookup of the most recent entry.
+ */
+export const JOURNAL_PATH_PREFIX = "Personal/Journal";
+
+/**
  * Check if a note is an index note
  *
  * Index notes are special notes that serve as the default preview

@@ -1,5 +1,6 @@
 import { A, createAsync, RouteDefinition } from "@solidjs/router";
 import BookOpen from "lucide-solid/icons/book-open";
+import CalendarDays from "lucide-solid/icons/calendar-days";
 import FileText from "lucide-solid/icons/file-text";
 import Home from "lucide-solid/icons/home";
 import Menu from "lucide-solid/icons/menu";
@@ -10,7 +11,8 @@ import { SidebarTabs } from "~/components/layout/sidebar/SidebarContent";
 import { UserDropdown } from "~/components/UserDrowDown";
 import { getUser } from "~/lib/auth";
 import { getIndexNoteQuery } from "~/lib/db/notes/read";
-import type { NoteWithoutContent } from "~/lib/db/types";
+import { getLatestJournalPageQuery } from "~/lib/db/notes/journal";
+import type { Note, NoteWithoutContent } from "~/lib/db/types";
 import { Alert } from "~/solid-daisy-components/components/Alert";
 import {
   BottomDock,
@@ -24,6 +26,7 @@ import {
   SidebarContent,
   ToggleButton,
 } from "~/solid-daisy-components/components/Layouts/ResponsiveDrawer";
+import NoteEditor from "./(app)/note/[id]";
 
 // Route Guard
 export const route = {
@@ -35,11 +38,12 @@ export const route = {
 
 export default function MainLayout(props: { children: JSXElement }) {
   const indexNote = createAsync(() => getIndexNoteQuery());
+  const latestJournal = createAsync(() => getLatestJournalPageQuery());
 
   return (
     <Layout class="text-base-content">
       <Navbar class="navbar bg-base-200 shadow-lg mt-[-0.25rem]">
-        <NavbarContent indexNote={indexNote} />
+        <NavbarContent indexNote={indexNote} latestJournal={latestJournal} />
       </Navbar>
       <MainWrapper>
         <Sidebar class="bg-base-200">
@@ -62,6 +66,7 @@ export default function MainLayout(props: { children: JSXElement }) {
 
 const NavbarContent = (props: {
   indexNote: Accessor<NoteWithoutContent | null | undefined>;
+  latestJournal: Accessor<Note | null | undefined>;
 }) => (
   <>
     <div class="navbar-start">
@@ -79,6 +84,17 @@ const NavbarContent = (props: {
             title="Index Note"
           >
             <FileText class="w-5 h-5" />
+          </A>
+        )}
+      </Show>
+      <Show when={props.latestJournal()}>
+        {(journal) => (
+          <A
+            href={`/note/${journal().id}`}
+            class="btn btn-square btn-ghost"
+            title="Latest Journal"
+          >
+            <CalendarDays class="w-5 h-5" />
           </A>
         )}
       </Show>

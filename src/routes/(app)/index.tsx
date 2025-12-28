@@ -1,12 +1,15 @@
 import { A, RouteDefinition, createAsync } from "@solidjs/router";
+import CalendarDays from "lucide-solid/icons/calendar-days";
 import Clock from "lucide-solid/icons/clock";
 
 import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
 
-import { For, Suspense, Show } from "solid-js";
+import { createSignal, For, Suspense, Show } from "solid-js";
+import { NoteBreadcrumbsById } from "~/components/NoteBreadcrumbs";
 import { getUser } from "~/lib/auth";
 import { getNotesStatsQuery } from "~/lib/db/noteStats";
+import { getLatestJournalPageQuery } from "~/lib/db/notes/journal";
 import { getRecentNotesQuery } from "~/lib/db/notes/search";
 
 import { Badge } from "~/solid-daisy-components/components/Badge";
@@ -25,6 +28,7 @@ export const route = {
     getUser();
     getNotesStatsQuery();
     getRecentNotesQuery(20);
+    getLatestJournalPageQuery();
   },
 } satisfies RouteDefinition;
 
@@ -32,6 +36,7 @@ export const route = {
 export default function Home() {
   const stats = createAsync(() => getNotesStatsQuery());
   const recentNotes = createAsync(() => getRecentNotesQuery(4));
+  const latestJournal = createAsync(() => getLatestJournalPageQuery());
 
   const formatDate = (isoString: string) => {
     return new Date(isoString).toLocaleDateString();
@@ -81,6 +86,50 @@ export default function Home() {
         </Suspense>
       </div>
 
+      {/* Latest Journal */}
+      <Show when={latestJournal()}>
+        {(journal) => (
+          <div>
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+              <CalendarDays class="w-6 h-6 mr-3" />
+              Latest Journal
+            </h2>
+            <Card class="hover:shadow-lg transition-shadow shadow-lg">
+              <Card.Body>
+                <div class="flex justify-between items-start mb-2">
+                  <div class="flex items-center gap-2">
+                    <CalendarDays class="w-4 h-4 text-base-content/60" />
+                    <h3 class="card-title text-lg">{journal().title}</h3>
+                  </div>
+                  <Badge variant="outline" size="sm">
+                    {journal().syntax}
+                  </Badge>
+                </div>
+                <Show when={journal().abstract}>
+                  <p class="text-base-content/70 text-sm line-clamp-3 mb-4">
+                    {journal().abstract}
+                  </p>
+                </Show>
+                <div class="flex justify-between items-center text-xs text-base-content/60">
+                  <div class="flex-1 min-w-0">
+                    <NoteBreadcrumbsById noteId={createSignal(journal().id)[0]} />
+                  </div>
+                  <div class="text-right ml-4">
+                    <div>{formatDate(journal().updated_at)}</div>
+                    <div>{formatTime(journal().updated_at)}</div>
+                  </div>
+                </div>
+                <Card.Actions class="justify-end mt-4">
+                  <A class="btn btn-primary btn-sm" href={`/note/${journal().id}`}>
+                    Open Journal
+                  </A>
+                </Card.Actions>
+              </Card.Body>
+            </Card>
+          </div>
+        )}
+      </Show>
+
       {/* Recent Notes */}
       <div>
         <h2 class="text-2xl font-bold mb-6 flex items-center">
@@ -109,8 +158,10 @@ export default function Home() {
                             {note.abstract}
                           </p>
                         </Show>
-                        <div class="flex justify-between items-center text-xs text-base-content/60 gap-8">
-                          <span class="font-mono text-xs truncate">/notes/{note.id}</span>
+                        <div class="flex justify-between items-center text-xs text-base-content/60 gap-4">
+                          <div class="flex-1 min-w-0">
+                            <NoteBreadcrumbsById noteId={createSignal(note.id)[0]} />
+                          </div>
                           <div class="text-right">
                             <div>{formatDate(note.updated_at)}</div>
                             <div>{formatTime(note.updated_at)}</div>
