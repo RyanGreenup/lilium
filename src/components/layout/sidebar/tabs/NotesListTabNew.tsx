@@ -63,6 +63,8 @@ interface ListStore {
 }
 
 interface ListViewerProps {
+  /** Focus trigger signal from parent (for Alt+1 keybinding) */
+  focusTrigger?: Accessor<string | null>;
   onSelect?: (item: ListItem) => void;
   onSelectIndex?: (noteId: string) => void;
   onFocus?: (item: ListItem | null) => void;
@@ -197,6 +199,16 @@ export function ListViewer(props: ListViewerProps) {
 
   // Refocus container after navigation
   createEffect(on(currentParent, () => containerRef.focus(), { defer: false }));
+
+  // Handle external focus requests (from Alt+1 keybinding)
+  createEffect(() => {
+    const trigger = props.focusTrigger?.();
+    if (trigger && containerRef) {
+      requestAnimationFrame(() => {
+        containerRef.focus();
+      });
+    }
+  });
 
   // Auto-select index note after navigating into a folder (when clicking a folder)
   createEffect(() => {

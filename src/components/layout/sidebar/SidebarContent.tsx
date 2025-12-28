@@ -70,6 +70,9 @@ export const SidebarTabs = () => {
   };
 
   // Focus triggers for tabs
+  const [notesFocusTrigger, setNotesFocusTrigger] = createSignal<string | null>(
+    null,
+  );
   const [recentFocusTrigger, setRecentFocusTrigger] = createSignal<
     string | null
   >(null);
@@ -95,14 +98,17 @@ export const SidebarTabs = () => {
 
   // Persistent notes list state across tab navigation
   const [notesHistory, setNotesHistory] = createSignal<string[]>([]);
-  const [notesFocusMemory, setNotesFocusMemory] = createSignal<Record<string, number | undefined>>({});
+  const [notesFocusMemory, setNotesFocusMemory] = createSignal<
+    Record<string, number | undefined>
+  >({});
 
   // Context menu state - discriminated union for clarity
   type ContextMenuTarget =
     | { type: "item"; item: ListItem }
     | { type: "emptyArea"; parentId: string | null };
 
-  const [contextTarget, setContextTarget] = createSignal<ContextMenuTarget | null>(null);
+  const [contextTarget, setContextTarget] =
+    createSignal<ContextMenuTarget | null>(null);
 
   // List item actions (create, rename, etc.)
   const {
@@ -178,7 +184,10 @@ export const SidebarTabs = () => {
     contextMenu.open(event);
   };
 
-  const handleEmptyAreaContextMenu = (parentId: string | null, event: MouseEvent) => {
+  const handleEmptyAreaContextMenu = (
+    parentId: string | null,
+    event: MouseEvent,
+  ) => {
     setContextTarget({ type: "emptyArea", parentId });
     contextMenu.open(event);
   };
@@ -233,7 +242,11 @@ export const SidebarTabs = () => {
     const shouldFocus = true;
     if (shouldFocus) {
       const triggerId = Date.now().toString();
-      if (tabId === 1) {
+      if (tabId === 0) {
+        // Notes tab - focus file browser for keyboard navigation
+        setNotesFocusTrigger(triggerId);
+        setTimeout(() => setNotesFocusTrigger(null), 100);
+      } else if (tabId === 1) {
         // Recent tab - focus list for keybinding navigation
         setRecentFocusTrigger(triggerId);
         setTimeout(() => setRecentFocusTrigger(null), 100);
@@ -318,6 +331,7 @@ export const SidebarTabs = () => {
                   See also: BacklinksTab, ForwardLinksTab, RelatedTab (same pattern) */}
               <Suspense fallback={<SidebarLoadingIndicator />}>
                 <ListViewer
+                  focusTrigger={notesFocusTrigger}
                   currentNoteId={currentNoteId}
                   onNoteSelect={handleNoteSelect}
                   onContextMenu={handleContextMenu}
