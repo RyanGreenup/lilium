@@ -1,5 +1,5 @@
 import { createAsync, useParams } from "@solidjs/router";
-import { createSignal, createEffect, Show, Suspense } from "solid-js";
+import { createSignal, createEffect, Show, Suspense, Accessor } from "solid-js";
 import { useCurrentNote, useNoteById } from "~/lib/hooks/useCurrentNote";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 import { updateNoteQuery } from "~/lib/db/notes/update";
@@ -9,6 +9,7 @@ import Eye from "lucide-solid/icons/eye";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import NotebookPen from "lucide-solid/icons/notebook-pen";
 import Upload from "lucide-solid/icons/upload";
+import Link from "lucide-solid/icons/link";
 
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
@@ -366,22 +367,16 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
 
                 {/* Right: Primary actions */}
                 <div class="flex items-center gap-2">
-                  {/* Upload Button (only when editing) */}
-                  <Show when={isEditing()}>
-                    <button
-                      onClick={triggerFileUpload}
-                      class={`btn btn-sm btn-ghost gap-1 h-8 min-h-8 ${uploading() ? "loading" : ""}`}
-                      disabled={uploading()}
-                      title="Upload file"
-                    >
-                      <Show when={!uploading()}>
-                        <Upload class="w-3.5 h-3.5" />
-                      </Show>
-                      <span class="hidden sm:inline text-xs">
-                        {uploading() ? "Uploading..." : "Upload"}
-                      </span>
-                    </button>
-                  </Show>
+                  <LinkButton
+                    isEditing={isEditing}
+                    openLinkPalette={linkPalette.open}
+                  />
+
+                  <UploadButton
+                    isEditing={isEditing}
+                    uploading={uploading}
+                    onUpload={triggerFileUpload}
+                  />
 
                   {/* Edit Toggle (hidden when metadata expanded) */}
                   <div
@@ -499,3 +494,49 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
     </Show>
   );
 }
+
+/**
+ * LinkButton - Opens the link palette for inserting note links.
+ * Provides mobile-friendly access to the Ctrl+K keyboard shortcut.
+ */
+const LinkButton = (props: {
+  isEditing: Accessor<boolean>;
+  openLinkPalette: () => void;
+}) => (
+  <Show when={props.isEditing()}>
+    <button
+      onClick={props.openLinkPalette}
+      class="btn btn-sm btn-ghost gap-1 h-8 min-h-8"
+      title="Insert link (Ctrl+K)"
+    >
+      <Link class="w-3.5 h-3.5" />
+      <span class="hidden sm:inline text-xs">Link</span>
+    </button>
+  </Show>
+);
+
+/**
+ * UploadButton - Triggers file upload for embedding in notes.
+ * Provides mobile-friendly access to the Ctrl+U keyboard shortcut.
+ */
+const UploadButton = (props: {
+  isEditing: Accessor<boolean>;
+  uploading: Accessor<boolean>;
+  onUpload: () => void;
+}) => (
+  <Show when={props.isEditing()}>
+    <button
+      onClick={props.onUpload}
+      class={`btn btn-sm btn-ghost gap-1 h-8 min-h-8 ${props.uploading() ? "loading" : ""}`}
+      disabled={props.uploading()}
+      title="Upload file (Ctrl+U)"
+    >
+      <Show when={!props.uploading()}>
+        <Upload class="w-3.5 h-3.5" />
+      </Show>
+      <span class="hidden sm:inline text-xs">
+        {props.uploading() ? "Uploading..." : "Upload"}
+      </span>
+    </button>
+  </Show>
+);

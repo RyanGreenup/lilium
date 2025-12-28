@@ -40,7 +40,7 @@ import type { NoteWithPath } from "~/lib/db/notes/search";
 const paletteStyles = tv({
   slots: {
     wrapper:
-      "w-full max-w-lg bg-base-100 rounded-lg shadow-2xl border border-base-content/10 overflow-hidden",
+      "w-[calc(100vw-2rem)] sm:w-full max-w-lg bg-base-100 rounded-lg shadow-2xl border border-base-content/10 overflow-hidden",
     searchContainer:
       "flex items-center gap-3 px-4 py-3 border-b border-base-content/10",
     searchIcon: "text-base-content/50",
@@ -55,7 +55,7 @@ const paletteStyles = tv({
     empty: "px-4 py-8 text-center text-base-content/50",
     footer:
       "flex items-center justify-between px-4 py-2 border-t border-base-content/10 text-xs text-base-content/40",
-    footerHints: "flex items-center gap-4",
+    footerHints: "hidden sm:flex items-center gap-4",
     footerHint: "flex items-center gap-1",
     toggle: "flex items-center gap-2",
   },
