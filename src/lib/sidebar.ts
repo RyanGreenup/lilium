@@ -13,8 +13,8 @@ import {
   getRecentNotes,
   getBacklinks,
   getForwardLinks,
-} from "~/lib/db_new/notes/search";
-import { transformNotesForDisplay } from "~/lib/db_new/notes/display";
+} from "~/lib/db/notes/search";
+import { transformNotesForDisplay } from "~/lib/db/notes/display";
 
 /**
  * Get recent notes with display titles resolved

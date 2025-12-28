@@ -1,6 +1,6 @@
 import { createAsync } from "@solidjs/router";
 import { Accessor } from "solid-js";
-import { getNoteFolderPathQuery } from "~/lib/db_new/api";
+import { getNoteFolderPathQuery } from "~/lib/db/api";
 
 /**
  * Hook to get the folder path for a note

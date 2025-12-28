@@ -7,7 +7,7 @@
 import { query } from "@solidjs/router";
 import { requireUser } from "../../auth";
 import { redirect } from "@solidjs/router";
-import type { Note } from "../../db_new/types";
+import type { Note } from "../../db/types";
 import { INDEX_NOTE_TITLE, type NoteWithoutContent } from "../types";
 import { db } from "../index";
 

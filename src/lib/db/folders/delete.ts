@@ -16,7 +16,7 @@ import { db } from "../index";
  * - All notes in this folder
  * - All notes in child folders
  *
- * Note: CASCADE only works because PRAGMA foreign_keys is enabled in db_new/index.ts
+ * Note: CASCADE only works because PRAGMA foreign_keys is enabled in db/index.ts
  */
 export async function deleteFolder(id: string): Promise<void> {
   const user = await requireUser();

@@ -1,5 +1,5 @@
 /**
- * Note search and filtering functions for db_new schema
+ * Note search and filtering functions for db schema
  */
 
 "use server";

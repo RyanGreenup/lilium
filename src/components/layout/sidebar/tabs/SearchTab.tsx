@@ -19,7 +19,7 @@ import { Select } from "~/solid-daisy-components/components/Select";
 import { Kbd } from "~/solid-daisy-components/components/Kbd";
 import { ContentItem, ContentItemData } from "../shared/ContentItem";
 import { useFollowMode } from "~/lib/hooks/useFollowMode";
-import { searchNotesWithDisplayTitlesQuery } from "~/lib/db_new/notes/search";
+import { searchNotesWithDisplayTitlesQuery } from "~/lib/db/notes/search";
 
 interface SidebarSearchContentProps {
   focusTrigger?: () => string | null;

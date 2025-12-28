@@ -6,7 +6,7 @@ import {
 } from "@solidjs/router";
 import { createMemo } from "solid-js";
 import { Note } from "~/lib/db";
-import { getNoteByIdQuery } from "~/lib/db_new/notes/read";
+import { getNoteByIdQuery } from "~/lib/db/notes/read";
 
 /**
  * Hook to get the current note based on route params or search params

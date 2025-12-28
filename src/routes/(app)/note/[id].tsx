@@ -2,8 +2,8 @@ import { createAsync, useParams } from "@solidjs/router";
 import { createSignal, createEffect, Show, Suspense } from "solid-js";
 import { useCurrentNote } from "~/lib/hooks/useCurrentNote";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
-import { updateNoteQuery } from "~/lib/db_new/notes/update";
-import { SYNTAX_OPTIONS, type Note, type NoteSyntax } from "~/lib/db_new/types";
+import { updateNoteQuery } from "~/lib/db/notes/update";
+import { SYNTAX_OPTIONS, type Note, type NoteSyntax } from "~/lib/db/types";
 import Save from "lucide-solid/icons/save";
 import Eye from "lucide-solid/icons/eye";
 import ChevronUp from "lucide-solid/icons/chevron-up";
@@ -18,7 +18,7 @@ import { Textarea } from "~/solid-daisy-components/components/Textarea";
 import { Input } from "~/solid-daisy-components/components/Input";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import NoteBreadcrumbs from "~/components/NoteBreadcrumbs";
-import { getNotePathQuery } from "~/lib/db_new/notes/path";
+import { getNotePathQuery } from "~/lib/db/notes/path";
 
 export default function NoteEditor() {
   const { note, noteId, noteExists, noteLoaded } = useCurrentNote();

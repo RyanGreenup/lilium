@@ -21,7 +21,7 @@ import {
   isMarkdownConvertibleSyntax,
   isClientRenderedSyntax,
   isPassthroughSyntax,
-} from "~/lib/db_new/types";
+} from "~/lib/db/types";
 import markedFootnote from "marked-footnote";
 import markedAlert from "marked-alert";
 
