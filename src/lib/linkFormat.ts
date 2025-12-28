@@ -30,7 +30,9 @@ export function formatNoteLink(
   useFullPath: boolean = false,
 ): string {
   const displayText = useFullPath ? note.display_path : note.title;
-  const noteUrl = `/note/${note.id}`;
+  // NOTE avoid abs url for compatability sake
+  // const noteUrl = `/note/${note.id}`;
+  const noteUrl = note.id;
 
   switch (syntax) {
     case "md":
