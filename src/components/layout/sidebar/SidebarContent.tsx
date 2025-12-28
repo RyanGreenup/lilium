@@ -8,14 +8,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-solid";
-import {
-  createSignal,
-  For,
-  onMount,
-  onCleanup,
-  Show,
-  Suspense,
-} from "solid-js";
+import { createSignal, For, onMount, onCleanup, Show, Suspense } from "solid-js";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import {
@@ -30,7 +23,6 @@ import { ListViewer } from "./tabs/NotesListTabNew";
 import RecentNotesTab from "./tabs/RecentNotesTab";
 import RelatedTab from "./tabs/RelatedTab";
 import { SidebarSearchContent } from "./tabs/SearchTab";
-import { SlideTransition } from "~/components/Animations/SlideTransition";
 import { Loading } from "~/solid-daisy-components/components/Loading";
 import type { ListItem } from "~/lib/db/types";
 import { ITEM_KEYBINDINGS } from "~/lib/keybindings";
@@ -56,7 +48,6 @@ const SidebarLoadingIndicator = () => (
 
 export const SidebarTabs = () => {
   const [activeTab, setActiveTab] = createSignal(0);
-  const [isGoingDeeper, setIsGoingDeeper] = createSignal(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const params = useParams();
@@ -230,8 +221,6 @@ export const SidebarTabs = () => {
   });
 
   const handleTabChange = (tabId: number, fromKeybinding = false) => {
-    const currentTab = activeTab();
-    setIsGoingDeeper(tabId > currentTab);
     setActiveTab(tabId);
     const tab = tabs.find((t) => t.id === tabId);
     if (tab) {
@@ -315,91 +304,84 @@ export const SidebarTabs = () => {
         </For>
       </Tabs>
 
-      <div class="mt-4 relative overflow-hidden flex-1 min-h-0">
-        <SlideTransition
-          isGoingDeeper={isGoingDeeper}
-          contentId={`tab-${activeTab()}`}
-        >
-          <div class="h-full">
-            <Show when={activeTab() === 0}>
-              {/* IMPORTANT: Suspense boundary prevents full-screen flicker
-                  ListViewer uses createAsync for data fetching (items, folderPath, indexNoteId).
-                  When users interact with the component (click items, navigate folders),
-                  these async queries re-run. Without a Suspense boundary at the parent level,
-                  SolidJS triggers re-renders of the entire page instead of just this component.
-                  The Suspense boundary isolates these async updates to prevent flicker.
-                  See also: BacklinksTab, ForwardLinksTab, RelatedTab (same pattern) */}
-              <Suspense fallback={<SidebarLoadingIndicator />}>
-                <ListViewer
-                  focusTrigger={notesFocusTrigger}
-                  currentNoteId={currentNoteId}
-                  onNoteSelect={handleNoteSelect}
-                  onContextMenu={handleContextMenu}
-                  onEmptyAreaContextMenu={handleEmptyAreaContextMenu}
-                  editingItemId={editingItemId}
-                  onRename={handleRename}
-                  onCancelRename={handleCancelRename}
-                  onCreateSibling={handleCreateSibling}
-                  onCreateChild={handleCreateChild}
-                  onStartEdit={handleStartEdit}
-                  onCopyLink={handleCopyLink}
-                  onDuplicate={handleDuplicate}
-                  cutItemId={() => cutItem()?.id ?? null}
-                  onCut={handleCut}
-                  onPaste={handlePaste}
-                  onPasteChild={handlePasteChild}
-                  onDelete={handleDelete}
-                  onMakeFolder={handleMakeFolder}
-                  onMakeNote={handleMakeNote}
-                  persistedHistory={notesHistory()}
-                  onHistoryChange={setNotesHistory}
-                  persistedFocusMemory={notesFocusMemory()}
-                  onFocusMemoryChange={setNotesFocusMemory}
-                />
-              </Suspense>
-            </Show>
+      <div class="mt-4 relative flex-1 min-h-0">
+        {/* Notes Tab */}
+        <div class="h-full" hidden={activeTab() !== 0}>
+          <Suspense fallback={<SidebarLoadingIndicator />}>
+            <ListViewer
+              focusTrigger={notesFocusTrigger}
+              currentNoteId={currentNoteId}
+              onNoteSelect={handleNoteSelect}
+              onContextMenu={handleContextMenu}
+              onEmptyAreaContextMenu={handleEmptyAreaContextMenu}
+              editingItemId={editingItemId}
+              onRename={handleRename}
+              onCancelRename={handleCancelRename}
+              onCreateSibling={handleCreateSibling}
+              onCreateChild={handleCreateChild}
+              onStartEdit={handleStartEdit}
+              onCopyLink={handleCopyLink}
+              onDuplicate={handleDuplicate}
+              cutItemId={() => cutItem()?.id ?? null}
+              onCut={handleCut}
+              onPaste={handlePaste}
+              onPasteChild={handlePasteChild}
+              onDelete={handleDelete}
+              onMakeFolder={handleMakeFolder}
+              onMakeNote={handleMakeNote}
+              persistedHistory={notesHistory()}
+              onHistoryChange={setNotesHistory}
+              persistedFocusMemory={notesFocusMemory()}
+              onFocusMemoryChange={setNotesFocusMemory}
+            />
+          </Suspense>
+        </div>
 
-            <Show when={activeTab() === 1}>
-              <Suspense fallback={<SidebarLoadingIndicator />}>
-                <RecentNotesTab focusTrigger={recentFocusTrigger} />
-              </Suspense>
-            </Show>
+        {/* Recent Tab */}
+        <div class="h-full" hidden={activeTab() !== 1}>
+          <Suspense fallback={<SidebarLoadingIndicator />}>
+            <RecentNotesTab focusTrigger={recentFocusTrigger} />
+          </Suspense>
+        </div>
 
-            <Show when={activeTab() === 2}>
-              <Suspense fallback={<SidebarLoadingIndicator />}>
-                <SidebarSearchContent
-                  focusTrigger={searchFocusTrigger}
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
-                />
-              </Suspense>
-            </Show>
+        {/* Search Tab */}
+        <div class="h-full" hidden={activeTab() !== 2}>
+          <Suspense fallback={<SidebarLoadingIndicator />}>
+            <SidebarSearchContent
+              focusTrigger={searchFocusTrigger}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+            />
+          </Suspense>
+        </div>
 
-            <Show when={activeTab() === 3}>
-              <Suspense fallback={<SidebarLoadingIndicator />}>
-                <BacklinksTab focusTrigger={backlinksFocusTrigger} />
-              </Suspense>
-            </Show>
+        {/* Backlinks Tab */}
+        <div class="h-full" hidden={activeTab() !== 3}>
+          <Suspense fallback={<SidebarLoadingIndicator />}>
+            <BacklinksTab focusTrigger={backlinksFocusTrigger} />
+          </Suspense>
+        </div>
 
-            <Show when={activeTab() === 4}>
-              <Suspense fallback={<SidebarLoadingIndicator />}>
-                <ForwardLinksTab focusTrigger={forwardLinksFocusTrigger} />
-              </Suspense>
-            </Show>
+        {/* Forward Links Tab */}
+        <div class="h-full" hidden={activeTab() !== 4}>
+          <Suspense fallback={<SidebarLoadingIndicator />}>
+            <ForwardLinksTab focusTrigger={forwardLinksFocusTrigger} />
+          </Suspense>
+        </div>
 
-            <Show when={activeTab() === 5}>
-              <Suspense fallback={<SidebarLoadingIndicator />}>
-                <RelatedTab focusTrigger={relatedFocusTrigger} />
-              </Suspense>
-            </Show>
+        {/* Related Tab */}
+        <div class="h-full" hidden={activeTab() !== 5}>
+          <Suspense fallback={<SidebarLoadingIndicator />}>
+            <RelatedTab focusTrigger={relatedFocusTrigger} />
+          </Suspense>
+        </div>
 
-            <Show when={activeTab() === 6}>
-              <Suspense fallback={<SidebarLoadingIndicator />}>
-                <DiscussionTab focusTrigger={discussionFocusTrigger} />
-              </Suspense>
-            </Show>
-          </div>
-        </SlideTransition>
+        {/* Discussion Tab */}
+        <div class="h-full" hidden={activeTab() !== 6}>
+          <Suspense fallback={<SidebarLoadingIndicator />}>
+            <DiscussionTab focusTrigger={discussionFocusTrigger} />
+          </Suspense>
+        </div>
       </div>
 
       {/* Context menu for list items - wrapped in Show to ensure items are evaluated
