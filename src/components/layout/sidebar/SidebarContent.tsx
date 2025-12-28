@@ -8,7 +8,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-solid";
-import { createSignal, For, onMount, onCleanup, Show, Suspense } from "solid-js";
+import { createSignal, createMemo, For, onMount, onCleanup, Show, Suspense } from "solid-js";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import {
@@ -27,6 +27,7 @@ import { Loading } from "~/solid-daisy-components/components/Loading";
 import type { ListItem } from "~/lib/db/types";
 import { ITEM_KEYBINDINGS } from "~/lib/keybindings";
 import { useListItemActions } from "~/lib/hooks/useListItemActions";
+import { OpenNotePalette, useOpenNotePalette } from "~/components/palette";
 
 // Delayed fallback component to avoid flickering loading states for fast operations
 function DelayedFallback(props: { delay?: number; children: any }) {
@@ -92,6 +93,43 @@ export const SidebarTabs = () => {
   const [notesFocusMemory, setNotesFocusMemory] = createSignal<
     Record<string, number | undefined>
   >({});
+
+  // ==========================================================================
+  // Open Note Palette
+  // [TODO 2025-12-28 17:49]
+  // ==========================================================================
+  // The "current parent" is pulled from the file browser's navigation history.
+  // This allows the palette to scope searches to the current folder context
+  // without requiring the user to navigate away from their current note.
+  //
+  // FUTURE: This parentId will be connected to a URL parameter for "virtual root"
+  // This will effectively be `cd`, api will scope all queries to
+  // descendants of a parent_id by using =mv_note_paths= and =mv_folder_paths=
+  //
+  // The palette will then look at that (and likely move to a global context
+  // provider. Then the Link Insert Palette can use it too
+  // For now, it's derived from the sidebar's navigation state. as the API
+  // has not yet been implemented.
+
+  const currentFileBrowserParent = createMemo(() => notesHistory().at(-1) ?? null);
+
+  // Open note palette with scoped search (uses file browser's current folder)
+  const openPaletteScoped = useOpenNotePalette({
+    parentId: currentFileBrowserParent,
+  });
+
+  // Open note palette with global search (all notes)
+  const openPaletteGlobal = useOpenNotePalette({
+    parentId: () => null,
+  });
+
+  // Ctrl+P: Open global palette (search all notes)
+  useKeybinding({ key: "p", ctrl: true }, openPaletteGlobal.open);
+
+  // Ctrl+Alt+P: Open scoped palette (search within current folder context)
+  // NOTE: Using Ctrl+Alt instead of Ctrl+Shift to avoid browser conflicts
+  // (Ctrl+Shift+P often opens browser dev tools or other browser features)
+  useKeybinding({ key: "p", ctrl: true, alt: true }, openPaletteScoped.open);
 
   // Context menu state - discriminated union for clarity
   type ContextMenuTarget =
@@ -397,6 +435,12 @@ export const SidebarTabs = () => {
           }}
         />
       </Show>
+
+      {/* Open Note Palettes */}
+      {/* Ctrl+P: Global palette (all notes) */}
+      <OpenNotePalette {...openPaletteGlobal.paletteProps} />
+      {/* Ctrl+Shift+P: Scoped palette (within current folder context) */}
+      <OpenNotePalette {...openPaletteScoped.paletteProps} />
     </div>
   );
 };

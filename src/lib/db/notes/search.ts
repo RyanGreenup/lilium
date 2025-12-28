@@ -140,6 +140,108 @@ export async function getForwardLinks(noteId: string): Promise<Note[]> {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Palette Search (using mv_note_paths) ////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+export type NoteWithPath = Note & {
+  full_path: string;
+  display_path: string;
+};
+
+/**
+ * Search notes for command palette using mv_note_paths materialized view.
+ * Supports filtering by parent_id (descendants only) and searching by
+ * full path or title only.
+ *
+ * @param searchQuery - The search query (fuzzy matched client-side, this just filters)
+ * @param options.parentId - Optional parent folder ID to scope search to descendants
+ * @param options.searchFullPath - If true, returns full_path for searching; if false, title only
+ * @param options.limit - Maximum number of results (default 25)
+ */
+export async function searchNotesForPalette(
+  searchQuery: string,
+  options: {
+    parentId?: string | null;
+    searchFullPath?: boolean;
+    limit?: number;
+  } = {},
+): Promise<NoteWithPath[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  const { parentId = null, searchFullPath = true, limit = 25 } = options;
+
+  // When we have a parentId, we need to find all descendants and compute relative paths
+  // We do this by getting the parent's path prefix and using LIKE to find descendants
+  let sql: string;
+  const params: (string | number)[] = [];
+
+  if (parentId) {
+    // Get descendants of the parent folder by matching path prefix
+    // The parentId is a FOLDER id, so we look up its path from mv_folder_paths
+    // Then find all notes whose paths start with that folder's path
+    sql = `
+      WITH parent_path AS (
+        SELECT full_path || '/' as prefix
+        FROM mv_folder_paths
+        WHERE folder_id = ? AND user_id = ?
+      )
+      SELECT
+        n.id, n.title, n.abstract, n.content, n.syntax,
+        n.parent_id, n.user_id, n.created_at, n.updated_at,
+        p.full_path,
+        SUBSTR(p.full_path, LENGTH(pp.prefix) + 1) as display_path
+      FROM notes n
+      INNER JOIN mv_note_paths p ON n.id = p.note_id
+      CROSS JOIN parent_path pp
+      WHERE p.user_id = ?
+        AND p.full_path LIKE pp.prefix || '%'
+      ORDER BY n.updated_at DESC
+      LIMIT ?
+    `;
+    params.push(parentId, user.id, user.id, limit);
+  } else {
+    // Root level - get all notes, full_path equals display_path
+    sql = `
+      SELECT
+        n.id, n.title, n.abstract, n.content, n.syntax,
+        n.parent_id, n.user_id, n.created_at, n.updated_at,
+        p.full_path,
+        p.full_path as display_path
+      FROM notes n
+      INNER JOIN mv_note_paths p ON n.id = p.note_id
+      WHERE p.user_id = ?
+      ORDER BY n.updated_at DESC
+      LIMIT ?
+    `;
+    params.push(user.id, limit);
+  }
+
+  const stmt = db.prepare(sql);
+  return stmt.all(...params) as NoteWithPath[];
+}
+
+/**
+ * Query function for palette search (for client-side use)
+ */
+export const searchNotesForPaletteQuery = query(
+  async (
+    searchQuery: string,
+    options?: {
+      parentId?: string | null;
+      searchFullPath?: boolean;
+      limit?: number;
+    },
+  ) => {
+    "use server";
+    return await searchNotesForPalette(searchQuery, options);
+  },
+  "search-notes-palette",
+);
+
+////////////////////////////////////////////////////////////////////////////////
 // Search //////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
