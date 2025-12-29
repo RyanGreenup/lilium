@@ -8,6 +8,7 @@ import { query, redirect } from "@solidjs/router";
 import { requireUser } from "../../auth";
 import { db } from "../index";
 import type { Note } from "../types";
+import { getDisplayTitles, transformNotesForDisplay } from "./display";
 
 ////////////////////////////////////////////////////////////////////////////////
 // Recent //////////////////////////////////////////////////////////////////////
@@ -146,6 +147,7 @@ export async function getForwardLinks(noteId: string): Promise<Note[]> {
 export type NoteWithPath = Note & {
   full_path: string;
   display_path: string;
+  display_title: string;
 };
 
 /**
@@ -220,7 +222,18 @@ export async function searchNotesForPalette(
   }
 
   const stmt = db.prepare(sql);
-  return stmt.all(...params) as NoteWithPath[];
+  const notes = stmt.all(...params) as (Note & {
+    full_path: string;
+    display_path: string;
+  })[];
+
+  // Resolve display titles for index notes (show parent folder name instead of "index")
+  const displayTitles = await getDisplayTitles(notes);
+
+  return notes.map((note): NoteWithPath => ({
+    ...note,
+    display_title: displayTitles.get(note.id) ?? note.title,
+  }));
 }
 
 /**
@@ -294,7 +307,6 @@ export const searchNotesQuery = query(
 export const searchNotesWithDisplayTitlesQuery = query(
   async (searchQuery: string, parentId?: string) => {
     "use server";
-    const { transformNotesForDisplay } = await import("./display");
     const notes = await searchNotes(searchQuery, parentId);
     return await transformNotesForDisplay(notes);
   },

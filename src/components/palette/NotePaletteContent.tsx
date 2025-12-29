@@ -158,7 +158,7 @@ const NoteItem = (props: NoteItemProps) => {
         <Folder size={18} class={itemStyles().itemIcon()} />
       </Show>
       <div class={styles.itemContent()}>
-        <div class={styles.itemTitle()}>{props.note.title}</div>
+        <div class={styles.itemTitle()}>{props.note.display_title}</div>
         <div class={styles.itemPath()}>{props.note.display_path}</div>
       </div>
     </div>
