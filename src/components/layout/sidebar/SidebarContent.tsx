@@ -301,14 +301,14 @@ export const SidebarTabs = () => {
     }
   };
 
-  // Global keybindings for tab switching (Alt + 1-7)
-  useKeybinding({ key: "1", alt: true }, () => handleTabChange(0, true));
-  useKeybinding({ key: "2", alt: true }, () => handleTabChange(1, true));
-  useKeybinding({ key: "3", alt: true }, () => handleTabChange(2, true));
-  useKeybinding({ key: "4", alt: true }, () => handleTabChange(3, true));
-  useKeybinding({ key: "5", alt: true }, () => handleTabChange(4, true));
-  useKeybinding({ key: "6", alt: true }, () => handleTabChange(5, true));
-  useKeybinding({ key: "7", alt: true }, () => handleTabChange(6, true));
+  // Global keybindings for tab switching (Ctrl + 1-7)
+  useKeybinding({ key: "1", ctrl: true }, () => handleTabChange(0, true));
+  useKeybinding({ key: "2", ctrl: true }, () => handleTabChange(1, true));
+  useKeybinding({ key: "3", ctrl: true }, () => handleTabChange(2, true));
+  useKeybinding({ key: "4", ctrl: true }, () => handleTabChange(3, true));
+  useKeybinding({ key: "5", ctrl: true }, () => handleTabChange(4, true));
+  useKeybinding({ key: "6", ctrl: true }, () => handleTabChange(5, true));
+  useKeybinding({ key: "7", ctrl: true }, () => handleTabChange(6, true));
 
   // Global keybindings for tab navigation (Alt + h/l)
   useKeybinding({ key: "h", alt: true }, () => {
