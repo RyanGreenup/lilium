@@ -121,7 +121,7 @@ export function KeybindingHelp(props: KeybindingHelpProps) {
                   {(kb) => (
                     <div
                       class={`flex items-center gap-2 py-0.5 px-1 -mx-1 rounded ${
-                        kb.key === "f" && props.followModeActive()
+                        kb.key === LIST_KEYBINDINGS.followMode.key && props.followModeActive()
                           ? "bg-primary/20 ring-1 ring-primary/50"
                           : ""
                       }`}
@@ -130,7 +130,7 @@ export function KeybindingHelp(props: KeybindingHelpProps) {
                         <KeyCombo keys={getDisplayKeys(kb)} />
                       </span>
                       <span class="text-base-content/70">{kb.description}</span>
-                      <Show when={kb.key === "f" && props.followModeActive()}>
+                      <Show when={kb.key === LIST_KEYBINDINGS.followMode.key && props.followModeActive()}>
                         <span class="ml-auto text-primary text-[10px] font-medium">ON</span>
                       </Show>
                     </div>

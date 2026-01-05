@@ -220,7 +220,7 @@ const SearchContentInner = (props: SidebarSearchContentProps) => {
             <VStack
               label={
                 <>
-                  Follow Mode <Kbd size="xs">Ctrl+F</Kbd>
+                  Follow Mode <Kbd size="xs">Alt+F</Kbd>
                 </>
               }
             >

@@ -26,35 +26,118 @@ export function getDisplayKeys(kb: KeybindDef): readonly string[] {
 
 /** Navigation keybindings (display-only, not used for matching) */
 export const NAV_KEYBINDINGS = {
-  up: { key: "", keys: ["↑", "k"], label: "Move up", description: "Focus previous item" },
-  down: { key: "", keys: ["↓", "j"], label: "Move down", description: "Focus next item" },
-  enter: { key: "", keys: ["Enter"], label: "Select", description: "Select focused item" },
-  into: { key: "", keys: ["l"], label: "Enter folder", description: "Navigate into folder" },
-  back: { key: "", keys: ["h", "⌫"], label: "Go back", description: "Navigate to parent" },
-  escape: { key: "", keys: ["Esc"], label: "Exit list", description: "Switch to path zone" },
-  index: { key: "", keys: ["0"], label: "Index note", description: "Select folder's index note" },
+  up: {
+    key: "",
+    keys: ["↑", "k"],
+    label: "Move up",
+    description: "Focus previous item",
+  },
+  down: {
+    key: "",
+    keys: ["↓", "j"],
+    label: "Move down",
+    description: "Focus next item",
+  },
+  enter: {
+    key: "",
+    keys: ["Enter"],
+    label: "Select",
+    description: "Select focused item",
+  },
+  into: {
+    key: "",
+    keys: ["l"],
+    label: "Enter folder",
+    description: "Navigate into folder",
+  },
+  back: {
+    key: "",
+    keys: ["h", "⌫"],
+    label: "Go back",
+    description: "Navigate to parent",
+  },
+  escape: {
+    key: "",
+    keys: ["Esc"],
+    label: "Exit list",
+    description: "Switch to path zone",
+  },
+  index: {
+    key: "",
+    keys: ["0"],
+    label: "Index note",
+    description: "Select folder's index note",
+  },
 } as const;
 
 /** List-level mode toggles */
 export const LIST_KEYBINDINGS = {
-  followMode: { key: "f", label: "Follow mode", description: "Arrow keys select items as you navigate" },
+  followMode: {
+    key: "Alt+f",
+    label: "Follow mode",
+    description: "Arrow keys select items as you navigate",
+  },
 } as const;
 
 /** Item-level actions (context menu + keyboard) */
 export const ITEM_KEYBINDINGS = {
-  rename: { key: "F2", label: "Rename", description: "Rename the focused item" },
-  createSibling: { key: "N", label: "New sibling note", description: "Create note at same level" },
-  createSiblingFolder: { key: "Ctrl+Shift+N", label: "New sibling folder", description: "Create folder at same level" },
-  createChild: { key: "Shift+N", label: "New child note", description: "Create note inside folder" },
-  createChildFolder: { key: "Alt+Shift+N", label: "New child folder", description: "Create folder inside folder" },
-  copyLink: { key: "y", label: "Copy link", description: "Copy link to clipboard" },
-  duplicate: { key: "Ctrl+D", label: "Duplicate", description: "Create a copy" },
+  rename: {
+    key: "F2",
+    label: "Rename",
+    description: "Rename the focused item",
+  },
+  createSibling: {
+    key: "N",
+    label: "New sibling note",
+    description: "Create note at same level",
+  },
+  createSiblingFolder: {
+    key: "Ctrl+Shift+N",
+    label: "New sibling folder",
+    description: "Create folder at same level",
+  },
+  createChild: {
+    key: "Shift+N",
+    label: "New child note",
+    description: "Create note inside folder",
+  },
+  createChildFolder: {
+    key: "Alt+Shift+N",
+    label: "New child folder",
+    description: "Create folder inside folder",
+  },
+  copyLink: {
+    key: "y",
+    label: "Copy link",
+    description: "Copy link to clipboard",
+  },
+  duplicate: {
+    key: "Ctrl+D",
+    label: "Duplicate",
+    description: "Create a copy",
+  },
   cut: { key: "Ctrl+X", label: "Cut", description: "Cut for moving" },
-  paste: { key: "Ctrl+V", label: "Paste sibling", description: "Paste at same level" },
-  pasteChild: { key: "Ctrl+Shift+V", label: "Paste child", description: "Paste inside folder" },
+  paste: {
+    key: "Ctrl+V",
+    label: "Paste sibling",
+    description: "Paste at same level",
+  },
+  pasteChild: {
+    key: "Ctrl+Shift+V",
+    label: "Paste child",
+    description: "Paste inside folder",
+  },
   delete: { key: "Delete", label: "Delete", description: "Delete item" },
-  makeFolder: { key: "Ctrl+Shift+F", label: "Make folder", description: "Convert note to folder" },
-  makeNote: { key: "Ctrl+Shift+G", label: "Make note", description: "Convert folder to note" },
+  makeFolder: {
+    key: "Ctrl+Shift+F",
+    label: "Make folder",
+    description: "Convert note to folder",
+  },
+  makeNote: {
+    key: "Ctrl+Shift+G",
+    label: "Make note",
+    description: "Convert folder to note",
+  },
 } as const;
 
 export type ItemAction = keyof typeof ITEM_KEYBINDINGS;

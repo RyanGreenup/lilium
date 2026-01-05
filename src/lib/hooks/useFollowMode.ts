@@ -48,7 +48,7 @@ export function useFollowMode(props: UseFollowModeProps) {
 
   // Keybinding for toggle
   useKeybinding(
-    { key: "f", ctrl: true },
+    { key: "f", alt: true },
     () => {
       console.log("Toggling follow mode...");
       setFollowMode(!followMode());

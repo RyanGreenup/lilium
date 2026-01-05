@@ -18,7 +18,7 @@ export function FollowModeToggle(props: FollowModeToggleProps) {
       <div class="flex items-center justify-between">
         <label class="label cursor-pointer p-0">
           <span class="label-text text-sm font-medium">
-            Follow Mode <Kbd size="xs">Ctrl+F</Kbd>
+            Follow Mode <Kbd size="xs">Alt+F</Kbd>
           </span>
         </label>
         <Toggle

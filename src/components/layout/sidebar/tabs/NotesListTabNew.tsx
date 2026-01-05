@@ -543,7 +543,6 @@ export function ListViewer(props: ListViewerProps) {
     h: navigateBack,
     Backspace: navigateBack,
     Escape: () => setList("focusZone", "path"),
-    [LIST_KEYBINDINGS.followMode.key]: () => setFollowMode((prev) => !prev),
     Enter: () => {
       if (list.focusedIndex === null) return;
       const item = items()?.[list.focusedIndex];
@@ -675,6 +674,13 @@ export function ListViewer(props: ListViewerProps) {
     if (e.ctrlKey && e.key === "ArrowDown") {
       e.preventDefault();
       setList("focusZone", "list");
+      return;
+    }
+
+    // Follow mode toggle (Alt+F) - check before zone handlers
+    if (matchesKeybind(e, LIST_KEYBINDINGS.followMode.key)) {
+      e.preventDefault();
+      setFollowMode((prev) => !prev);
       return;
     }
 
