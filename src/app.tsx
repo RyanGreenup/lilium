@@ -3,6 +3,7 @@ import { FileRoutes } from "@solidjs/start/router";
 import { Suspense } from "solid-js";
 import "./app.css";
 import { GlobalMathRenderer } from "./components/GlobalMathRenderer";
+import { GlobalMermaidRenderer } from "./components/GlobalMermaidRenderer";
 
 export default function App() {
   return (
@@ -10,6 +11,7 @@ export default function App() {
       root={(props) => (
         <>
           <GlobalMathRenderer />
+          <GlobalMermaidRenderer />
           <Suspense>{props.children}</Suspense>
         </>
       )}
