@@ -178,6 +178,18 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
     handleFileUpload(file);
   };
 
+  const handleDrop = (e: DragEvent) => {
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+
+    e.preventDefault();
+    handleFileUpload(file);
+  };
+
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+  };
+
   const triggerFileUpload = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -475,6 +487,8 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
                 value={currentNote()?.content || ""}
                 onInput={(e) => updateNote("content", e.currentTarget.value)}
                 onPaste={handlePaste}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
                 class="flex-1 p-6 textarea textarea-ghost resize-none border-none focus:outline-none text-sm font-mono leading-relaxed"
                 placeholder="Start writing your note..."
                 style={{ "field-sizing": "content" } as any}
