@@ -83,6 +83,27 @@ export const getNoteByIdWithoutContentQuery = query(async (noteId: string) => {
 }, "note-by-id-without-content");
 
 /**
+ * Get just the title of a note by ID (lightweight query for navigation history)
+ */
+export async function getNoteTitle(id: string): Promise<string | null> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  const stmt = db.prepare(`
+    SELECT title FROM notes WHERE id = ? AND user_id = ?
+  `);
+  const row = stmt.get(id, user.id) as { title: string } | undefined;
+  return row?.title || null;
+}
+
+export const getNoteTitleQuery = query(async (noteId: string) => {
+  "use server";
+  return await getNoteTitle(noteId);
+}, "note-title");
+
+/**
  * Get the root index note (title='index', parent_id IS NULL)
  */
 export async function getIndexNote(): Promise<NoteWithoutContent | null> {

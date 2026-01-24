@@ -9,6 +9,7 @@ import ToggleLeft from "lucide-solid/icons/toggle-left";
 import { Accessor, JSXElement, Show } from "solid-js";
 import { SidebarTabs } from "~/components/layout/sidebar/SidebarContent";
 import { UserDropdown } from "~/components/UserDrowDown";
+import RecentlyVisited from "~/components/RecentlyVisited";
 import { getUser } from "~/lib/auth";
 import { getIndexNoteQuery } from "~/lib/db/notes/read";
 import { getLatestJournalPageQuery } from "~/lib/db/notes/journal";
@@ -100,8 +101,8 @@ const NavbarContent = (props: {
       </Show>
     </div>
 
-    {/*This would be used if the right drawer was included*/}
     <div class="navbar-end">
+      <RecentlyVisited />
       <UserDropdown />
       <ToggleButton
         id={CheckboxId.RIGHT_DRAWER}
