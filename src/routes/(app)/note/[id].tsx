@@ -22,6 +22,28 @@ import NoteBreadcrumbs from "~/components/NoteBreadcrumbs";
 import { getNotePathQuery } from "~/lib/db/notes/path";
 import { LinkPalette, useLinkPalette } from "~/components/palette";
 
+const uploadMarkup = (mimeType: string, url: string, name: string): string => {
+  if (mimeType.startsWith("image/")) {
+    return [
+      `<div class="markdown-thumb-right">`,
+      `  <img src="${url}" alt="${name}">`,
+      `  <div class="thumb-caption">`,
+      `    <p>${name}</p>`,
+      `  </div>`,
+      `</div>`,
+    ].join("\n");
+  }
+  if (mimeType.startsWith("video/")) {
+    return [
+      `<video controls style="width: 10rem">`,
+      `  <source src="${url}" type="${mimeType}">`,
+      `  Your browser does not support the video tag.`,
+      `</video>`,
+    ].join("\n");
+  }
+  return `[${name}](${url})`;
+};
+
 interface NoteEditorProps {
   noteId?: string | null;
 }
@@ -116,12 +138,7 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
       const result = await response.json();
 
       if (result.success) {
-        // Insert the appropriate markdown at cursor position
-        const markdownText = file.type.startsWith("image/")
-          ? `![${result.originalName}](${result.url})`
-          : `[${result.originalName}](${result.url})`;
-
-        insertTextAtCursor(markdownText);
+        insertTextAtCursor(uploadMarkup(file.type, result.url, result.originalName));
       } else {
         console.error("Upload failed:", result.error);
         alert(`Upload failed: ${result.error}`);
@@ -151,6 +168,14 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
       textarea.focus();
       textarea.setSelectionRange(start + text.length, start + text.length);
     }, 0);
+  };
+
+  const handlePaste = (e: ClipboardEvent) => {
+    const file = e.clipboardData?.files?.[0];
+    if (!file) return;
+
+    e.preventDefault();
+    handleFileUpload(file);
   };
 
   const triggerFileUpload = () => {
@@ -449,6 +474,7 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
                 ref={textareaRef}
                 value={currentNote()?.content || ""}
                 onInput={(e) => updateNote("content", e.currentTarget.value)}
+                onPaste={handlePaste}
                 class="flex-1 p-6 textarea textarea-ghost resize-none border-none focus:outline-none text-sm font-mono leading-relaxed"
                 placeholder="Start writing your note..."
                 style={{ "field-sizing": "content" } as any}
