@@ -20,12 +20,12 @@ import {
   type ColumnEntry,
   EASE_OUT,
   SLIDE_DURATION,
-} from "~/components/sandbox2/constants";
-import Breadcrumb from "~/components/sandbox2/Breadcrumb";
-import Column from "~/components/sandbox2/Column";
-import KeyboardHints from "~/components/sandbox2/KeyboardHints";
-import PreviewPanel from "~/components/sandbox2/PreviewPanel";
-import PreviewSkeleton from "~/components/sandbox2/PreviewSkeleton";
+} from "~/components/finder/constants";
+import Breadcrumb from "~/components/finder/Breadcrumb";
+import Column from "~/components/finder/Column";
+import KeyboardHints from "~/components/finder/KeyboardHints";
+import PreviewPanel from "~/components/finder/PreviewPanel";
+import PreviewSkeleton from "~/components/finder/PreviewSkeleton";
 import {
   SandboxJumpPalette,
   type SandboxJumpSelection,
