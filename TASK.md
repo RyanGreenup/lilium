@@ -16,6 +16,7 @@
 6. File operations:
    - copy/cut/paste (`yy`, `dd`, `pp`)
    - rename (`cw`), create file/folder, delete with confirmation
+   - Delete
    - bulk rename mode
 7. Selection mode:
    - toggle selection (`space`), visual range selection, invert selection
