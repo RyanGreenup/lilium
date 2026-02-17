@@ -14,8 +14,8 @@ const Panel = (props: { open: boolean; children: JSXElement }) => (
     }}
   >
     <div
-      class="bg-base-200 rounded-lg shadow-2xl mx-auto overflow-hidden"
-      style={{ "max-width": "95dvw", "max-height": "85dvh", height: "85dvh" }}
+      class="bg-base-200 rounded-lg shadow-2xl overflow-hidden w-full"
+      style={{ height: "85dvh" }}
     >
       {props.children}
     </div>
