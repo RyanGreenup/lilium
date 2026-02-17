@@ -8,8 +8,9 @@
 - Column component: `src/components/finder/Column.tsx`
 - ColumnItem component: `src/components/finder/ColumnItem.tsx`
 - KeyboardHints: `src/components/finder/KeyboardHints.tsx`
+- FinderTabBar: `src/components/finder/FinderTabBar.tsx`
 - List styles (tv variants): `src/components/layout/sidebar/tabs/listStyle.ts`
-- Constants + ColumnEntry type: `src/components/finder/constants.ts`
+- Constants + ColumnEntry/TabState types: `src/components/finder/constants.ts`
 
 ## Architecture Patterns
 
@@ -28,6 +29,8 @@
 - Jump palette open state (`isJumpPaletteOpen`) gates the handler — return early if open.
 - Input/textarea targets also early-return to avoid swallowing typing.
 - `Escape` was added as a key to cancel a pending cut; it does NOT currently close the jump palette (that has its own handler).
+- Tab shortcuts (`t`, `[`, `]`, `Ctrl+c`) are checked with early-return `if` guards BEFORE the switch
+  statement, since switch doesn't handle modifier key combinations cleanly.
 
 ## Cut/Paste Move Feature (implemented)
 
@@ -77,3 +80,18 @@
 - Fuzzy search: Fuse.js, keys `["display_path", "title"]`, threshold 0.4. Client-side filter to 50 from 500 server-fetched.
 - `Show` accessor pattern `{(loadedNotes) => <Content notes={loadedNotes()} />}` required to avoid re-triggering Suspense on reactive reads inside Show.
 - Navigation: `useNavigate` from `@solidjs/router`, calls `navigate(\`/note/\${note.id}\`)` then `setOpen(false)`.
+
+## Tabs Feature (implemented)
+
+- `TabState` interface in `constants.ts`: `{ label, columns, depth, focusMemory, previewItems }`.
+- `tabs` is a `createStore<TabState[]>` — each tab owns its full navigation state.
+- `activeTabIndex` is a plain `createSignal<number>(0)`.
+- `columns()` and `depth()` are `createMemo`s derived from `tabs[activeTabIndex()]`.
+- All column/depth/focusMemory setters are thin wrappers that write into `setTabs(activeTabIndex(), ...)`.
+- Tab label is re-derived after every depth/column mutation via `deriveTabLabel(columns, depth)`.
+- `FinderTabBar` renders only when `tabs.length >= 2` (uses `<Show when={props.labels.length >= 2}>`).
+- Track animations snap (no slide) on tab switch: `prevTabIndexForTrack` sentinel in the track effect.
+- `createNewTab()` is async — fetches root items then pushes to the store and switches to the new tab.
+- `closeTab(tabIdx)` guards against closing the last tab (tabs.length <= 1 → no-op).
+- Tab shortcut keys are checked with early-return `if` blocks before the main `switch` in `handleKeyDown`.
+- setColumns helper supports three call patterns: `(array)`, `(produce(fn))`, `(colIdx, key, value)`.

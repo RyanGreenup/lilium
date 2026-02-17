@@ -5,6 +5,8 @@ interface KeyboardHintsProps {
   cutCount?: number;
   markCount?: number;
   isMarkMode?: boolean;
+  /** Total number of open tabs. Used to conditionally show tab shortcuts. */
+  tabCount?: number;
 }
 
 export default function KeyboardHints(props: KeyboardHintsProps) {
@@ -35,6 +37,12 @@ export default function KeyboardHints(props: KeyboardHintsProps) {
       </span>
       <span>
         <kbd class="kbd kbd-xs">z</kbd> jump palette
+      </span>
+      <span>
+        <kbd class="kbd kbd-xs">a</kbd> new note
+      </span>
+      <span>
+        <kbd class="kbd kbd-xs">A</kbd> new folder
       </span>
       <span>
         <kbd class="kbd kbd-xs">u</kbd>/<kbd class="kbd kbd-xs">d</kbd>{" "}
@@ -76,6 +84,18 @@ export default function KeyboardHints(props: KeyboardHintsProps) {
           <kbd class="kbd kbd-xs">p</kbd> paste {(props.cutCount ?? 0) > 1 ? `${props.cutCount} items` : ""} here
           {" "}&middot;{" "}
           <kbd class="kbd kbd-xs">Esc</kbd> cancel
+        </span>
+      </Show>
+      {/* Tab shortcuts — always shown so users can discover them */}
+      <span class="ml-auto opacity-70">
+        <kbd class="kbd kbd-xs">t</kbd> new tab
+      </span>
+      <Show when={(props.tabCount ?? 1) >= 2}>
+        <span class="opacity-70">
+          <kbd class="kbd kbd-xs">[</kbd>/<kbd class="kbd kbd-xs">]</kbd> switch tab
+        </span>
+        <span class="opacity-70">
+          <kbd class="kbd kbd-xs">Ctrl</kbd>+<kbd class="kbd kbd-xs">c</kbd> close tab
         </span>
       </Show>
     </div>

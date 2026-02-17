@@ -15,3 +15,17 @@ export interface ColumnEntry {
   focusedIndex: number;
   title: string;
 }
+
+/** All navigation state owned by a single finder tab. */
+export interface TabState {
+  /** Human-readable label shown in the tab bar (derived from deepest column). */
+  label: string;
+  /** The column stack for this tab. */
+  columns: ColumnEntry[];
+  /** Index of the active (rightmost visible) column. -1 = not yet initialized. */
+  depth: number;
+  /** Per-folder focus memory, keyed by folderId or "root". */
+  focusMemory: Record<string, number>;
+  /** Children of the focused folder for the preview panel. null = leaf note. */
+  previewItems: ListItem[] | null;
+}

@@ -12,6 +12,9 @@ interface ColumnProps {
   nextColumnFolderId: string | null | undefined;
   cutItemIds: Set<string>;
   markedItemIds: Set<string>;
+  editingItemId?: string | null;
+  onRenameConfirm?: (itemId: string, itemType: "note" | "folder", newTitle: string) => void;
+  onRenameCancel?: () => void;
   onItemClick: (itemIdx: number, item: ListItem) => void;
   onItemMouseMove: (itemIdx: number) => void;
 }
@@ -69,6 +72,11 @@ export default function Column(props: ColumnProps) {
                 selected={isCurrentFolder()}
                 isCut={props.cutItemIds.has(item.id)}
                 isMarked={props.markedItemIds.has(item.id)}
+                isEditing={props.editingItemId === item.id}
+                onRenameConfirm={(newTitle) =>
+                  props.onRenameConfirm?.(item.id, item.type, newTitle)
+                }
+                onRenameCancel={() => props.onRenameCancel?.()}
                 onClick={() => props.onItemClick(itemIdx(), item)}
                 onMouseMove={() => props.onItemMouseMove(itemIdx())}
               />

@@ -13,6 +13,9 @@ interface ColumnItemProps {
   selected: boolean;
   isCut: boolean;
   isMarked: boolean;
+  isEditing?: boolean;
+  onRenameConfirm?: (newTitle: string) => void;
+  onRenameCancel?: () => void;
   onClick: () => void;
   onMouseMove: () => void;
 }
@@ -29,21 +32,51 @@ export default function ColumnItem(props: ColumnItemProps) {
       onMouseMove={props.onMouseMove}
     >
       <ItemIcon item={props.item} />
-      <span
-        class={listItemNameVariants({
-          focused: props.focused,
-          selected: props.selected,
-        })}
+      <Show
+        when={props.isEditing}
+        fallback={
+          <>
+            <span
+              class={listItemNameVariants({
+                focused: props.focused,
+                selected: props.selected,
+              })}
+            >
+              {props.item.title}
+            </span>
+            <Show when={props.item.type === "note" && "syntax" in props.item}>
+              <span class="ml-auto text-xs text-base-content/50">
+                {(props.item as NoteListItem).syntax}
+              </span>
+            </Show>
+            <Show when={props.item.type === "folder"}>
+              <ChevronRight class="ml-auto w-4 h-4 text-base-content/30" />
+            </Show>
+          </>
+        }
       >
-        {props.item.title}
-      </span>
-      <Show when={props.item.type === "note" && "syntax" in props.item}>
-        <span class="ml-auto text-xs text-base-content/50">
-          {(props.item as NoteListItem).syntax}
-        </span>
-      </Show>
-      <Show when={props.item.type === "folder"}>
-        <ChevronRight class="ml-auto w-4 h-4 text-base-content/30" />
+        <input
+          ref={(el) => {
+            requestAnimationFrame(() => {
+              el.focus();
+              el.select();
+            });
+          }}
+          class="input input-xs input-bordered flex-1 min-w-0"
+          value={props.item.title}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              props.onRenameConfirm?.(e.currentTarget.value.trim() || props.item.title);
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              props.onRenameCancel?.();
+            }
+          }}
+          onBlur={(e) => {
+            props.onRenameConfirm?.(e.currentTarget.value.trim() || props.item.title);
+          }}
+        />
       </Show>
     </div>
   );
