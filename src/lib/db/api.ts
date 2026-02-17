@@ -84,6 +84,111 @@ export const getChildrenQuery = query(async (parentId: string | null) => {
   return await getChildren(parentId);
 }, "list-children");
 
+export interface TreePaletteItem {
+  id: string;
+  title: string;
+  parent_id: string | null;
+  type: "folder" | "note";
+  full_path: string;
+  display_path: string;
+}
+
+/**
+ * Get all folders and notes at the provided level or below.
+ *
+ * @param parentId - Current folder ID in sandbox2. null means root.
+ */
+export async function getTreeItemsForPalette(
+  parentId: string | null,
+): Promise<TreePaletteItem[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  let sql: string;
+  const params: (string | number)[] = [];
+
+  if (parentId) {
+    sql = `
+      WITH parent_path AS (
+        SELECT full_path || '/' as prefix
+        FROM mv_folder_paths
+        WHERE folder_id = ? AND user_id = ?
+      )
+      SELECT
+        f.id,
+        f.title,
+        f.parent_id,
+        'folder' as type,
+        fp.full_path,
+        SUBSTR(fp.full_path, LENGTH(pp.prefix) + 1) as display_path
+      FROM folders f
+      INNER JOIN mv_folder_paths fp ON fp.folder_id = f.id
+      CROSS JOIN parent_path pp
+      WHERE f.user_id = ?
+        AND fp.full_path LIKE pp.prefix || '%'
+
+      UNION ALL
+
+      SELECT
+        n.id,
+        n.title,
+        n.parent_id,
+        'note' as type,
+        np.full_path,
+        SUBSTR(np.full_path, LENGTH(pp.prefix) + 1) as display_path
+      FROM notes n
+      INNER JOIN mv_note_paths np ON np.note_id = n.id
+      CROSS JOIN parent_path pp
+      WHERE n.user_id = ?
+        AND np.full_path LIKE pp.prefix || '%'
+        AND LOWER(TRIM(n.title)) != 'index'
+
+      ORDER BY display_path ASC
+    `;
+    params.push(parentId, user.id, user.id, user.id);
+  } else {
+    sql = `
+      SELECT
+        f.id,
+        f.title,
+        f.parent_id,
+        'folder' as type,
+        fp.full_path,
+        fp.full_path as display_path
+      FROM folders f
+      INNER JOIN mv_folder_paths fp ON fp.folder_id = f.id
+      WHERE f.user_id = ?
+
+      UNION ALL
+
+      SELECT
+        n.id,
+        n.title,
+        n.parent_id,
+        'note' as type,
+        np.full_path,
+        np.full_path as display_path
+      FROM notes n
+      INNER JOIN mv_note_paths np ON np.note_id = n.id
+      WHERE n.user_id = ?
+        AND LOWER(TRIM(n.title)) != 'index'
+
+      ORDER BY display_path ASC
+    `;
+    params.push(user.id, user.id);
+  }
+
+  const stmt = db.prepare(sql);
+  return stmt.all(...params) as TreePaletteItem[];
+}
+
+export const getTreeItemsForPaletteQuery = query(async (parentId: string | null) => {
+  "use server";
+  return await getTreeItemsForPalette(parentId);
+}, "tree-items-palette");
+
 /**
  * Get folder path for breadcrumb navigation
  *

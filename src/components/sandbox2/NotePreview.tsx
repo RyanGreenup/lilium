@@ -1,8 +1,13 @@
 import FileText from "lucide-solid/icons/file-text";
+import { createAsync } from "@solidjs/router";
 import { Show } from "solid-js";
 import type { NoteListItem } from "~/lib/db/types";
+import { getNoteByIdQuery } from "~/lib/db/notes/read";
+import NoteContentPreview from "~/components/note/NoteContentPreview";
 
 export default function NotePreview(props: { item: NoteListItem }) {
+  const note = createAsync(() => getNoteByIdQuery(props.item.id));
+
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString(undefined, {
       year: "numeric",
@@ -17,7 +22,7 @@ export default function NotePreview(props: { item: NoteListItem }) {
     });
 
   return (
-    <div class="p-4 space-y-4">
+    <div class="p-4 h-full flex flex-col gap-4 min-h-0">
       <div>
         <div class="flex items-center gap-2 mb-2">
           <FileText class="w-5 h-5 text-base-content/60" />
@@ -42,6 +47,40 @@ export default function NotePreview(props: { item: NoteListItem }) {
         <div>
           Updated: {formatDate(props.item.updated_at)}{" "}
           {formatTime(props.item.updated_at)}
+        </div>
+      </div>
+
+      <div class="flex-1 min-h-0 flex flex-col">
+        <h4 class="text-xs font-semibold text-base-content/50 uppercase mb-1">
+          Content
+        </h4>
+        <div class="rounded border border-base-300 bg-base-200/30 flex-1 min-h-0 overflow-hidden">
+          <Show
+            when={note() !== undefined}
+            fallback={
+              <div class="h-full flex items-center justify-center p-4">
+                <span class="loading loading-spinner loading-sm" />
+              </div>
+            }
+          >
+            <Show
+              when={note()}
+              fallback={
+                <div class="h-full flex items-center justify-center text-center text-base-content/60 p-4 text-sm">
+                  Note not found
+                </div>
+              }
+            >
+              {(resolvedNote) => (
+                <NoteContentPreview
+                  class="p-4 h-full overflow-auto"
+                  content={resolvedNote().content}
+                  syntax={resolvedNote().syntax}
+                  emptyLabel="No content"
+                />
+              )}
+            </Show>
+          </Show>
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 import { createAsync, useParams } from "@solidjs/router";
 import { createSignal, createEffect, Show, Suspense, Accessor } from "solid-js";
 import { useCurrentNote, useNoteById } from "~/lib/hooks/useCurrentNote";
-import { MarkdownRenderer } from "~/components/MarkdownRenderer";
+import NoteContentPreview from "~/components/note/NoteContentPreview";
 import { updateNoteQuery } from "~/lib/db/notes/update";
 import { SYNTAX_OPTIONS, type Note, type NoteSyntax } from "~/lib/db/types";
 import Save from "lucide-solid/icons/save";
@@ -456,23 +456,12 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
             <Show
               when={isEditing()}
               fallback={
-                <div class="flex-1 p-6 overflow-auto">
-                  <div class="prose prose-sm max-w-none">
-                    <Show
-                      when={currentNote()?.content}
-                      fallback={
-                        <div class="text-center text-base-content/60 p-8">
-                          No content
-                        </div>
-                      }
-                    >
-                      <MarkdownRenderer
-                        content={() => currentNote()?.content || ""}
-                        syntax={() => currentNote()?.syntax || defaultSyntax}
-                      />
-                    </Show>
-                  </div>
-                </div>
+                <NoteContentPreview
+                  class="flex-1 p-6 overflow-auto"
+                  content={currentNote()?.content}
+                  syntax={currentNote()?.syntax || defaultSyntax}
+                  defaultSyntax={defaultSyntax}
+                />
               }
             >
               <textarea

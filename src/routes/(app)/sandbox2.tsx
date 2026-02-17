@@ -24,6 +24,10 @@ import Breadcrumb from "~/components/sandbox2/Breadcrumb";
 import Column from "~/components/sandbox2/Column";
 import KeyboardHints from "~/components/sandbox2/KeyboardHints";
 import PreviewPanel from "~/components/sandbox2/PreviewPanel";
+import {
+  SandboxJumpPalette,
+  type SandboxJumpSelection,
+} from "~/components/palette/SandboxJumpPalette";
 
 export const route = {
   preload() {
@@ -34,6 +38,8 @@ export const route = {
 
 export default function Sandbox2() {
   const navigate = useNavigate();
+  const MAX_VISIBLE_COLUMNS = 7;
+  const MIN_COLUMN_WIDTH_PX = 280;
   const SANDBOX2_STATE_KEY = "sandbox2:list-state:v1";
 
   // Route guard — deferStream blocks SSR until auth resolves
@@ -51,10 +57,16 @@ export default function Sandbox2() {
   const [disableAnimations, setDisableAnimations] = createSignal(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = createSignal(false);
   const [gPressed, setGPressed] = createSignal(false);
+  const [visibleColumns, setVisibleColumns] = createSignal(1);
   const [colWidthPx, setColWidthPx] = createSignal(0);
   const [layoutReady, setLayoutReady] = createSignal(false);
   const [previewItems, setPreviewItems] = createSignal<ListItem[] | null>(null);
   const [focusMemory, setFocusMemory] = createSignal<Record<string, number>>({});
+  const [isJumpPaletteOpen, setIsJumpPaletteOpen] = createSignal(false);
+  const [jumpPaletteParentId, setJumpPaletteParentId] = createSignal<string | null>(
+    null,
+  );
+  const [jumpPaletteBaseDepth, setJumpPaletteBaseDepth] = createSignal(0);
 
   // Refs
   let viewportRef: HTMLDivElement | undefined;
@@ -190,13 +202,20 @@ export default function Sandbox2() {
   const trackOffset = createMemo(() => {
     const d = depth();
     if (d < 0) return 0;
-    return (1 - d) * colWidthPx();
+    return (visibleColumns() - 1 - d) * colWidthPx();
   });
 
   const measureColWidth = () => {
     if (!viewportRef) return false;
-    const nextWidth = Math.floor(viewportRef.offsetWidth / 2);
+    const viewportWidth = viewportRef.offsetWidth;
+    if (viewportWidth <= 0) return false;
+    const nextVisibleColumns = Math.max(
+      1,
+      Math.min(MAX_VISIBLE_COLUMNS, Math.floor(viewportWidth / MIN_COLUMN_WIDTH_PX)),
+    );
+    const nextWidth = Math.floor(viewportWidth / nextVisibleColumns);
     if (nextWidth <= 0) return false;
+    setVisibleColumns(nextVisibleColumns);
     setColWidthPx(nextWidth);
     return true;
   };
@@ -417,6 +436,66 @@ export default function Sandbox2() {
     navigate(`/note/${noteId}`);
   };
 
+  const openJumpPalette = () => {
+    const col = currentColumn();
+    const d = depth();
+    if (!col || d < 0) return;
+    setJumpPaletteParentId(col.folderId);
+    setJumpPaletteBaseDepth(d);
+    setIsJumpPaletteOpen(true);
+  };
+
+  const closeJumpPalette = () => {
+    setIsJumpPaletteOpen(false);
+  };
+
+  const jumpToSelection = async (selection: SandboxJumpSelection) => {
+    const baseDepth = jumpPaletteBaseDepth();
+    if (baseDepth < 0 || baseDepth >= columns.length) return;
+
+    const scopedColumns = columns.slice(0, baseDepth + 1).map((col) => ({ ...col }));
+    let parentCol = scopedColumns[scopedColumns.length - 1];
+    if (!parentCol) return;
+
+    const memoryUpdates: Record<string, number> = {};
+
+    for (const folderId of selection.ancestorFolderIds) {
+      const folderIdx = parentCol.items.findIndex(
+        (item) => item.type === "folder" && item.id === folderId,
+      );
+      if (folderIdx < 0) return;
+
+      parentCol.focusedIndex = folderIdx;
+      memoryUpdates[memoryKey(parentCol.folderId)] = folderIdx;
+
+      const folderItem = parentCol.items[folderIdx];
+      if (!folderItem || folderItem.type !== "folder") return;
+
+      const children = await getChildrenQuery(folderItem.id);
+      const nextCol: ColumnEntry = {
+        folderId: folderItem.id,
+        items: children,
+        focusedIndex: 0,
+        title: folderItem.title,
+      };
+      scopedColumns.push(nextCol);
+      parentCol = nextCol;
+    }
+
+    const targetIdx = parentCol.items.findIndex((item) => item.id === selection.item.id);
+    if (targetIdx < 0) return;
+
+    parentCol.focusedIndex = targetIdx;
+    memoryUpdates[memoryKey(parentCol.folderId)] = targetIdx;
+
+    batch(() => {
+      setColumns(scopedColumns);
+      setDepth(scopedColumns.length - 1);
+      setFocusMemory((prev) => ({ ...prev, ...memoryUpdates }));
+      closeJumpPalette();
+    });
+  };
+
   const runWithoutAnimations = async (fn: () => void | Promise<void>) => {
     setDisableAnimations(true);
     try {
@@ -466,6 +545,7 @@ export default function Sandbox2() {
       e.target instanceof HTMLTextAreaElement
     )
       return;
+    if (isJumpPaletteOpen()) return;
     if (depth() < 0) return;
 
     const col = currentColumn();
@@ -518,6 +598,12 @@ export default function Sandbox2() {
         e.preventDefault();
         setGPressed(false);
         if (len > 0) setFocusedIndex(len - 1);
+        break;
+
+      case "z":
+        e.preventDefault();
+        setGPressed(false);
+        openJumpPalette();
         break;
 
       default:
@@ -591,6 +677,13 @@ export default function Sandbox2() {
       </div>
 
       <KeyboardHints />
+
+      <SandboxJumpPalette
+        open={isJumpPaletteOpen}
+        onClose={closeJumpPalette}
+        parentId={jumpPaletteParentId}
+        onSelect={(selection) => void jumpToSelection(selection)}
+      />
     </div>
   );
 }

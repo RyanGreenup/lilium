@@ -19,6 +19,9 @@ export default function KeyboardHints() {
       <span>
         <kbd class="kbd kbd-xs">G</kbd> bottom
       </span>
+      <span>
+        <kbd class="kbd kbd-xs">z</kbd> jump palette
+      </span>
     </div>
   );
 }

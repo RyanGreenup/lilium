@@ -32,3 +32,9 @@ export {
   type OpenNotePaletteProps,
   type UseOpenNotePaletteOptions,
 } from "./OpenNotePalette";
+
+export {
+  SandboxJumpPalette,
+  type SandboxJumpPaletteProps,
+  type SandboxJumpSelection,
+} from "./SandboxJumpPalette";
