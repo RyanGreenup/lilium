@@ -20,6 +20,7 @@ import {
   Suspense,
 } from "solid-js";
 import { createStore } from "solid-js/store";
+import { animate } from "motion/mini";
 import {
   getChildrenQuery,
   getFolderPathQuery,
@@ -127,6 +128,7 @@ interface ListViewerProps {
 const memoryKey = (parentId: string | null): string => parentId ?? "root";
 const INDEX_KEY = "0";
 const INDENT_PX = 12;
+const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 export function ListViewer(props: ListViewerProps) {
   const [local] = splitProps(props, [
@@ -305,6 +307,41 @@ export function ListViewer(props: ListViewerProps) {
     }
   });
 
+  // ─── Animations ──────────────────────────────────────────────────────
+  // Direction signal: 1 = forward, -1 = back, 0 = none (no animation)
+  const [navDir, setNavDir] = createSignal(0);
+
+  /** Staggered slide+fade for list items after async data arrives */
+  const animateListItems = (dir: number, itemList: ListItem[]) => {
+    for (let i = 0; i < itemList.length; i++) {
+      const el = itemRefs[i];
+      if (!el) continue;
+      animate(
+        el,
+        {
+          opacity: [0, 1],
+          transform: [`translateX(${dir * 16}px)`, "translateX(0px)"],
+        },
+        { duration: 0.2, ease: EASE_OUT, delay: i * 0.025 },
+      );
+    }
+  };
+
+  // Trigger animation when items arrive after a navigation
+  // on() untrack the callback, so reading navDir() won't subscribe
+  createEffect(
+    on(
+      () => items(),
+      (currentItems) => {
+        const dir = navDir();
+        if (dir === 0 || !currentItems?.length) return;
+        setNavDir(0);
+        animateListItems(dir, currentItems);
+      },
+      { defer: true },
+    ),
+  );
+
   // Focus memory
   const saveFocus = () => {
     if (list.focusedIndex !== null) {
@@ -328,11 +365,13 @@ export function ListViewer(props: ListViewerProps) {
 
   const navigateToFolder = (folderId: string | null) => {
     if (folderId === null) {
+      setNavDir(-1);
       saveFocus();
       applyNavigation([], restoreFocus(null));
     } else {
       const idx = list.history.indexOf(folderId);
       if (idx !== -1) {
+        setNavDir(-1);
         saveFocus();
         const newHistory = list.history.slice(0, idx + 1);
         applyNavigation(newHistory, restoreFocus(folderId));
@@ -342,12 +381,14 @@ export function ListViewer(props: ListViewerProps) {
 
   const navigateInto = (item: ListItem) => {
     if (item.type !== "folder") return;
+    setNavDir(1);
     saveFocus();
     applyNavigation([...list.history, item.id], restoreFocus(item.id));
   };
 
   const navigateBack = () => {
     if (list.history.length === 0) return;
+    setNavDir(-1);
     saveFocus();
     const newHistory = list.history.slice(0, -1);
     applyNavigation(newHistory, restoreFocus(newHistory.at(-1) ?? null));
@@ -356,6 +397,7 @@ export function ListViewer(props: ListViewerProps) {
   const jumpToSelection = () => {
     const ctx = list.selectionHistory;
     if (!ctx) return;
+    setNavDir(1);
     saveFocus();
     update({
       history: [...ctx],
