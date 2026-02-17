@@ -8,6 +8,7 @@ interface ColumnProps {
   focusedIndex: number;
   width: number;
   isActive: boolean;
+  isSliding: boolean;
   nextColumnFolderId: string | null | undefined;
   onItemClick: (itemIdx: number, item: ListItem) => void;
   onItemHover: (itemIdx: number) => void;
@@ -18,7 +19,7 @@ export default function Column(props: ColumnProps) {
 
   // Scroll focused item into view when this is the active column
   createEffect(() => {
-    if (!props.isActive || !columnRef) return;
+    if (!props.isActive || props.isSliding || !columnRef) return;
     const items = columnRef.querySelectorAll("[data-list-item]");
     const el = items[props.focusedIndex] as HTMLElement | undefined;
     el?.scrollIntoView({ block: "nearest" });

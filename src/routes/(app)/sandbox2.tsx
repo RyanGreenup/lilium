@@ -1,6 +1,5 @@
 import { RouteDefinition, createAsync, useNavigate } from "@solidjs/router";
 import { animate } from "motion/mini";
-import { stagger } from "motion";
 import {
   For,
   Show,
@@ -19,8 +18,7 @@ import type { ListItem } from "~/lib/db/types";
 import {
   type ColumnEntry,
   EASE_OUT,
-  STAGGER_DELAY,
-  STAGGER_DURATION,
+  SLIDE_DURATION,
 } from "~/components/sandbox2/constants";
 import Breadcrumb from "~/components/sandbox2/Breadcrumb";
 import Column from "~/components/sandbox2/Column";
@@ -44,13 +42,18 @@ export default function Sandbox2() {
   const [columns, setColumns] = createStore<ColumnEntry[]>([]);
   const [depth, setDepth] = createSignal(-1); // -1 = not yet initialized
   const [isNavigating, setIsNavigating] = createSignal(false);
+  const [isSliding, setIsSliding] = createSignal(false);
   const [gPressed, setGPressed] = createSignal(false);
-  const [colWidthPx, setColWidthPx] = createSignal(300);
+  const [colWidthPx, setColWidthPx] = createSignal(0);
+  const [layoutReady, setLayoutReady] = createSignal(false);
   const [previewItems, setPreviewItems] = createSignal<ListItem[] | null>(null);
 
   // Refs
   let viewportRef: HTMLDivElement | undefined;
   let trackRef: HTMLDivElement | undefined;
+  let trackSlide: ReturnType<typeof animate> | null = null;
+  let trackSlideId = 0;
+  let renderedTrackX = 0;
 
   // ─── Derived state ───────────────────────────────────────
   const currentColumn = createMemo(() => {
@@ -81,11 +84,22 @@ export default function Sandbox2() {
     return (1 - d) * colWidthPx();
   });
 
+  const measureColWidth = () => {
+    if (!viewportRef) return false;
+    const nextWidth = Math.floor(viewportRef.offsetWidth / 2);
+    if (nextWidth <= 0) return false;
+    setColWidthPx(nextWidth);
+    return true;
+  };
+
+  const applyTrackTransform = (x: number) => {
+    renderedTrackX = x;
+    if (trackRef) trackRef.style.transform = `translateX(${x}px)`;
+  };
+
   // ─── Initialization ──────────────────────────────────────
   onMount(async () => {
-    if (viewportRef) {
-      setColWidthPx(viewportRef.offsetWidth / 2);
-    }
+    const hasInitialMeasurement = measureColWidth();
 
     const rootItems = await getChildrenQuery(null);
     batch(() => {
@@ -93,93 +107,97 @@ export default function Sandbox2() {
         { folderId: null, items: rootItems, focusedIndex: 0, title: "Home" },
       ]);
       setDepth(0);
-    });
-
-    requestAnimationFrame(() => {
-      if (trackRef) {
-        const items = trackRef.querySelectorAll("[data-list-item]");
-        if (items.length > 0) {
-          animate(
-            Array.from(items),
-            { opacity: [0, 1], transform: ["translateY(4px)", "translateY(0)"] },
-            {
-              delay: stagger(STAGGER_DELAY),
-              duration: STAGGER_DURATION,
-              ease: EASE_OUT,
-            },
-          );
-        }
+      if (hasInitialMeasurement || measureColWidth()) {
+        setLayoutReady(true);
       }
     });
 
     if (viewportRef) {
       const ro = new ResizeObserver(() => {
-        if (!viewportRef) return;
-        setColWidthPx(viewportRef.offsetWidth / 2);
+        if (measureColWidth() && !layoutReady()) setLayoutReady(true);
       });
       ro.observe(viewportRef);
       onCleanup(() => ro.disconnect());
     }
 
     document.addEventListener("keydown", handleKeyDown);
-    onCleanup(() => document.removeEventListener("keydown", handleKeyDown));
+    onCleanup(() => {
+      document.removeEventListener("keydown", handleKeyDown);
+      trackSlide?.stop();
+      trackSlide = null;
+      setIsSliding(false);
+    });
   });
 
   // ─── Effects ─────────────────────────────────────────────
 
   // Fetch preview items when focused item is a folder
-  createEffect(() => {
-    const item = focusedItem();
-    if (item?.type === "folder") {
-      let cancelled = false;
-      onCleanup(() => {
-        cancelled = true;
-      });
-      getChildrenQuery(item.id).then((children) => {
-        if (!cancelled) setPreviewItems(children);
-      });
-    } else {
-      setPreviewItems(null);
-    }
-  });
-
-  // Stagger-animate new column items when going deeper
-  let prevDepth = -1;
   createEffect(
     on(
-      () => depth(),
-      (d) => {
-        if (d < 0 || !trackRef) {
-          prevDepth = d;
-          return;
-        }
-        const wentDeeper = d > prevDepth && prevDepth >= 0;
-        prevDepth = d;
-
-        if (wentDeeper) {
-          const colEl = trackRef.children[d] as HTMLElement | undefined;
-          if (colEl) {
-            const items = colEl.querySelectorAll("[data-list-item]");
-            if (items.length > 0) {
-              animate(
-                Array.from(items),
-                {
-                  opacity: [0, 1],
-                  transform: ["translateX(8px)", "translateX(0)"],
-                },
-                {
-                  delay: stagger(STAGGER_DELAY),
-                  duration: STAGGER_DURATION,
-                  ease: EASE_OUT,
-                },
-              );
-            }
-          }
+      () => [focusedItem()?.id, isSliding()] as const,
+      ([focusedItemId, sliding]) => {
+        if (sliding) return;
+        const item = focusedItem();
+        if (item?.type === "folder" && item.id === focusedItemId) {
+          let cancelled = false;
+          onCleanup(() => {
+            cancelled = true;
+          });
+          getChildrenQuery(item.id).then((children) => {
+            if (!cancelled) setPreviewItems(children);
+          });
+        } else {
+          setPreviewItems(null);
         }
       },
       { defer: true },
     ),
   );
+
+  // Slide the whole track with Motion One on depth changes; snap on width changes.
+  let prevDepthForTrack = -1;
+  let prevWidthForTrack = 0;
+  createEffect(() => {
+    if (!layoutReady() || !trackRef) return;
+
+    const d = depth();
+    const width = colWidthPx();
+    if (d < 0 || width <= 0) return;
+
+    const targetX = trackOffset();
+    const depthChanged = d !== prevDepthForTrack;
+    const widthChanged = width !== prevWidthForTrack;
+
+    if (prevDepthForTrack < 0 || !depthChanged || widthChanged) {
+      trackSlide?.stop();
+      trackSlide = null;
+      applyTrackTransform(targetX);
+      setIsSliding(false);
+    } else if (renderedTrackX !== targetX) {
+      trackSlide?.stop();
+      const animationId = ++trackSlideId;
+      setIsSliding(true);
+      trackSlide = animate(
+        trackRef,
+        {
+          transform: [
+            `translateX(${renderedTrackX}px)`,
+            `translateX(${targetX}px)`,
+          ],
+        },
+        { duration: SLIDE_DURATION, ease: EASE_OUT },
+      );
+      trackSlide.finished.finally(() => {
+        if (animationId !== trackSlideId) return;
+        applyTrackTransform(targetX);
+        setIsSliding(false);
+        if (trackSlide) trackSlide = null;
+      });
+    }
+
+    prevDepthForTrack = d;
+    prevWidthForTrack = width;
+  });
 
   // ─── Navigation ──────────────────────────────────────────
   const setFocusedIndex = (idx: number) => {
@@ -194,20 +212,19 @@ export default function Sandbox2() {
     try {
       const children = await getChildrenQuery(item.id);
 
-      setPreviewItems(null);
-      setColumns(
-        produce((cols) => {
-          cols.splice(depth() + 1, Infinity, {
-            folderId: item.id,
-            items: children,
-            focusedIndex: 0,
-            title: item.title,
-          });
-        }),
-      );
-
-      await new Promise((r) => requestAnimationFrame(r));
-      setDepth((d) => d + 1);
+      batch(() => {
+        setColumns(
+          produce((cols) => {
+            cols.splice(depth() + 1, Infinity, {
+              folderId: item.id,
+              items: children,
+              focusedIndex: 0,
+              title: item.title,
+            });
+          }),
+        );
+        setDepth((d) => d + 1);
+      });
     } catch (e) {
       console.error("Failed to navigate deeper:", e);
     } finally {
@@ -334,9 +351,12 @@ export default function Sandbox2() {
 
       <div class="flex-1 min-h-0 grid grid-cols-[2fr_1fr] gap-px bg-base-300">
         {/* Stack viewport — columns slide within this container */}
-        <div ref={viewportRef} class="overflow-hidden relative bg-base-100">
+        <div
+          ref={viewportRef}
+          class="overflow-hidden relative bg-base-100 z-10 isolate"
+        >
           <Show
-            when={depth() >= 0}
+            when={depth() >= 0 && layoutReady()}
             fallback={
               <div class="flex items-center justify-center h-full">
                 <span class="loading loading-spinner" />
@@ -347,7 +367,6 @@ export default function Sandbox2() {
               ref={trackRef}
               class="flex h-full"
               style={{
-                transform: `translateX(${trackOffset()}px)`,
                 "will-change": "transform",
               }}
             >
@@ -359,6 +378,7 @@ export default function Sandbox2() {
                     focusedIndex={col.focusedIndex}
                     width={colWidthPx()}
                     isActive={colIdx() === depth()}
+                    isSliding={isSliding()}
                     nextColumnFolderId={
                       colIdx() < depth()
                         ? columns[colIdx() + 1]?.folderId
@@ -380,6 +400,7 @@ export default function Sandbox2() {
         <PreviewPanel
           focusedItem={focusedItem()}
           previewItems={previewItems()}
+          isSliding={isSliding()}
         />
       </div>
 

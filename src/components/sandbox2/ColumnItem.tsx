@@ -19,10 +19,10 @@ export default function ColumnItem(props: ColumnItemProps) {
   return (
     <div
       data-list-item
-      class={listItemVariants({
+      class={`${listItemVariants({
         focused: props.focused,
         selected: props.selected,
-      })}
+      })} transition-none`}
       onClick={props.onClick}
       onMouseEnter={props.onMouseEnter}
     >

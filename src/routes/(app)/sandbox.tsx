@@ -46,9 +46,21 @@ const EASE_OUT: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
 type NavDirection = "deeper" | "shallower";
 type FolderPathItem = { id: string; title: string };
 
+/** Prevent overlapping animations from fighting each other. */
+function cancelAnimations(el: HTMLElement | undefined) {
+  if (!el) return;
+  for (const animation of el.getAnimations()) {
+    animation.cancel();
+  }
+}
+
 /** Animate a column container + stagger its children in from a direction */
 function animateColumnIn(el: HTMLElement | undefined, direction: NavDirection) {
   if (!el) return;
+  cancelAnimations(el);
+  for (const child of Array.from(el.children)) {
+    if (child instanceof HTMLElement) cancelAnimations(child);
+  }
   const dx = direction === "deeper" ? SLIDE_PX : -SLIDE_PX;
   animate(
     el,
@@ -74,7 +86,15 @@ function animateColumnIn(el: HTMLElement | undefined, direction: NavDirection) {
 /** Quick crossfade for preview content */
 function animateFade(el: HTMLElement | undefined) {
   if (!el) return;
+  cancelAnimations(el);
   animate(el, { opacity: [0, 1] }, { duration: FADE_DURATION, ease: EASE_OUT });
+}
+
+/** Subtle context refresh for columns that should not slide. */
+function animateSoftFade(el: HTMLElement | undefined) {
+  if (!el) return;
+  cancelAnimations(el);
+  animate(el, { opacity: [0.75, 1] }, { duration: FADE_DURATION, ease: EASE_OUT });
 }
 
 export default function Sandbox() {
@@ -171,7 +191,9 @@ export default function Sandbox() {
         const dir = navDirection();
         requestAnimationFrame(() => {
           animateColumnIn(middleColRef, dir);
-          animateColumnIn(leftColRef, dir);
+          if (dir === "shallower") {
+            animateSoftFade(leftColRef);
+          }
           if (breadcrumbRef) {
             animate(
               breadcrumbRef,

@@ -8,6 +8,7 @@ import NotePreview from "./NotePreview";
 interface PreviewPanelProps {
   focusedItem: ListItem | undefined;
   previewItems: ListItem[] | null;
+  isSliding: boolean;
 }
 
 export default function PreviewPanel(props: PreviewPanelProps) {
@@ -16,8 +17,9 @@ export default function PreviewPanel(props: PreviewPanelProps) {
   // Fade preview when focused item changes
   createEffect(
     on(
-      () => props.focusedItem?.id,
-      () => {
+      () => [props.focusedItem?.id, props.isSliding] as const,
+      ([, isSliding]) => {
+        if (isSliding) return;
         requestAnimationFrame(() => {
           if (innerRef) {
             animate(
@@ -33,11 +35,11 @@ export default function PreviewPanel(props: PreviewPanelProps) {
   );
 
   return (
-    <div class="bg-base-100 overflow-y-auto">
+    <div class="bg-base-100 overflow-hidden relative z-0 isolate flex flex-col h-full">
       <div class="px-3 py-1.5 text-xs font-semibold text-base-content/50 uppercase tracking-wider border-b border-base-300">
         Preview
       </div>
-      <div ref={innerRef}>
+      <div ref={innerRef} class="overflow-y-auto flex-1 min-h-0">
         <Show
           when={props.focusedItem}
           fallback={
