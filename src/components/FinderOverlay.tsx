@@ -1,5 +1,6 @@
 import { createSignal, JSXElement, onCleanup, onMount } from "solid-js";
 import { Portal } from "solid-js/web";
+import OverlayFinder from "./OverlayFinder";
 
 const Backdrop = (props: { onClick: () => void }) => (
   <div class="absolute inset-0 bg-black/50" onClick={props.onClick} />
@@ -13,8 +14,8 @@ const Panel = (props: { open: boolean; children: JSXElement }) => (
     }}
   >
     <div
-      class="bg-base-200 rounded-lg shadow-2xl mx-auto max-w-[95vw] overflow-hidden"
-      style={{ height: "85dvh" }}
+      class="bg-base-200 rounded-lg shadow-2xl mx-auto overflow-hidden"
+      style={{ "max-width": "95dvw", "max-height": "85dvh", height: "85dvh" }}
     >
       {props.children}
     </div>
@@ -46,9 +47,7 @@ export const FinderOverlay = () => {
       >
         <Backdrop onClick={() => setOpen(false)} />
         <Panel open={open()}>
-          <div class="p-4 h-full overflow-y-auto">
-            <p class="text-base-content">Finder content goes here</p>
-          </div>
+          <OverlayFinder open={open} onClose={() => setOpen(false)} />
         </Panel>
       </div>
     </Portal>

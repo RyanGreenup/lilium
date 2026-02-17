@@ -1,6 +1,17 @@
-import { RouteDefinition, createAsync, revalidate, useNavigate } from "@solidjs/router";
+/**
+ * Standalone finder for the overlay panel.
+ *
+ * Reuses existing sub-components (Column, Breadcrumb, etc.) but owns all of
+ * its own navigation state — it is NOT connected to the route-based finder.
+ *
+ * Keyboard handling uses the capture phase so that events are intercepted
+ * before the route-level finder (which listens in the bubble phase).
+ */
+
+import { useNavigate, revalidate } from "@solidjs/router";
 import { animate } from "motion/mini";
 import {
+  Accessor,
   For,
   Show,
   Suspense,
@@ -13,7 +24,6 @@ import {
   onMount,
 } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-import { getUser } from "~/lib/auth";
 import { getChildrenQuery, LIST_CHILDREN_KEY, moveItem, moveItems } from "~/lib/db/api";
 import { createNewNote } from "~/lib/db/notes/create";
 import { createNewFolder } from "~/lib/db/folders/create";
@@ -40,34 +50,32 @@ import {
   type SandboxJumpSelection,
 } from "~/components/palette/SandboxJumpPalette";
 
-export const route = {
-  preload() {
-    getUser();
-    getChildrenQuery(null);
-  },
-} satisfies RouteDefinition;
+export interface OverlayFinderProps {
+  open: Accessor<boolean>;
+  onClose: () => void;
+}
 
-// ─── Helper: derive a tab label from its column stack ────────────────────────
+// ─── Helper ─────────────────────────────────────────────────────────────────
 function deriveTabLabel(columns: ColumnEntry[], depth: number): string {
   if (depth < 0 || columns.length === 0) return "Home";
-  // Use the deepest column's title. The root column is "Home"; deeper columns
-  // carry the folder name that was navigated into.
   const col = columns[depth];
   return col?.title ?? "Home";
 }
 
-export default function Sandbox2() {
+const clampIndex = (idx: number, len: number): number => {
+  if (len <= 0) return 0;
+  return Math.min(Math.max(idx, 0), len - 1);
+};
+
+const memoryKey = (folderId: string | null): string => folderId ?? "root";
+
+// ─── Component ──────────────────────────────────────────────────────────────
+export default function OverlayFinder(props: OverlayFinderProps) {
   const navigate = useNavigate();
   const MAX_VISIBLE_COLUMNS = 7;
   const MIN_COLUMN_WIDTH_PX = 280;
-  const SANDBOX2_STATE_KEY = "sandbox2:list-state:v1";
 
-  // Route guard — deferStream blocks SSR until auth resolves
-  createAsync(() => getUser(), { deferStream: true });
-
-  // ─── Tabs state ──────────────────────────────────────────────────────────
-  // Each tab owns its own navigation state. We start with one empty-shell tab
-  // and populate it during onMount.
+  // ─── Tabs state ───────────────────────────────────────────────────────────
   const [tabs, setTabs] = createStore<TabState[]>([
     {
       label: "Home",
@@ -79,36 +87,20 @@ export default function Sandbox2() {
   ]);
   const [activeTabIndex, setActiveTabIndex] = createSignal(0);
 
-  // ─── Convenience accessors into the active tab ──────────────────────────
-  // These memos mirror what was previously individual top-level signals/stores,
-  // so the rest of the logic below can largely remain unchanged.
-
   const activeTab = createMemo(() => tabs[activeTabIndex()]);
-
-  // Derived: columns array for the active tab (reactive).
-  // We use a function wrapper so callers get a reactive read.
   const columns = createMemo(() => activeTab()?.columns ?? []);
   const depth = createMemo(() => activeTab()?.depth ?? -1);
 
-  // ─── Writers into active tab ─────────────────────────────────────────────
-  // All mutations go through these helpers so they always target the correct
-  // tab even if activeTabIndex changes between async operations.
-
-  /** Set depth for the currently active tab. */
+  // ─── Writers ──────────────────────────────────────────────────────────────
   const setDepth = (updater: number | ((prev: number) => number)) => {
     const tabIdx = activeTabIndex();
     const prev = tabs[tabIdx]?.depth ?? -1;
     const next = typeof updater === "function" ? updater(prev) : updater;
     setTabs(tabIdx, "depth", next);
-    // Update label whenever depth changes.
     const newLabel = deriveTabLabel(tabs[tabIdx]?.columns ?? [], next);
     setTabs(tabIdx, "label", newLabel);
   };
 
-  /**
-   * Write columns for the active tab using a producer or direct value.
-   * Supports the same `produce()` pattern used below.
-   */
   const setColumns = (
     ...args:
       | [ColumnEntry[]]
@@ -118,29 +110,23 @@ export default function Sandbox2() {
   ) => {
     const tabIdx = activeTabIndex();
     if (args.length === 3) {
-      // setColumns(colIdx, "items"|"focusedIndex", value)
       const [colIdx, key, value] = args;
       setTabs(tabIdx, "columns", colIdx, key as never, value as never);
     } else if (typeof args[0] === "function") {
-      // setColumns(produce(fn))
       const producer = args[0] as (cols: ColumnEntry[]) => void;
-      setTabs(
-        tabIdx,
-        "columns",
-        produce(producer),
-      );
+      setTabs(tabIdx, "columns", produce(producer));
     } else {
-      // setColumns(newArray)
       setTabs(tabIdx, "columns", args[0] as ColumnEntry[]);
     }
-    // Keep label in sync whenever columns change.
     const d = tabs[tabIdx]?.depth ?? -1;
     const newLabel = deriveTabLabel(tabs[tabIdx]?.columns ?? [], d);
     setTabs(tabIdx, "label", newLabel);
   };
 
   const setFocusMemory = (
-    updater: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>),
+    updater:
+      | Record<string, number>
+      | ((prev: Record<string, number>) => Record<string, number>),
   ) => {
     const tabIdx = activeTabIndex();
     const prev = tabs[tabIdx]?.focusMemory ?? {};
@@ -152,11 +138,9 @@ export default function Sandbox2() {
     setTabs(activeTabIndex(), "previewItems", items);
   };
 
-  // ─── Other (non-per-tab) state ───────────────────────────────────────────
+  // ─── Other state ──────────────────────────────────────────────────────────
   const [isNavigating, setIsNavigating] = createSignal(false);
-  // Global "transition lock" for side effects that can fight horizontal track motion.
   const [isSliding, setIsSliding] = createSignal(false);
-  // Click interactions can trigger multiple state updates in quick succession.
   const [disableAnimations, setDisableAnimations] = createSignal(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = createSignal(false);
   const [gPressed, setGPressed] = createSignal(false);
@@ -164,20 +148,21 @@ export default function Sandbox2() {
   const [colWidthPx, setColWidthPx] = createSignal(0);
   const [layoutReady, setLayoutReady] = createSignal(false);
   const [isJumpPaletteOpen, setIsJumpPaletteOpen] = createSignal(false);
-  const [jumpPaletteParentId, setJumpPaletteParentId] = createSignal<string | null>(null);
+  const [jumpPaletteParentId, setJumpPaletteParentId] = createSignal<
+    string | null
+  >(null);
   const [jumpPaletteBaseDepth, setJumpPaletteBaseDepth] = createSignal(0);
-  // Mark state: items selected for bulk operations.
-  const [markedItems, setMarkedItems] = createSignal<Map<string, ListItem>>(new Map());
-  const [isMarkMode, setIsMarkMode] = createSignal(false);
-  // Cut/paste state: tracks items staged for a move operation.
-  const [cutItems, setCutItems] = createSignal<ListItem[]>([]);
-  const [cutItemSourceFolderIds, setCutItemSourceFolderIds] = createSignal<Set<string | null>>(
-    new Set(),
+  const [markedItems, setMarkedItems] = createSignal<Map<string, ListItem>>(
+    new Map(),
   );
-  // Inline rename state: the ID of the item currently being renamed.
+  const [isMarkMode, setIsMarkMode] = createSignal(false);
+  const [cutItems, setCutItems] = createSignal<ListItem[]>([]);
+  const [cutItemSourceFolderIds, setCutItemSourceFolderIds] = createSignal<
+    Set<string | null>
+  >(new Set());
   const [editingItemId, setEditingItemId] = createSignal<string | null>(null);
-  // Delete confirmation state: the item pending deletion.
   const [itemPendingDelete, setItemPendingDelete] = createSignal<ListItem | null>(null);
+  const [initialized, setInitialized] = createSignal(false);
 
   // Refs
   let viewportRef: HTMLDivElement | undefined;
@@ -187,107 +172,7 @@ export default function Sandbox2() {
   let trackSlideId = 0;
   let renderedTrackX = 0;
 
-  const memoryKey = (folderId: string | null): string => folderId ?? "root";
-
-  interface PersistedSandbox2State {
-    path: string[];
-    focusedByFolder: Record<string, number>;
-  }
-
-  // ─── Persisted state (only for tab 0 / first tab) ────────────────────────
-  // We persist only the active navigation path so that reloading the page
-  // restores the user's position. Tabs themselves are not persisted (they are
-  // ephemeral session state).
-
-  const clampIndex = (idx: number, len: number): number => {
-    if (len <= 0) return 0;
-    return Math.min(Math.max(idx, 0), len - 1);
-  };
-
-  const readPersistedState = (): PersistedSandbox2State | null => {
-    if (typeof window === "undefined") return null;
-    try {
-      const raw = window.sessionStorage.getItem(SANDBOX2_STATE_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw) as Partial<PersistedSandbox2State>;
-      if (!parsed || typeof parsed !== "object") return null;
-      const path = Array.isArray(parsed.path)
-        ? parsed.path.filter((id): id is string => typeof id === "string")
-        : [];
-      const focusedByFolder =
-        parsed.focusedByFolder &&
-        typeof parsed.focusedByFolder === "object" &&
-        !Array.isArray(parsed.focusedByFolder)
-          ? Object.fromEntries(
-              Object.entries(parsed.focusedByFolder)
-                .filter(([, value]) => Number.isInteger(value))
-                .map(([key, value]) => [key, value as number]),
-            )
-          : {};
-      return { path, focusedByFolder };
-    } catch (error) {
-      console.warn("Failed to parse persisted sandbox2 state:", error);
-      return null;
-    }
-  };
-
-  const writePersistedState = (state: PersistedSandbox2State) => {
-    if (typeof window === "undefined") return;
-    try {
-      window.sessionStorage.setItem(SANDBOX2_STATE_KEY, JSON.stringify(state));
-    } catch (error) {
-      console.warn("Failed to persist sandbox2 state:", error);
-    }
-  };
-
-  const buildInitialColumns = async (
-    rootItems: ListItem[],
-    persisted: PersistedSandbox2State | null,
-  ): Promise<ColumnEntry[]> => {
-    const rootCol: ColumnEntry = {
-      folderId: null,
-      items: rootItems,
-      focusedIndex: 0,
-      title: "Home",
-    };
-
-    if (!persisted) return [rootCol];
-
-    const columnsFromState: ColumnEntry[] = [rootCol];
-    const rootSavedFocus = persisted.focusedByFolder[memoryKey(null)];
-    if (Number.isInteger(rootSavedFocus)) {
-      columnsFromState[0]!.focusedIndex = clampIndex(rootSavedFocus, rootItems.length);
-    }
-
-    for (const folderId of persisted.path) {
-      const parentCol = columnsFromState[columnsFromState.length - 1];
-      if (!parentCol) break;
-
-      const folderIdx = parentCol.items.findIndex(
-        (item) => item.type === "folder" && item.id === folderId,
-      );
-      if (folderIdx < 0) break;
-
-      parentCol.focusedIndex = folderIdx;
-
-      const folderItem = parentCol.items[folderIdx];
-      if (!folderItem || folderItem.type !== "folder") break;
-
-      const children = await getChildrenQuery(folderItem.id);
-      const savedFocus = persisted.focusedByFolder[memoryKey(folderItem.id)] ?? 0;
-      const appliedFocus = clampIndex(savedFocus, children.length);
-      columnsFromState.push({
-        folderId: folderItem.id,
-        items: children,
-        focusedIndex: appliedFocus,
-        title: folderItem.title,
-      });
-    }
-
-    return columnsFromState;
-  };
-
-  // ─── Derived state ───────────────────────────────────────
+  // ─── Derived state ────────────────────────────────────────────────────────
   const currentColumn = createMemo(() => {
     const d = depth();
     const cols = columns();
@@ -318,16 +203,22 @@ export default function Sandbox2() {
     return (visibleColumns() - 1 - d) * colWidthPx();
   });
 
-  // Derived tab labels for the tab bar.
   const tabLabels = createMemo(() => tabs.map((t) => t.label));
+  const cutItemIds = createMemo(() => new Set(cutItems().map((i) => i.id)));
+  const markedItemIdSet = createMemo(() => new Set(markedItems().keys()));
+  const markCount = createMemo(() => markedItems().size);
 
+  // ─── Layout measurement ───────────────────────────────────────────────────
   const measureColWidth = () => {
     if (!viewportRef) return false;
     const viewportWidth = viewportRef.offsetWidth;
     if (viewportWidth <= 0) return false;
     const nextVisibleColumns = Math.max(
       1,
-      Math.min(MAX_VISIBLE_COLUMNS, Math.floor(viewportWidth / MIN_COLUMN_WIDTH_PX)),
+      Math.min(
+        MAX_VISIBLE_COLUMNS,
+        Math.floor(viewportWidth / MIN_COLUMN_WIDTH_PX),
+      ),
     );
     const nextWidth = Math.floor(viewportWidth / nextVisibleColumns);
     if (nextWidth <= 0) return false;
@@ -341,23 +232,13 @@ export default function Sandbox2() {
     if (trackRef) trackRef.style.transform = `translateX(${x}px)`;
   };
 
-  // ─── Tab operations ──────────────────────────────────────────────────────
-
-  /**
-   * Create a new tab starting at the root (Home).
-   * The new tab is initialized with the root items already loaded.
-   */
+  // ─── Tab operations ───────────────────────────────────────────────────────
   const createNewTab = async () => {
     const rootItems = await getChildrenQuery(null);
     const newTab: TabState = {
       label: "Home",
       columns: [
-        {
-          folderId: null,
-          items: rootItems,
-          focusedIndex: 0,
-          title: "Home",
-        },
+        { folderId: null, items: rootItems, focusedIndex: 0, title: "Home" },
       ],
       depth: 0,
       focusMemory: {},
@@ -367,63 +248,65 @@ export default function Sandbox2() {
       setTabs(produce((ts) => { ts.push(newTab); }));
       setActiveTabIndex(tabs.length - 1);
     });
-    // Snap track to the new tab's initial position (no animation — new tab).
     applyTrackTransform(trackOffset());
   };
 
-  /**
-   * Close the tab at index. Won't close the last remaining tab.
-   */
   const closeTab = (tabIdx: number) => {
     if (tabs.length <= 1) return;
     const currentActive = activeTabIndex();
     batch(() => {
       setTabs(produce((ts) => { ts.splice(tabIdx, 1); }));
-      // If we closed a tab before or at the current active, shift index down.
       if (tabIdx < currentActive) {
         setActiveTabIndex(currentActive - 1);
       } else if (tabIdx === currentActive) {
-        // Clamp to the new last tab if needed.
         setActiveTabIndex(Math.min(currentActive, tabs.length - 1));
       }
     });
-    // Snap track after tab switch.
     applyTrackTransform(trackOffset());
   };
 
-  /** Switch to the tab at index. */
   const switchToTab = (tabIdx: number) => {
-    if (tabIdx < 0 || tabIdx >= tabs.length || tabIdx === activeTabIndex()) return;
+    if (tabIdx < 0 || tabIdx >= tabs.length || tabIdx === activeTabIndex())
+      return;
     batch(() => {
       setActiveTabIndex(tabIdx);
-      // Reset transient UI state on tab switch.
       setIsNavigating(false);
       setIsSliding(false);
     });
-    // Snap track to new tab's position without animation.
     applyTrackTransform(trackOffset());
   };
 
-  // ─── Initialization ──────────────────────────────────────
-  onMount(async () => {
-    const hasInitialMeasurement = measureColWidth();
+  // ─── Initialization ───────────────────────────────────────────────────────
+  // Lazy: only fetch root data the first time the overlay opens.
+  createEffect(
+    on(
+      () => props.open(),
+      async (isOpen) => {
+        if (!isOpen || initialized()) return;
+        setInitialized(true);
 
-    const rootItems = await getChildrenQuery(null);
-    const persisted = readPersistedState();
-    const initialFocusMemory = persisted?.focusedByFolder ?? {};
-    const initialColumns = await buildInitialColumns(rootItems, persisted);
+        const rootItems = await getChildrenQuery(null);
+        batch(() => {
+          setTabs(0, "columns", [
+            { folderId: null, items: rootItems, focusedIndex: 0, title: "Home" },
+          ]);
+          setTabs(0, "depth", 0);
+          setTabs(0, "label", "Home");
+        });
+      },
+    ),
+  );
 
-    batch(() => {
-      // Initialize tab 0 with the restored state.
-      setTabs(0, "columns", initialColumns);
-      setTabs(0, "depth", initialColumns.length - 1);
-      setTabs(0, "focusMemory", initialFocusMemory);
-      setTabs(0, "label", deriveTabLabel(initialColumns, initialColumns.length - 1));
-      if (hasInitialMeasurement || measureColWidth()) {
-        setLayoutReady(true);
-      }
+  // Measure layout once the panel is visible and data is loaded.
+  createEffect(() => {
+    if (!props.open() || depth() < 0) return;
+    // Give the DOM a frame to settle after becoming visible.
+    requestAnimationFrame(() => {
+      if (measureColWidth()) setLayoutReady(true);
     });
+  });
 
+  onMount(() => {
     if (viewportRef) {
       const ro = new ResizeObserver(() => {
         if (measureColWidth() && !layoutReady()) setLayoutReady(true);
@@ -433,44 +316,23 @@ export default function Sandbox2() {
     }
 
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const handleReducedMotionChange = (e: MediaQueryListEvent) => {
-      setPrefersReducedMotion(e.matches);
-    };
     setPrefersReducedMotion(mediaQuery.matches);
-    mediaQuery.addEventListener("change", handleReducedMotionChange);
+    const handleReduced = (e: MediaQueryListEvent) =>
+      setPrefersReducedMotion(e.matches);
+    mediaQuery.addEventListener("change", handleReduced);
 
-    document.addEventListener("keydown", handleKeyDown);
+    // ── Keyboard: capture phase to intercept before route finder ──
+    document.addEventListener("keydown", handleKeyDown, true);
     onCleanup(() => {
-      mediaQuery.removeEventListener("change", handleReducedMotionChange);
-      document.removeEventListener("keydown", handleKeyDown);
+      mediaQuery.removeEventListener("change", handleReduced);
+      document.removeEventListener("keydown", handleKeyDown, true);
       trackSlide?.stop();
       trackSlide = null;
-      setIsSliding(false);
     });
   });
 
-  // Persist state for the active tab (tab 0 path is what we restore on load).
-  createEffect(() => {
-    const d = depth();
-    const cols = columns();
-    const fm = activeTab()?.focusMemory ?? {};
-    if (d < 0 || cols.length === 0) return;
-
-    const limitedCols = cols.slice(0, d + 1);
-    const path = limitedCols
-      .slice(1)
-      .map((col) => col.folderId)
-      .filter((id): id is string => !!id);
-    const focusedByFolder: Record<string, number> = { ...fm };
-    for (const col of limitedCols) {
-      focusedByFolder[memoryKey(col.folderId)] = col.focusedIndex;
-    }
-    writePersistedState({ path, focusedByFolder });
-  });
-
-  // ─── Effects ─────────────────────────────────────────────
-
-  // Fetch preview items when focused item is a folder
+  // ─── Effects ──────────────────────────────────────────────────────────────
+  // Fetch preview items when focused item is a folder.
   createEffect(
     on(
       () => [focusedItem()?.id, isSliding()] as const,
@@ -479,9 +341,7 @@ export default function Sandbox2() {
         const item = focusedItem();
         if (item?.type === "folder" && item.id === focusedItemId) {
           let cancelled = false;
-          onCleanup(() => {
-            cancelled = true;
-          });
+          onCleanup(() => { cancelled = true; });
           getChildrenQuery(item.id).then((children) => {
             if (!cancelled) setPreviewItems(children);
           });
@@ -493,15 +353,13 @@ export default function Sandbox2() {
     ),
   );
 
-  // Slide the whole track with Motion One on depth changes; snap on width changes.
+  // Slide the track on depth changes.
   let prevDepthForTrack = -1;
   let prevWidthForTrack = 0;
-  // Also track tab switches so we always snap (never animate) on tab change.
   let prevTabIndexForTrack = -1;
 
   createEffect(() => {
     if (!layoutReady() || !trackRef) return;
-
     const d = depth();
     const width = colWidthPx();
     const tabIdx = activeTabIndex();
@@ -513,7 +371,13 @@ export default function Sandbox2() {
     const tabChanged = tabIdx !== prevTabIndexForTrack;
     const reducedMotion = prefersReducedMotion() || disableAnimations();
 
-    if (prevDepthForTrack < 0 || !depthChanged || widthChanged || reducedMotion || tabChanged) {
+    if (
+      prevDepthForTrack < 0 ||
+      !depthChanged ||
+      widthChanged ||
+      reducedMotion ||
+      tabChanged
+    ) {
       trackSlide?.stop();
       trackSlide = null;
       applyTrackTransform(targetX);
@@ -545,7 +409,7 @@ export default function Sandbox2() {
     prevTabIndexForTrack = tabIdx;
   });
 
-  // ─── Navigation ──────────────────────────────────────────
+  // ─── Navigation ───────────────────────────────────────────────────────────
   const setFocusedIndexForColumn = (colIdx: number, idx: number) => {
     const cols = columns();
     if (colIdx < 0 || colIdx >= cols.length) return;
@@ -570,9 +434,9 @@ export default function Sandbox2() {
     setIsNavigating(true);
     try {
       const children = await getChildrenQuery(item.id);
-      const rememberedFocus = (activeTab()?.focusMemory ?? {})[memoryKey(item.id)] ?? 0;
+      const rememberedFocus =
+        (activeTab()?.focusMemory ?? {})[memoryKey(item.id)] ?? 0;
       const restoredFocus = clampIndex(rememberedFocus, children.length);
-
       const targetDepth = fromDepth + 1;
       batch(() => {
         setColumns((cols) => {
@@ -609,8 +473,20 @@ export default function Sandbox2() {
 
   const openNote = (noteId: string) => {
     navigate(`/note/${noteId}`);
+    props.onClose();
   };
 
+  const activateItem = () => {
+    const item = focusedItem();
+    if (!item) return;
+    if (item.type === "folder") {
+      goDeeper(item);
+    } else {
+      openNote(item.id);
+    }
+  };
+
+  // ─── Jump palette ─────────────────────────────────────────────────────────
   const openJumpPalette = () => {
     const col = currentColumn();
     const d = depth();
@@ -629,7 +505,9 @@ export default function Sandbox2() {
     const cols = columns();
     if (baseDepth < 0 || baseDepth >= cols.length) return;
 
-    const scopedColumns = cols.slice(0, baseDepth + 1).map((col) => ({ ...col }));
+    const scopedColumns = cols
+      .slice(0, baseDepth + 1)
+      .map((col) => ({ ...col }));
     let parentCol = scopedColumns[scopedColumns.length - 1];
     if (!parentCol) return;
 
@@ -640,7 +518,6 @@ export default function Sandbox2() {
         (item) => item.type === "folder" && item.id === folderId,
       );
       if (folderIdx < 0) return;
-
       parentCol.focusedIndex = folderIdx;
       memoryUpdates[memoryKey(parentCol.folderId)] = folderIdx;
 
@@ -658,9 +535,10 @@ export default function Sandbox2() {
       parentCol = nextCol;
     }
 
-    const targetIdx = parentCol.items.findIndex((item) => item.id === selection.item.id);
+    const targetIdx = parentCol.items.findIndex(
+      (item) => item.id === selection.item.id,
+    );
     if (targetIdx < 0) return;
-
     parentCol.focusedIndex = targetIdx;
     memoryUpdates[memoryKey(parentCol.folderId)] = targetIdx;
 
@@ -672,32 +550,7 @@ export default function Sandbox2() {
     });
   };
 
-  const runWithoutAnimations = async (fn: () => void | Promise<void>) => {
-    setDisableAnimations(true);
-    try {
-      await fn();
-    } finally {
-      requestAnimationFrame(() => setDisableAnimations(false));
-    }
-  };
-
-  const activateItem = () => {
-    const item = focusedItem();
-    if (!item) return;
-    if (item.type === "folder") {
-      goDeeper(item);
-    } else {
-      openNote(item.id);
-    }
-  };
-
-  // ─── Derived mark/cut state ─────────────────────────────
-  const cutItemIds = createMemo(() => new Set(cutItems().map((i) => i.id)));
-  const markedItemIdSet = createMemo(() => new Set(markedItems().keys()));
-  const markCount = createMemo(() => markedItems().size);
-
-  // ─── Mark / Cut / Paste (move) ─────────────────────────
-
+  // ─── Mark / Cut / Paste ───────────────────────────────────────────────────
   const markFocusedItem = () => {
     const item = focusedItem();
     if (!item) return;
@@ -705,20 +558,6 @@ export default function Sandbox2() {
       if (prev.has(item.id)) return prev;
       const next = new Map(prev);
       next.set(item.id, item);
-      return next;
-    });
-  };
-
-  const toggleMarkOnFocusedItem = () => {
-    const item = focusedItem();
-    if (!item) return;
-    setMarkedItems((prev) => {
-      const next = new Map(prev);
-      if (next.has(item.id)) {
-        next.delete(item.id);
-      } else {
-        next.set(item.id, item);
-      }
       return next;
     });
   };
@@ -742,7 +581,6 @@ export default function Sandbox2() {
     }
   };
 
-  /** Reload a specific column in a specific tab. */
   const reloadColumnInTab = async (tabIdx: number, colIdx: number) => {
     const col = tabs[tabIdx]?.columns[colIdx];
     if (!col) return;
@@ -754,7 +592,6 @@ export default function Sandbox2() {
     }
   };
 
-  /** Reload every column across ALL tabs that displays the given folder. */
   const reloadFolderAcrossAllTabs = async (folderId: string | null) => {
     const promises: Promise<void>[] = [];
     for (let tabIdx = 0; tabIdx < tabs.length; tabIdx++) {
@@ -769,32 +606,24 @@ export default function Sandbox2() {
     await Promise.all(promises);
   };
 
-  /** Shorthand: reload a column index in the active tab. */
-  const reloadColumn = async (colIdx: number) => {
-    await reloadColumnInTab(activeTabIndex(), colIdx);
-  };
-
   const createItem = async (type: "note" | "folder") => {
     const col = currentColumn();
     const d = depth();
     if (!col || d < 0) return;
-
     const parentId = col.folderId ?? undefined;
     try {
       const created =
         type === "note"
           ? await createNewNote("Untitled Note", "", parentId)
           : await createNewFolder("New Folder", parentId);
-
       await revalidate(LIST_CHILDREN_KEY);
       await reloadFolderAcrossAllTabs(col.folderId);
-
       const refreshedCol = columns()[d];
       if (refreshedCol) {
-        const newIdx = refreshedCol.items.findIndex((item) => item.id === created.id);
-        if (newIdx >= 0) {
-          setFocusedIndex(newIdx);
-        }
+        const newIdx = refreshedCol.items.findIndex(
+          (item) => item.id === created.id,
+        );
+        if (newIdx >= 0) setFocusedIndex(newIdx);
       }
       setEditingItemId(created.id);
     } catch (e) {
@@ -808,11 +637,8 @@ export default function Sandbox2() {
     newTitle: string,
   ) => {
     try {
-      if (itemType === "note") {
-        await renameNote(itemId, newTitle);
-      } else {
-        await renameFolder(itemId, newTitle);
-      }
+      if (itemType === "note") await renameNote(itemId, newTitle);
+      else await renameFolder(itemId, newTitle);
       const folderId = currentColumn()?.folderId ?? null;
       await revalidate(LIST_CHILDREN_KEY);
       await reloadFolderAcrossAllTabs(folderId);
@@ -822,9 +648,7 @@ export default function Sandbox2() {
     setEditingItemId(null);
   };
 
-  const cancelRename = () => {
-    setEditingItemId(null);
-  };
+  const cancelRename = () => setEditingItemId(null);
 
   const startRename = () => {
     const item = focusedItem();
@@ -851,11 +675,9 @@ export default function Sandbox2() {
   const pasteItems = async () => {
     const items = cutItems();
     if (items.length === 0) return;
-
     const destCol = currentColumn();
     const d = depth();
     if (!destCol || d < 0) return;
-
     const targetParentId = destCol.folderId;
 
     const toMove = items.filter((item) => {
@@ -898,32 +720,43 @@ export default function Sandbox2() {
     }
 
     const sourceFolderIds = cutItemSourceFolderIds();
-
     setCutItems([]);
     setCutItemSourceFolderIds(new Set<string | null>());
-
     await revalidate(LIST_CHILDREN_KEY);
 
-    // Reload destination + all source folders across every tab.
     const affectedFolderIds = new Set<string | null>(sourceFolderIds);
     affectedFolderIds.add(targetParentId);
-    const refreshPromises: Promise<void>[] = [];
-    for (const folderId of affectedFolderIds) {
-      refreshPromises.push(reloadFolderAcrossAllTabs(folderId));
-    }
-    await Promise.all(refreshPromises);
+    await Promise.all(
+      Array.from(affectedFolderIds).map((id) =>
+        reloadFolderAcrossAllTabs(id),
+      ),
+    );
   };
 
   const scrollPreview = (direction: "up" | "down") => {
     if (!previewScrollRef) return false;
-    const maxScroll = previewScrollRef.scrollHeight - previewScrollRef.clientHeight;
+    const maxScroll =
+      previewScrollRef.scrollHeight - previewScrollRef.clientHeight;
     if (maxScroll <= 0) return false;
-    const amount = Math.max(80, Math.floor(previewScrollRef.clientHeight * 0.8));
+    const amount = Math.max(
+      80,
+      Math.floor(previewScrollRef.clientHeight * 0.8),
+    );
     const delta = direction === "down" ? amount : -amount;
     previewScrollRef.scrollBy({ top: delta, behavior: "auto" });
     return true;
   };
 
+  const runWithoutAnimations = async (fn: () => void | Promise<void>) => {
+    setDisableAnimations(true);
+    try {
+      await fn();
+    } finally {
+      requestAnimationFrame(() => setDisableAnimations(false));
+    }
+  };
+
+  // ─── Click handlers ───────────────────────────────────────────────────────
   const handleColumnItemClick = (
     colIdx: number,
     itemIdx: number,
@@ -947,31 +780,39 @@ export default function Sandbox2() {
     if (colIdx === depth()) setFocusedIndex(itemIdx);
   };
 
-  // ─── Keyboard ────────────────────────────────────────────
+  // ─── Keyboard (capture phase) ─────────────────────────────────────────────
   const handleKeyDown = (e: KeyboardEvent) => {
+    // Let Ctrl+Shift+F pass through to the FinderOverlay toggle handler.
+    if (e.ctrlKey && e.shiftKey && e.key === "F") return;
+
+    // Only intercept when this overlay is open.
+    if (!props.open()) return;
+
+    // Don't intercept when typing in inputs (e.g. inline rename).
     if (
       e.target instanceof HTMLInputElement ||
       e.target instanceof HTMLTextAreaElement
     )
       return;
+
     if (isJumpPaletteOpen()) return;
     if (itemPendingDelete()) return;
     if (depth() < 0) return;
+
+    // Stop the event from reaching the route-level finder.
+    e.stopPropagation();
 
     const col = currentColumn();
     const len = col?.items.length ?? 0;
     const idx = col?.focusedIndex ?? 0;
 
-    // ── Tab shortcuts ─────────────────────────────────────
-    // `t` — create new tab
+    // ── Tab shortcuts ────────────────────────────────────────────────────
     if (e.key === "t" && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       setGPressed(false);
       void createNewTab();
       return;
     }
-
-    // `[` — previous tab
     if (e.key === "[" && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       setGPressed(false);
@@ -979,8 +820,6 @@ export default function Sandbox2() {
       if (prevIdx >= 0) switchToTab(prevIdx);
       return;
     }
-
-    // `]` — next tab
     if (e.key === "]" && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       setGPressed(false);
@@ -988,8 +827,6 @@ export default function Sandbox2() {
       if (nextIdx < tabs.length) switchToTab(nextIdx);
       return;
     }
-
-    // `Ctrl+c` — close current tab
     if (e.key === "c" && e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       setGPressed(false);
@@ -997,15 +834,20 @@ export default function Sandbox2() {
       return;
     }
 
-    // `a` — create new note
-    if (e.key === "a" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+    // ── Create shortcuts ─────────────────────────────────────────────────
+    if (
+      e.key === "a" &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey &&
+      !e.shiftKey
+    ) {
       e.preventDefault();
       setGPressed(false);
       setIsMarkMode(false);
       void createItem("note");
       return;
     }
-    // `A` (shift+a) — create new folder
     if (e.key === "A" && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       setGPressed(false);
@@ -1159,6 +1001,8 @@ export default function Sandbox2() {
         } else if (cutItems().length > 0) {
           setCutItems([]);
           setCutItemSourceFolderIds(new Set<string | null>());
+        } else {
+          props.onClose();
         }
         break;
 
@@ -1168,7 +1012,7 @@ export default function Sandbox2() {
     }
   };
 
-  // ─── Render ──────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div class="flex flex-col h-full">
       <FinderTabBar
@@ -1181,7 +1025,7 @@ export default function Sandbox2() {
       <Breadcrumb crumbs={breadcrumb()} onNavigate={goToDepth} />
 
       <div class="flex-1 min-h-0 grid grid-cols-[2fr_1fr] gap-px bg-base-300">
-        {/* Stack viewport — columns slide within this container */}
+        {/* Column viewport */}
         <div
           ref={viewportRef}
           class="overflow-hidden relative bg-base-100 z-10 isolate"
@@ -1197,9 +1041,7 @@ export default function Sandbox2() {
             <div
               ref={trackRef}
               class="flex h-full"
-              style={{
-                "will-change": "transform",
-              }}
+              style={{ "will-change": "transform" }}
             >
               <For each={columns()}>
                 {(col, colIdx) => (
@@ -1217,7 +1059,9 @@ export default function Sandbox2() {
                     }
                     cutItemIds={cutItemIds()}
                     markedItemIds={markedItemIdSet()}
-                    editingItemId={colIdx() === depth() ? editingItemId() : null}
+                    editingItemId={
+                      colIdx() === depth() ? editingItemId() : null
+                    }
                     onRenameConfirm={(itemId, itemType, newTitle) =>
                       void confirmRename(itemId, itemType, newTitle)
                     }

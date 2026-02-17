@@ -45,6 +45,12 @@ export default function KeyboardHints(props: KeyboardHintsProps) {
         <kbd class="kbd kbd-xs">A</kbd> new folder
       </span>
       <span>
+        <kbd class="kbd kbd-xs">r</kbd> rename
+      </span>
+      <span>
+        <kbd class="kbd kbd-xs">D</kbd> delete
+      </span>
+      <span>
         <kbd class="kbd kbd-xs">u</kbd>/<kbd class="kbd kbd-xs">d</kbd>{" "}
         preview scroll
       </span>
