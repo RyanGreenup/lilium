@@ -42,6 +42,8 @@ export default function Sandbox2() {
   const [columns, setColumns] = createStore<ColumnEntry[]>([]);
   const [depth, setDepth] = createSignal(-1); // -1 = not yet initialized
   const [isNavigating, setIsNavigating] = createSignal(false);
+  // Global "transition lock" for side effects that can fight horizontal track motion.
+  // Footgun: preview fades/fetches and scrollIntoView during track movement caused visible jitter.
   const [isSliding, setIsSliding] = createSignal(false);
   const [gPressed, setGPressed] = createSignal(false);
   const [colWidthPx, setColWidthPx] = createSignal(0);
@@ -51,8 +53,13 @@ export default function Sandbox2() {
   // Refs
   let viewportRef: HTMLDivElement | undefined;
   let trackRef: HTMLDivElement | undefined;
+  // Keep a handle so we can stop previous slide before starting a new one.
   let trackSlide: ReturnType<typeof animate> | null = null;
+  // Monotonic token guarding async finished() callbacks from stale/canceled animations.
+  // Footgun: canceled animations can still resolve later and write old transforms.
   let trackSlideId = 0;
+  // Single source of truth for current track X used as the next animation start.
+  // Footgun: reading/writing transform from multiple places introduced snap-back artifacts.
   let renderedTrackX = 0;
 
   // ─── Derived state ───────────────────────────────────────
@@ -92,6 +99,7 @@ export default function Sandbox2() {
     return true;
   };
 
+  // Centralized transform writer. Keep all track position writes here.
   const applyTrackTransform = (x: number) => {
     renderedTrackX = x;
     if (trackRef) trackRef.style.transform = `translateX(${x}px)`;
@@ -114,6 +122,8 @@ export default function Sandbox2() {
 
     if (viewportRef) {
       const ro = new ResizeObserver(() => {
+        // Resize path intentionally snaps to the new X instead of animating:
+        // avoids width-change + slide overlap jitter.
         if (measureColWidth() && !layoutReady()) setLayoutReady(true);
       });
       ro.observe(viewportRef);
@@ -136,6 +146,8 @@ export default function Sandbox2() {
     on(
       () => [focusedItem()?.id, isSliding()] as const,
       ([focusedItemId, sliding]) => {
+        // Freeze preview churn while the track is sliding.
+        // Footgun: preview updates/fades during horizontal slide caused paint contention.
         if (sliding) return;
         const item = focusedItem();
         if (item?.type === "folder" && item.id === focusedItemId) {
@@ -169,11 +181,18 @@ export default function Sandbox2() {
     const widthChanged = width !== prevWidthForTrack;
 
     if (prevDepthForTrack < 0 || !depthChanged || widthChanged) {
+      // Snap path:
+      // - first sync after mount
+      // - no-op depth updates
+      // - width changes (resize)
+      // Never animate these or we reintroduce "jelly" movement.
       trackSlide?.stop();
       trackSlide = null;
       applyTrackTransform(targetX);
       setIsSliding(false);
     } else if (renderedTrackX !== targetX) {
+      // Animate from our tracked X value, never from computed style.
+      // This avoids stale reads when rapid nav cancels/restarts the slide.
       trackSlide?.stop();
       const animationId = ++trackSlideId;
       setIsSliding(true);
@@ -188,6 +207,7 @@ export default function Sandbox2() {
         { duration: SLIDE_DURATION, ease: EASE_OUT },
       );
       trackSlide.finished.finally(() => {
+        // Ignore stale completions from canceled/replaced animations.
         if (animationId !== trackSlideId) return;
         applyTrackTransform(targetX);
         setIsSliding(false);
@@ -212,6 +232,9 @@ export default function Sandbox2() {
     try {
       const children = await getChildrenQuery(item.id);
 
+      // Critical sequencing:
+      // update columns + depth in one batch so we do not render an intermediate
+      // "new column data with old depth" frame. That frame was the main right-nav jitter.
       batch(() => {
         setColumns(
           produce((cols) => {
@@ -353,6 +376,8 @@ export default function Sandbox2() {
         {/* Stack viewport — columns slide within this container */}
         <div
           ref={viewportRef}
+          // isolate/z-index contain the viewport in its own paint/stack context.
+          // Footgun: preview fade could composite over left columns without this.
           class="overflow-hidden relative bg-base-100 z-10 isolate"
         >
           <Show

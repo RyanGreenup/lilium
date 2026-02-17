@@ -17,7 +17,10 @@ interface ColumnProps {
 export default function Column(props: ColumnProps) {
   let columnRef: HTMLDivElement | undefined;
 
-  // Scroll focused item into view when this is the active column
+  // Scroll focused item into view when this is the active column.
+  // Footgun: running scrollIntoView while the parent track is animating
+  // introduces competing scroll/transform updates and visible jitter.
+  // Keep this disabled during slides.
   createEffect(() => {
     if (!props.isActive || props.isSliding || !columnRef) return;
     const items = columnRef.querySelectorAll("[data-list-item]");
