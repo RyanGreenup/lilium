@@ -19,10 +19,8 @@ import type { ListItem } from "~/lib/db/types";
 import {
   type ColumnEntry,
   EASE_OUT,
-  SLIDE_DURATION,
   STAGGER_DELAY,
   STAGGER_DURATION,
-  CSS_EASE,
 } from "~/components/sandbox2/constants";
 import Breadcrumb from "~/components/sandbox2/Breadcrumb";
 import Column from "~/components/sandbox2/Column";
@@ -48,7 +46,6 @@ export default function Sandbox2() {
   const [isNavigating, setIsNavigating] = createSignal(false);
   const [gPressed, setGPressed] = createSignal(false);
   const [colWidthPx, setColWidthPx] = createSignal(300);
-  const [enableTransition, setEnableTransition] = createSignal(false);
   const [previewItems, setPreviewItems] = createSignal<ListItem[] | null>(null);
 
   // Refs
@@ -99,8 +96,6 @@ export default function Sandbox2() {
     });
 
     requestAnimationFrame(() => {
-      setEnableTransition(true);
-
       if (trackRef) {
         const items = trackRef.querySelectorAll("[data-list-item]");
         if (items.length > 0) {
@@ -120,9 +115,7 @@ export default function Sandbox2() {
     if (viewportRef) {
       const ro = new ResizeObserver(() => {
         if (!viewportRef) return;
-        setEnableTransition(false);
         setColWidthPx(viewportRef.offsetWidth / 2);
-        requestAnimationFrame(() => setEnableTransition(true));
       });
       ro.observe(viewportRef);
       onCleanup(() => ro.disconnect());
@@ -355,9 +348,6 @@ export default function Sandbox2() {
               class="flex h-full"
               style={{
                 transform: `translateX(${trackOffset()}px)`,
-                transition: enableTransition()
-                  ? `transform ${SLIDE_DURATION}s ${CSS_EASE}`
-                  : "none",
                 "will-change": "transform",
               }}
             >
