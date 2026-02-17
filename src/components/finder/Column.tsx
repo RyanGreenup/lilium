@@ -10,7 +10,8 @@ interface ColumnProps {
   isActive: boolean;
   isSliding: boolean;
   nextColumnFolderId: string | null | undefined;
-  cutItemId: string | null;
+  cutItemIds: Set<string>;
+  markedItemIds: Set<string>;
   onItemClick: (itemIdx: number, item: ListItem) => void;
   onItemMouseMove: (itemIdx: number) => void;
 }
@@ -66,7 +67,8 @@ export default function Column(props: ColumnProps) {
                 item={item}
                 focused={isFocused()}
                 selected={isCurrentFolder()}
-                isCut={props.cutItemId === item.id}
+                isCut={props.cutItemIds.has(item.id)}
+                isMarked={props.markedItemIds.has(item.id)}
                 onClick={() => props.onItemClick(itemIdx(), item)}
                 onMouseMove={() => props.onItemMouseMove(itemIdx())}
               />

@@ -14,7 +14,7 @@ import {
 } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import { getUser } from "~/lib/auth";
-import { getChildrenQuery, LIST_CHILDREN_KEY, moveItem } from "~/lib/db/api";
+import { getChildrenQuery, LIST_CHILDREN_KEY, moveItem, moveItems } from "~/lib/db/api";
 import type { ListItem } from "~/lib/db/types";
 import {
   type ColumnEntry,
@@ -69,10 +69,13 @@ export default function Sandbox2() {
     null,
   );
   const [jumpPaletteBaseDepth, setJumpPaletteBaseDepth] = createSignal(0);
-  // Cut/paste state: tracks the item staged for a move operation.
-  const [cutItem, setCutItem] = createSignal<ListItem | null>(null);
-  // The folderId the cut item currently lives in (so we can reload that column after paste).
-  const [cutItemSourceFolderId, setCutItemSourceFolderId] = createSignal<string | null | undefined>(undefined);
+  // Mark state: items selected for bulk operations.
+  const [markedItems, setMarkedItems] = createSignal<Map<string, ListItem>>(new Map());
+  const [isMarkMode, setIsMarkMode] = createSignal(false);
+  // Cut/paste state: tracks items staged for a move operation.
+  const [cutItems, setCutItems] = createSignal<ListItem[]>([]);
+  // The folderIds the cut items currently live in (so we can reload those columns after paste).
+  const [cutItemSourceFolderIds, setCutItemSourceFolderIds] = createSignal<Set<string | null>>(new Set());
 
   // Refs
   let viewportRef: HTMLDivElement | undefined;
@@ -522,15 +525,56 @@ export default function Sandbox2() {
     }
   };
 
-  // ─── Cut / Paste (move) ──────────────────────────────────
+  // ─── Derived mark/cut state ─────────────────────────────
+  const cutItemIds = createMemo(() => new Set(cutItems().map((i) => i.id)));
+  const markedItemIdSet = createMemo(() => new Set(markedItems().keys()));
+  const markCount = createMemo(() => markedItems().size);
 
-  const cutFocusedItem = () => {
+  // ─── Mark / Cut / Paste (move) ─────────────────────────
+
+  const markFocusedItem = () => {
     const item = focusedItem();
     if (!item) return;
+    setMarkedItems((prev) => {
+      if (prev.has(item.id)) return prev;
+      const next = new Map(prev);
+      next.set(item.id, item);
+      return next;
+    });
+  };
+
+  const toggleMarkOnFocusedItem = () => {
+    const item = focusedItem();
+    if (!item) return;
+    setMarkedItems((prev) => {
+      const next = new Map(prev);
+      if (next.has(item.id)) {
+        next.delete(item.id);
+      } else {
+        next.set(item.id, item);
+      }
+      return next;
+    });
+  };
+
+  const cutMarkedOrFocusedItems = () => {
+    const marked = markedItems();
     const col = currentColumn();
-    // Record the folder the item currently lives in so we can refresh it later.
-    setCutItemSourceFolderId(col?.folderId);
-    setCutItem(item);
+    if (marked.size > 0) {
+      // Collect source folder IDs from each marked item's parent_id.
+      const sourceFolderIds = new Set<string | null>();
+      for (const item of marked.values()) {
+        sourceFolderIds.add(item.parent_id ?? null);
+      }
+      setCutItems(Array.from(marked.values()));
+      setCutItemSourceFolderIds(sourceFolderIds);
+      setMarkedItems(new Map());
+    } else {
+      const item = focusedItem();
+      if (!item) return;
+      setCutItems([item]);
+      setCutItemSourceFolderIds(new Set([col?.folderId ?? null]));
+    }
   };
 
   /**
@@ -549,57 +593,73 @@ export default function Sandbox2() {
     }
   };
 
-  const pasteItem = async () => {
-    const item = cutItem();
-    if (!item) return;
+  const pasteItems = async () => {
+    const items = cutItems();
+    if (items.length === 0) return;
 
     const destCol = currentColumn();
     const d = depth();
     if (!destCol || d < 0) return;
 
-    // Destination parent: the folderId of the currently active column.
-    // (Items get pasted *into* the current column, i.e. become children of destCol.folderId.)
     const targetParentId = destCol.folderId;
 
-    // Refuse a no-op move (item is already here).
-    if (item.parent_id === targetParentId || (!item.parent_id && targetParentId === null)) {
-      setCutItem(null);
-      setCutItemSourceFolderId(undefined);
+    // Filter out items already in the destination.
+    const toMove = items.filter((item) => {
+      if (item.parent_id === targetParentId) return false;
+      if (!item.parent_id && targetParentId === null) return false;
+      return true;
+    });
+
+    if (toMove.length === 0) {
+      setCutItems([]);
+      setCutItemSourceFolderIds(new Set<string | null>());
       return;
     }
 
     try {
-      const success = await moveItem(item.id, item.type, targetParentId);
-      if (!success) {
-        // Server refused (e.g. cycle detection) — clear cut state without moving.
-        setCutItem(null);
-        setCutItemSourceFolderId(undefined);
-        return;
+      if (toMove.length === 1) {
+        const item = toMove[0]!;
+        const success = await moveItem(item.id, item.type, targetParentId);
+        if (!success) {
+          setCutItems([]);
+          setCutItemSourceFolderIds(new Set<string | null>());
+          return;
+        }
+      } else {
+        const result = await moveItems(
+          toMove.map((i) => ({ id: i.id, type: i.type })),
+          targetParentId,
+        );
+        if (result.moved.length === 0) {
+          setCutItems([]);
+          setCutItemSourceFolderIds(new Set<string | null>());
+          return;
+        }
       }
     } catch (e) {
-      console.error("Failed to move item:", e);
-      setCutItem(null);
-      setCutItemSourceFolderId(undefined);
+      console.error("Failed to move items:", e);
+      setCutItems([]);
+      setCutItemSourceFolderIds(new Set<string | null>());
       return;
     }
 
-    // Find the source column index so we can reload it.
-    const sourceFolderId = cutItemSourceFolderId();
-    const sourceColIdx = columns.findIndex((col) => col.folderId === sourceFolderId);
+    // Collect source column indices to reload.
+    const sourceFolderIds = cutItemSourceFolderIds();
+    const sourceColIndices = new Set<number>();
+    for (const folderId of sourceFolderIds) {
+      const idx = columns.findIndex((col) => col.folderId === folderId);
+      if (idx >= 0 && idx !== d) sourceColIndices.add(idx);
+    }
 
     // Clear cut state before refreshing so UI updates atomically.
-    setCutItem(null);
-    setCutItemSourceFolderId(undefined);
+    setCutItems([]);
+    setCutItemSourceFolderIds(new Set<string | null>());
 
-    // Invalidate the list-children query cache so that subsequent
-    // getChildrenQuery() calls fetch fresh data from the server rather than
-    // returning stale cached results from before the move.
     await revalidate(LIST_CHILDREN_KEY);
 
-    // Refresh both source and destination columns now that the cache is clear.
     const refreshPromises: Promise<void>[] = [reloadColumn(d)];
-    if (sourceColIdx >= 0 && sourceColIdx !== d) {
-      refreshPromises.push(reloadColumn(sourceColIdx));
+    for (const colIdx of sourceColIndices) {
+      refreshPromises.push(reloadColumn(colIdx));
     }
     await Promise.all(refreshPromises);
   };
@@ -656,14 +716,20 @@ export default function Sandbox2() {
       case "ArrowDown":
         e.preventDefault();
         setGPressed(false);
-        if (len > 0) setFocusedIndex(Math.min(idx + 1, len - 1));
+        if (len > 0) {
+          setFocusedIndex(Math.min(idx + 1, len - 1));
+          if (isMarkMode()) markFocusedItem();
+        }
         break;
 
       case "k":
       case "ArrowUp":
         e.preventDefault();
         setGPressed(false);
-        if (len > 0) setFocusedIndex(Math.max(idx - 1, 0));
+        if (len > 0) {
+          setFocusedIndex(Math.max(idx - 1, 0));
+          if (isMarkMode()) markFocusedItem();
+        }
         break;
 
       case "h":
@@ -671,6 +737,7 @@ export default function Sandbox2() {
       case "Backspace":
         e.preventDefault();
         setGPressed(false);
+        setIsMarkMode(false);
         goShallower();
         break;
 
@@ -680,6 +747,7 @@ export default function Sandbox2() {
         if (item?.type === "folder") {
           e.preventDefault();
           setGPressed(false);
+          setIsMarkMode(false);
           goDeeper(item);
         }
         // No-op for notes: Right/l should not navigate to a note.
@@ -689,12 +757,14 @@ export default function Sandbox2() {
       case "Enter":
         e.preventDefault();
         setGPressed(false);
+        setIsMarkMode(false);
         activateItem();
         break;
 
       case "g":
         e.preventDefault();
         if (gPressed()) {
+          setIsMarkMode(false);
           setFocusedIndex(0);
           setGPressed(false);
         } else {
@@ -706,12 +776,14 @@ export default function Sandbox2() {
       case "G":
         e.preventDefault();
         setGPressed(false);
+        setIsMarkMode(false);
         if (len > 0) setFocusedIndex(len - 1);
         break;
 
       case "z":
         e.preventDefault();
         setGPressed(false);
+        setIsMarkMode(false);
         openJumpPalette();
         break;
 
@@ -736,25 +808,40 @@ export default function Sandbox2() {
         setGPressed(false);
         break;
 
+      case "v":
+        e.preventDefault();
+        setGPressed(false);
+        if (isMarkMode()) {
+          setIsMarkMode(false);
+        } else {
+          setIsMarkMode(true);
+          markFocusedItem();
+        }
+        break;
+
       case "x":
         e.preventDefault();
         setGPressed(false);
-        cutFocusedItem();
+        setIsMarkMode(false);
+        cutMarkedOrFocusedItems();
         break;
 
       case "p":
         e.preventDefault();
         setGPressed(false);
-        void pasteItem();
+        void pasteItems();
         break;
 
       case "Escape":
         e.preventDefault();
         setGPressed(false);
-        // Cancel a pending cut operation.
-        if (cutItem()) {
-          setCutItem(null);
-          setCutItemSourceFolderId(undefined);
+        setIsMarkMode(false);
+        // Clear marks first, then cut state.
+        if (markedItems().size > 0) {
+          setMarkedItems(new Map());
+        } else if (cutItems().length > 0) {
+          setCutItems([]);
+          setCutItemSourceFolderIds(new Set<string | null>());
         }
         break;
 
@@ -806,7 +893,8 @@ export default function Sandbox2() {
                         ? columns[colIdx() + 1]?.folderId
                         : undefined
                     }
-                    cutItemId={cutItem()?.id ?? null}
+                    cutItemIds={cutItemIds()}
+                    markedItemIds={markedItemIdSet()}
                     onItemClick={(itemIdx, item) =>
                       handleColumnItemClick(colIdx(), itemIdx, item)
                     }
@@ -836,7 +924,7 @@ export default function Sandbox2() {
         </Suspense>
       </div>
 
-      <KeyboardHints cutPending={cutItem() !== null} />
+      <KeyboardHints cutPending={cutItems().length > 0} cutCount={cutItems().length} markCount={markCount()} isMarkMode={isMarkMode()} />
 
       <SandboxJumpPalette
         open={isJumpPaletteOpen}

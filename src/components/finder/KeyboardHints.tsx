@@ -2,11 +2,17 @@ import { Show } from "solid-js";
 
 interface KeyboardHintsProps {
   cutPending?: boolean;
+  cutCount?: number;
+  markCount?: number;
+  isMarkMode?: boolean;
 }
 
 export default function KeyboardHints(props: KeyboardHintsProps) {
   return (
     <div class="flex items-center gap-4 px-4 py-2 bg-base-200 text-xs text-base-content/50 border-t border-base-300 flex-wrap">
+      <Show when={props.isMarkMode}>
+        <span class="text-info font-medium">-- MARK --</span>
+      </Show>
       <span>
         <kbd class="kbd kbd-xs">j</kbd>/<kbd class="kbd kbd-xs">k</kbd>{" "}
         navigate
@@ -34,9 +40,30 @@ export default function KeyboardHints(props: KeyboardHintsProps) {
         <kbd class="kbd kbd-xs">u</kbd>/<kbd class="kbd kbd-xs">d</kbd>{" "}
         preview scroll
       </span>
-      <span>
-        <kbd class="kbd kbd-xs">x</kbd> cut
-      </span>
+      <Show
+        when={props.markCount && props.markCount > 0}
+        fallback={
+          <span>
+            <kbd class="kbd kbd-xs">v</kbd> mark
+          </span>
+        }
+      >
+        <span class="text-info font-medium">
+          <kbd class="kbd kbd-xs">v</kbd> mark ({props.markCount})
+        </span>
+      </Show>
+      <Show
+        when={props.markCount && props.markCount > 0}
+        fallback={
+          <span>
+            <kbd class="kbd kbd-xs">x</kbd> cut
+          </span>
+        }
+      >
+        <span>
+          <kbd class="kbd kbd-xs">x</kbd> cut {props.markCount} marked
+        </span>
+      </Show>
       <Show
         when={props.cutPending}
         fallback={
@@ -46,8 +73,8 @@ export default function KeyboardHints(props: KeyboardHintsProps) {
         }
       >
         <span class="text-warning font-medium">
-          <kbd class="kbd kbd-xs">p</kbd> paste here
-          {" "}·{" "}
+          <kbd class="kbd kbd-xs">p</kbd> paste {(props.cutCount ?? 0) > 1 ? `${props.cutCount} items` : ""} here
+          {" "}&middot;{" "}
           <kbd class="kbd kbd-xs">Esc</kbd> cancel
         </span>
       </Show>

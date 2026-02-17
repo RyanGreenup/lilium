@@ -62,3 +62,18 @@
 - `listItemVariants` from `listStyle.ts` handles focused/selected states via tailwind-variants.
 - Cut state styling layered on top via plain Tailwind classes in the template string.
 - DaisyUI `warning` color used for cut indicator (amber/yellow).
+
+## FinderOverlay Patterns (note quick-jump overlay)
+
+- File: `src/components/FinderOverlay.tsx`. Rendered in `src/routes/(app).tsx` as `<FinderOverlay />`.
+- Toggle keybinding: `Ctrl+Shift+F` (registered via `onMount` + `document.addEventListener`).
+- Server query pattern: `query(async () => { "use server"; const { fn } = await import("~/lib/db/notes/search"); return fn(...); }, "key")`
+  The dynamic import is required so DB code is NOT bundled to the client.
+- `NoteWithPath` (from `~/lib/db/notes/search`): `id`, `title`, `display_title`, `display_path`, `full_path`.
+- Auto-focus pattern: `requestAnimationFrame(() => inputRef?.focus())` inside a `createEffect` watching `isOpen` — rAF prevents animation from swallowing focus.
+- Panel layout for full-height overlay: `flex flex-col` on the panel + `shrink-0` on header/footer + `flex-1 overflow-y-auto min-h-0` on the list.
+- All keyboard handling lives in the input's `onKeyDown`: Escape closes, arrows move selection, Enter selects, `Ctrl+.` toggles path search.
+- Mouse tracking: `onMouseMove` on list items syncs `selectedIndex` so keyboard cursor follows mouse.
+- Fuzzy search: Fuse.js, keys `["display_path", "title"]`, threshold 0.4. Client-side filter to 50 from 500 server-fetched.
+- `Show` accessor pattern `{(loadedNotes) => <Content notes={loadedNotes()} />}` required to avoid re-triggering Suspense on reactive reads inside Show.
+- Navigation: `useNavigate` from `@solidjs/router`, calls `navigate(\`/note/\${note.id}\`)` then `setOpen(false)`.

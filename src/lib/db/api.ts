@@ -403,3 +403,73 @@ export async function moveItem(
 
   return result.changes > 0;
 }
+
+/**
+ * Move multiple items to a new parent in a single transaction.
+ *
+ * @param items - Array of { id, type } to move
+ * @param targetParentId - Destination folder ID, or null for root
+ * @returns Object with arrays of moved and failed item IDs
+ */
+export async function moveItems(
+  items: { id: string; type: "note" | "folder" }[],
+  targetParentId: string | null,
+): Promise<{ moved: string[]; failed: string[] }> {
+  "use server";
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  const moved: string[] = [];
+  const failed: string[] = [];
+
+  const ancestorStmt = db.prepare(`
+    WITH RECURSIVE ancestors AS (
+      SELECT id, parent_id FROM folders WHERE id = ? AND user_id = ?
+      UNION ALL
+      SELECT f.id, f.parent_id
+      FROM folders f
+      INNER JOIN ancestors a ON f.id = a.parent_id
+      WHERE f.user_id = ?
+    )
+    SELECT id FROM ancestors WHERE id = ?
+  `);
+
+  const updateNoteStmt = targetParentId
+    ? db.prepare(`UPDATE notes SET parent_id = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`)
+    : db.prepare(`UPDATE notes SET parent_id = NULL, updated_at = datetime('now') WHERE id = ? AND user_id = ?`);
+
+  const updateFolderStmt = targetParentId
+    ? db.prepare(`UPDATE folders SET parent_id = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`)
+    : db.prepare(`UPDATE folders SET parent_id = NULL, updated_at = datetime('now') WHERE id = ? AND user_id = ?`);
+
+  const runTransaction = db.transaction(() => {
+    for (const item of items) {
+      // Cycle detection for folders
+      if (item.type === "folder" && targetParentId !== null) {
+        const cycle = ancestorStmt.get(targetParentId, user.id, user.id, item.id) as
+          | { id: string }
+          | undefined;
+        if (cycle) {
+          failed.push(item.id);
+          continue;
+        }
+      }
+
+      const stmt = item.type === "note" ? updateNoteStmt : updateFolderStmt;
+      const result = targetParentId
+        ? stmt.run(targetParentId, item.id, user.id)
+        : stmt.run(item.id, user.id);
+
+      if (result.changes > 0) {
+        moved.push(item.id);
+      } else {
+        failed.push(item.id);
+      }
+    }
+  });
+
+  runTransaction();
+  return { moved, failed };
+}
