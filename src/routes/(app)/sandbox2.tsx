@@ -34,6 +34,8 @@ export const route = {
 
 export default function Sandbox2() {
   const navigate = useNavigate();
+  const SANDBOX2_STATE_KEY = "sandbox2:list-state:v1";
+  const DEBUG_SANDBOX2_RESTORE = true;
 
   // Route guard — deferStream blocks SSR until auth resolves
   createAsync(() => getUser(), { deferStream: true });
@@ -53,6 +55,7 @@ export default function Sandbox2() {
   const [colWidthPx, setColWidthPx] = createSignal(0);
   const [layoutReady, setLayoutReady] = createSignal(false);
   const [previewItems, setPreviewItems] = createSignal<ListItem[] | null>(null);
+  const [focusMemory, setFocusMemory] = createSignal<Record<string, number>>({});
 
   // Refs
   let viewportRef: HTMLDivElement | undefined;
@@ -65,6 +68,141 @@ export default function Sandbox2() {
   // Single source of truth for current track X used as the next animation start.
   // Footgun: reading/writing transform from multiple places introduced snap-back artifacts.
   let renderedTrackX = 0;
+
+  const memoryKey = (folderId: string | null): string => folderId ?? "root";
+
+  const debugLog = (...args: unknown[]) => {
+    if (typeof window !== "undefined" && DEBUG_SANDBOX2_RESTORE) {
+      console.log("[sandbox2 restore]", ...args);
+    }
+  };
+
+  interface PersistedSandbox2State {
+    path: string[];
+    focusedByFolder: Record<string, number>;
+  }
+
+  const clampIndex = (idx: number, len: number): number => {
+    if (len <= 0) return 0;
+    return Math.min(Math.max(idx, 0), len - 1);
+  };
+
+  const readPersistedState = (): PersistedSandbox2State | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.sessionStorage.getItem(SANDBOX2_STATE_KEY);
+      debugLog("readPersistedState raw:", raw);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Partial<PersistedSandbox2State>;
+      if (!parsed || typeof parsed !== "object") return null;
+      const path = Array.isArray(parsed.path)
+        ? parsed.path.filter((id): id is string => typeof id === "string")
+        : [];
+      const focusedByFolder =
+        parsed.focusedByFolder &&
+        typeof parsed.focusedByFolder === "object" &&
+        !Array.isArray(parsed.focusedByFolder)
+          ? Object.fromEntries(
+              Object.entries(parsed.focusedByFolder)
+                .filter(([, value]) => Number.isInteger(value))
+                .map(([key, value]) => [key, value as number]),
+            )
+          : {};
+      debugLog("readPersistedState parsed:", { path, focusedByFolder });
+      return { path, focusedByFolder };
+    } catch (error) {
+      console.warn("Failed to parse persisted sandbox2 state:", error);
+      return null;
+    }
+  };
+
+  const writePersistedState = (state: PersistedSandbox2State) => {
+    if (typeof window === "undefined") return;
+    try {
+      debugLog("writePersistedState:", state);
+      window.sessionStorage.setItem(SANDBOX2_STATE_KEY, JSON.stringify(state));
+    } catch (error) {
+      console.warn("Failed to persist sandbox2 state:", error);
+    }
+  };
+
+  const buildInitialColumns = async (
+    rootItems: ListItem[],
+    persisted: PersistedSandbox2State | null,
+  ): Promise<ColumnEntry[]> => {
+    debugLog("buildInitialColumns start:", {
+      rootCount: rootItems.length,
+      hasPersisted: !!persisted,
+    });
+    const rootCol: ColumnEntry = {
+      folderId: null,
+      items: rootItems,
+      focusedIndex: 0,
+      title: "Home",
+    };
+
+    if (!persisted) return [rootCol];
+
+    const columnsFromState: ColumnEntry[] = [rootCol];
+    const rootSavedFocus = persisted.focusedByFolder[memoryKey(null)];
+    if (Number.isInteger(rootSavedFocus)) {
+      columnsFromState[0]!.focusedIndex = clampIndex(rootSavedFocus, rootItems.length);
+      debugLog("restored root focus:", {
+        saved: rootSavedFocus,
+        applied: columnsFromState[0]!.focusedIndex,
+      });
+    }
+
+    for (const folderId of persisted.path) {
+      const parentCol = columnsFromState[columnsFromState.length - 1];
+      if (!parentCol) break;
+
+      const folderIdx = parentCol.items.findIndex(
+        (item) => item.type === "folder" && item.id === folderId,
+      );
+      if (folderIdx < 0) {
+        debugLog("stopping rehydrate; folder not found in parent items:", {
+          folderId,
+          parentTitle: parentCol.title,
+          parentFolderId: parentCol.folderId,
+        });
+        break;
+      }
+
+      // Keep the active path visibly selected in ancestor columns.
+      parentCol.focusedIndex = folderIdx;
+
+      const folderItem = parentCol.items[folderIdx];
+      if (!folderItem || folderItem.type !== "folder") break;
+
+      const children = await getChildrenQuery(folderItem.id);
+      const savedFocus = persisted.focusedByFolder[memoryKey(folderItem.id)] ?? 0;
+      const appliedFocus = clampIndex(savedFocus, children.length);
+      debugLog("rehydrated folder column:", {
+        folderId: folderItem.id,
+        folderTitle: folderItem.title,
+        childrenCount: children.length,
+        savedFocus,
+        appliedFocus,
+      });
+      columnsFromState.push({
+        folderId: folderItem.id,
+        items: children,
+        focusedIndex: appliedFocus,
+        title: folderItem.title,
+      });
+    }
+
+    debugLog("buildInitialColumns result:", {
+      columns: columnsFromState.map((c) => ({
+        folderId: c.folderId,
+        title: c.title,
+        focusedIndex: c.focusedIndex,
+        itemCount: c.items.length,
+      })),
+    });
+    return columnsFromState;
+  };
 
   // ─── Derived state ───────────────────────────────────────
   const currentColumn = createMemo(() => {
@@ -111,16 +249,27 @@ export default function Sandbox2() {
 
   // ─── Initialization ──────────────────────────────────────
   onMount(async () => {
+    debugLog("onMount start");
     const hasInitialMeasurement = measureColWidth();
+    debugLog("initial measurement:", {
+      hasInitialMeasurement,
+      colWidthPx: colWidthPx(),
+    });
 
     const rootItems = await getChildrenQuery(null);
+    debugLog("fetched root items:", rootItems.length);
+    const persisted = readPersistedState();
+    setFocusMemory(persisted?.focusedByFolder ?? {});
+    const initialColumns = await buildInitialColumns(rootItems, persisted);
     batch(() => {
-      setColumns([
-        { folderId: null, items: rootItems, focusedIndex: 0, title: "Home" },
-      ]);
-      setDepth(0);
+      setColumns(initialColumns);
+      setDepth(initialColumns.length - 1);
+      debugLog("applied initial columns/depth:", {
+        depth: initialColumns.length - 1,
+      });
       if (hasInitialMeasurement || measureColWidth()) {
         setLayoutReady(true);
+        debugLog("layout marked ready");
       }
     });
 
@@ -149,6 +298,22 @@ export default function Sandbox2() {
       trackSlide = null;
       setIsSliding(false);
     });
+  });
+
+  createEffect(() => {
+    const d = depth();
+    if (d < 0 || columns.length === 0) return;
+
+    const limitedCols = columns.slice(0, d + 1);
+    const path = limitedCols
+      .slice(1)
+      .map((col) => col.folderId)
+      .filter((id): id is string => !!id);
+    const focusedByFolder: Record<string, number> = { ...focusMemory() };
+    for (const col of limitedCols) {
+      focusedByFolder[memoryKey(col.folderId)] = col.focusedIndex;
+    }
+    writePersistedState({ path, focusedByFolder });
   });
 
   // ─── Effects ─────────────────────────────────────────────
@@ -234,33 +399,72 @@ export default function Sandbox2() {
   });
 
   // ─── Navigation ──────────────────────────────────────────
+  const setFocusedIndexForColumn = (colIdx: number, idx: number) => {
+    if (colIdx < 0 || colIdx >= columns.length) return;
+    const folderId = columns[colIdx]?.folderId ?? null;
+    const key = memoryKey(folderId);
+    debugLog("setFocusedIndex:", {
+      depth: colIdx,
+      from: columns[colIdx]?.focusedIndex,
+      to: idx,
+      folderId,
+      title: columns[colIdx]?.title,
+    });
+    batch(() => {
+      setColumns(colIdx, "focusedIndex", idx);
+      setFocusMemory((prev) => ({ ...prev, [key]: idx }));
+    });
+  };
+
   const setFocusedIndex = (idx: number) => {
     const d = depth();
     if (d < 0 || d >= columns.length) return;
-    setColumns(d, "focusedIndex", idx);
+    setFocusedIndexForColumn(d, idx);
   };
 
   const goDeeper = async (item: ListItem) => {
     if (item.type !== "folder" || isNavigating()) return;
+    const fromDepth = depth();
+    debugLog("goDeeper start:", {
+      fromDepth,
+      folderId: item.id,
+      folderTitle: item.title,
+    });
     setIsNavigating(true);
     try {
       const children = await getChildrenQuery(item.id);
+      const rememberedFocus = focusMemory()[memoryKey(item.id)] ?? 0;
+      const restoredFocus = clampIndex(rememberedFocus, children.length);
+      debugLog("goDeeper fetched children:", {
+        folderId: item.id,
+        childrenCount: children.length,
+        rememberedFocus,
+        restoredFocus,
+      });
 
       // Critical sequencing:
       // update columns + depth in one batch so we do not render an intermediate
       // "new column data with old depth" frame. That frame was the main right-nav jitter.
+      const targetDepth = fromDepth + 1;
       batch(() => {
         setColumns(
           produce((cols) => {
             cols.splice(depth() + 1, Infinity, {
               folderId: item.id,
               items: children,
-              focusedIndex: 0,
+              focusedIndex: restoredFocus,
               title: item.title,
             });
           }),
         );
-        setDepth((d) => d + 1);
+        setFocusMemory((prev) => ({
+          ...prev,
+          [memoryKey(item.id)]: restoredFocus,
+        }));
+        setDepth(targetDepth);
+      });
+      debugLog("goDeeper applied:", {
+        newDepth: targetDepth,
       });
     } catch (e) {
       console.error("Failed to navigate deeper:", e);
@@ -271,12 +475,14 @@ export default function Sandbox2() {
 
   const goShallower = () => {
     if (depth() <= 0 || isNavigating()) return;
+    debugLog("goShallower:", { fromDepth: depth(), toDepth: depth() - 1 });
     setDepth((d) => d - 1);
   };
 
   const goToDepth = (targetDepth: number) => {
     if (targetDepth < 0 || targetDepth >= columns.length || isNavigating())
       return;
+    debugLog("goToDepth:", { fromDepth: depth(), toDepth: targetDepth });
     setDepth(targetDepth);
   };
 
@@ -314,7 +520,7 @@ export default function Sandbox2() {
         if (item.type === "folder") await goDeeper(item);
         else openNote(item.id);
       } else if (colIdx < depth()) {
-        setColumns(colIdx, "focusedIndex", itemIdx);
+        setFocusedIndexForColumn(colIdx, itemIdx);
         goToDepth(colIdx);
         if (item.type === "folder") await goDeeper(item);
         else openNote(item.id);
