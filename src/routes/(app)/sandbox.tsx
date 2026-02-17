@@ -3,9 +3,10 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import FileText from "lucide-solid/icons/file-text";
 import FolderIcon from "lucide-solid/icons/folder";
 import Home from "lucide-solid/icons/home";
-import { animate } from "motion/mini";
 import { stagger } from "motion";
+import { animate } from "motion/mini";
 import {
+  Accessor,
   For,
   JSXElement,
   Show,
@@ -18,13 +19,13 @@ import {
   onMount,
   startTransition,
 } from "solid-js";
+import {
+  listItemNameVariants,
+  listItemVariants,
+} from "~/components/layout/sidebar/tabs/listStyle";
 import { getUser } from "~/lib/auth";
 import { getChildrenQuery, getFolderPathQuery } from "~/lib/db/api";
 import type { ListItem, NoteListItem } from "~/lib/db/types";
-import {
-  listItemVariants,
-  listItemNameVariants,
-} from "~/components/layout/sidebar/tabs/listStyle";
 
 export const route = {
   preload() {
@@ -43,6 +44,7 @@ const FADE_DURATION = 0.14;
 const EASE_OUT: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
 
 type NavDirection = "deeper" | "shallower";
+type FolderPathItem = { id: string; title: string };
 
 /** Animate a column container + stagger its children in from a direction */
 function animateColumnIn(el: HTMLElement | undefined, direction: NavDirection) {
@@ -303,7 +305,6 @@ export default function Sandbox() {
   });
 
   // Scroll focused item into view
-  let middleScrollRef: HTMLDivElement | undefined;
   createEffect(() => {
     const idx = focusedIndex();
     if (!middleColRef) return;
@@ -311,222 +312,315 @@ export default function Sandbox() {
     el?.scrollIntoView({ block: "nearest" });
   });
 
+  const handleBreadcrumbNavigate = (id: string | null) => {
+    const path = folderPath();
+    const currentDepth = path?.length ?? 0;
+    const targetIdx = id === null ? -1 : (path?.findIndex((f) => f.id === id) ?? -1);
+    setNavDirection(targetIdx < currentDepth - 1 ? "shallower" : "deeper");
+    navigateToFolder(id);
+  };
+
   return (
     <div class="flex flex-col h-full">
-      {/* Breadcrumb */}
-      <Suspense
-        fallback={
-          <div class="flex items-center gap-1 px-4 py-2 bg-base-200 text-sm border-b border-base-300">
-            <Home class="w-4 h-4" />
-            <span>Home</span>
-          </div>
-        }
-      >
+      <Suspense fallback={<BreadcrumbFallback />}>
         <Breadcrumb
           ref={(el: HTMLDivElement) => (breadcrumbRef = el)}
           path={folderPath() ?? []}
-          onNavigate={(id) => {
-            // Breadcrumb click: determine direction from depth
-            const path = folderPath();
-            const currentDepth = path?.length ?? 0;
-            const targetIdx = id === null ? -1 : (path?.findIndex(f => f.id === id) ?? -1);
-            setNavDirection(targetIdx < currentDepth - 1 ? "shallower" : "deeper");
-            navigateToFolder(id);
-          }}
+          onNavigate={handleBreadcrumbNavigate}
         />
       </Suspense>
 
-      {/* Three-column layout */}
-      <div class="grid grid-cols-1 md:grid-cols-[1fr_1.5fr_1.5fr] flex-1 min-h-0 gap-px bg-base-300">
-        {/* Left column: parent items */}
-        <Column title={currentFolderId() === null ? "" : "Parent"}>
-          <Show
-            when={currentFolderId() !== null}
-            fallback={
-              <div class="flex items-center justify-center h-full text-base-content/40 text-sm">
-                Root level
-              </div>
-            }
-          >
-            <Suspense>
-              <div ref={leftColRef}>
-                <For each={parentItems()}>
-                  {(item) => (
-                    <div
-                      class={listItemVariants({
-                        focused: false,
-                        selected: item.id === currentFolderId(),
-                      })}
-                      onClick={() => {
-                        if (item.type === "folder") goDeeper(item.id);
-                        else openNote(item.id);
-                      }}
-                    >
-                      <ItemIcon item={item} />
-                      <span
-                        class={listItemNameVariants({
-                          focused: false,
-                          selected: item.id === currentFolderId(),
-                        })}
-                      >
-                        {item.title}
-                      </span>
-                    </div>
-                  )}
-                </For>
-              </div>
-            </Suspense>
-          </Show>
-        </Column>
+      <div class="grid [grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))] flex-1 min-h-0 gap-px bg-base-300">
+        <ParentColumn
+          class="order-2"
+          currentFolderId={currentFolderId}
+          parentItems={parentItems}
+          setLeftColRef={(el) => (leftColRef = el)}
+          onOpenFolder={goDeeper}
+          onOpenNote={openNote}
+        />
 
-        {/* Middle column */}
-        <div class="flex flex-col bg-base-100 min-h-0 overflow-hidden">
-          <Show
-            when={currentFolderId() !== null}
-            fallback={<ColumnHeader>Root</ColumnHeader>}
-          >
-            <Suspense fallback={<ColumnHeader>...</ColumnHeader>}>
-              <ColumnHeader>
-                {folderPath()?.at(-1)?.title ?? "..."}
-              </ColumnHeader>
-            </Suspense>
-          </Show>
+        <CurrentColumn
+          class="order-1"
+          currentFolderId={currentFolderId}
+          folderPath={folderPath}
+          currentItems={currentItems}
+          focusedIndex={focusedIndex}
+          setFocusedIndex={setFocusedIndex}
+          setMiddleColRef={(el) => (middleColRef = el)}
+          onActivateItem={activateItem}
+        />
 
-          <div ref={middleScrollRef} class="flex-1 overflow-y-auto min-h-0">
-            <Suspense>
-              <Show
-                when={(currentItems()?.length ?? 0) > 0}
-                fallback={
-                  <div class="flex items-center justify-center h-full text-base-content/40 text-sm">
-                    Empty folder
-                  </div>
-                }
-              >
-                <div ref={middleColRef} class="flex flex-col space-y-0.5">
-                  <For each={currentItems()}>
-                    {(item, idx) => (
-                      <div
-                        class={listItemVariants({
-                          focused: idx() === focusedIndex(),
-                          selected: false,
-                        })}
-                        onClick={() => {
-                          setFocusedIndex(idx());
-                          activateItem();
-                        }}
-                        onMouseEnter={() => setFocusedIndex(idx())}
-                      >
-                        <ItemIcon item={item} />
-                        <span
-                          class={listItemNameVariants({
-                            focused: idx() === focusedIndex(),
-                            selected: false,
-                          })}
-                        >
-                          {item.title}
-                        </span>
-                        <Show when={item.type === "note" && "syntax" in item}>
-                          <span class="ml-auto text-xs text-base-content/50">
-                            {(item as NoteListItem).syntax}
-                          </span>
-                        </Show>
-                        <Show when={item.type === "folder"}>
-                          <ChevronRight class="ml-auto w-4 h-4 text-base-content/30" />
-                        </Show>
-                      </div>
-                    )}
-                  </For>
-                </div>
-              </Show>
-            </Suspense>
-          </div>
-        </div>
-
-        {/* Right column: preview */}
-        <Column title="Preview">
-          <Suspense>
-            <Show
-              when={focusedItem()}
-              fallback={
-                <div class="flex items-center justify-center h-full text-base-content/40 text-sm">
-                  No selection
-                </div>
-              }
-            >
-              {(item) => (
-                <div ref={previewColRef}>
-                  <Show
-                    when={item().type === "folder"}
-                    fallback={<NotePreview item={item() as NoteListItem} />}
-                  >
-                    <Suspense>
-                      <Show
-                        when={previewItems()}
-                        fallback={
-                          <div class="flex items-center justify-center h-full text-base-content/40 text-sm">
-                            Empty folder
-                          </div>
-                        }
-                      >
-                        {(children) => (
-                          <Show
-                            when={children().length > 0}
-                            fallback={
-                              <div class="flex items-center justify-center h-full text-base-content/40 text-sm">
-                                Empty folder
-                              </div>
-                            }
-                          >
-                            <For each={children()}>
-                              {(child) => (
-                                <div class="flex items-center px-3 py-1.5 text-sm text-base-content/70">
-                                  <ItemIcon item={child} />
-                                  <span class="truncate">{child.title}</span>
-                                </div>
-                              )}
-                            </For>
-                          </Show>
-                        )}
-                      </Show>
-                    </Suspense>
-                  </Show>
-                </div>
-              )}
-            </Show>
-          </Suspense>
-        </Column>
+        <PreviewColumn
+          class="order-3"
+          focusedItem={focusedItem}
+          previewItems={previewItems}
+          setPreviewColRef={(el) => (previewColRef = el)}
+        />
       </div>
 
-      {/* Keyboard hints */}
-      <div class="flex items-center gap-4 px-4 py-2 bg-base-200 text-xs text-base-content/50 border-t border-base-300">
-        <span>
-          <kbd class="kbd kbd-xs">j</kbd>/<kbd class="kbd kbd-xs">k</kbd>{" "}
-          navigate
-        </span>
-        <span>
-          <kbd class="kbd kbd-xs">l</kbd>/<kbd class="kbd kbd-xs">Enter</kbd>{" "}
-          open
-        </span>
-        <span>
-          <kbd class="kbd kbd-xs">h</kbd>/
-          <kbd class="kbd kbd-xs">Backspace</kbd> back
-        </span>
-        <span>
-          <kbd class="kbd kbd-xs">gg</kbd> top
-        </span>
-        <span>
-          <kbd class="kbd kbd-xs">G</kbd> bottom
-        </span>
+      <KeyboardHints />
+    </div>
+  );
+}
+
+function BreadcrumbFallback() {
+  return (
+    <div class="flex items-center gap-1 px-4 py-2 bg-base-200 text-sm border-b border-base-300">
+      <Home class="w-4 h-4" />
+      <span>Home</span>
+    </div>
+  );
+}
+
+function ParentColumn(props: {
+  class?: string;
+  currentFolderId: Accessor<string | null>;
+  parentItems: Accessor<ListItem[] | undefined>;
+  setLeftColRef: (el: HTMLDivElement) => void;
+  onOpenFolder: (id: string) => void;
+  onOpenNote: (id: string) => void;
+}) {
+  return (
+    <Column class={props.class} title={props.currentFolderId() === null ? "" : "Parent"}>
+      <Show when={props.currentFolderId() !== null} fallback={<EmptyState label="Root level" />}>
+        <Suspense>
+          <div ref={props.setLeftColRef}>
+            <For each={props.parentItems()}>
+              {(item) => (
+                <ParentItemRow
+                  item={item}
+                  isSelected={item.id === props.currentFolderId()}
+                  onOpenFolder={props.onOpenFolder}
+                  onOpenNote={props.onOpenNote}
+                />
+              )}
+            </For>
+          </div>
+        </Suspense>
+      </Show>
+    </Column>
+  );
+}
+
+function ParentItemRow(props: {
+  item: ListItem;
+  isSelected: boolean;
+  onOpenFolder: (id: string) => void;
+  onOpenNote: (id: string) => void;
+}) {
+  return (
+    <div
+      class={listItemVariants({
+        focused: false,
+        selected: props.isSelected,
+      })}
+      onClick={() => {
+        if (props.item.type === "folder") props.onOpenFolder(props.item.id);
+        else props.onOpenNote(props.item.id);
+      }}
+    >
+      <ItemIcon item={props.item} />
+      <span
+        class={listItemNameVariants({
+          focused: false,
+          selected: props.isSelected,
+        })}
+      >
+        {props.item.title}
+      </span>
+    </div>
+  );
+}
+
+function CurrentColumn(props: {
+  class?: string;
+  currentFolderId: Accessor<string | null>;
+  folderPath: Accessor<FolderPathItem[] | undefined>;
+  currentItems: Accessor<ListItem[] | undefined>;
+  focusedIndex: Accessor<number>;
+  setFocusedIndex: (i: number) => void;
+  setMiddleColRef: (el: HTMLDivElement) => void;
+  onActivateItem: () => void;
+}) {
+  return (
+    <div class={`flex flex-col bg-base-100 min-h-0 overflow-hidden ${props.class ?? ""}`}>
+      <CurrentColumnHeader
+        currentFolderId={props.currentFolderId}
+        folderPath={props.folderPath}
+      />
+
+      <div class="flex-1 overflow-y-auto min-h-0">
+        <Suspense>
+          <Show when={(props.currentItems()?.length ?? 0) > 0} fallback={<EmptyState label="Empty folder" />}>
+            <CurrentItemsList
+              items={props.currentItems() ?? []}
+              focusedIndex={props.focusedIndex}
+              setFocusedIndex={props.setFocusedIndex}
+              setMiddleColRef={props.setMiddleColRef}
+              onActivateItem={props.onActivateItem}
+            />
+          </Show>
+        </Suspense>
       </div>
     </div>
   );
 }
 
-// --- Sub-components ---
+function CurrentColumnHeader(props: {
+  currentFolderId: Accessor<string | null>;
+  folderPath: Accessor<FolderPathItem[] | undefined>;
+}) {
+  return (
+    <Show when={props.currentFolderId() !== null} fallback={<ColumnHeader>Root</ColumnHeader>}>
+      <Suspense fallback={<ColumnHeader>...</ColumnHeader>}>
+        <ColumnHeader>{props.folderPath()?.at(-1)?.title ?? "..."}</ColumnHeader>
+      </Suspense>
+    </Show>
+  );
+}
+
+function CurrentItemsList(props: {
+  items: ListItem[];
+  focusedIndex: Accessor<number>;
+  setFocusedIndex: (i: number) => void;
+  setMiddleColRef: (el: HTMLDivElement) => void;
+  onActivateItem: () => void;
+}) {
+  return (
+    <div ref={props.setMiddleColRef} class="flex flex-col space-y-0.5">
+      <For each={props.items}>
+        {(item, idx) => (
+          <CurrentItemRow
+            item={item}
+            index={idx()}
+            focusedIndex={props.focusedIndex}
+            setFocusedIndex={props.setFocusedIndex}
+            onActivateItem={props.onActivateItem}
+          />
+        )}
+      </For>
+    </div>
+  );
+}
+
+function CurrentItemRow(props: {
+  item: ListItem;
+  index: number;
+  focusedIndex: Accessor<number>;
+  setFocusedIndex: (i: number) => void;
+  onActivateItem: () => void;
+}) {
+  const isFocused = () => props.index === props.focusedIndex();
+
+  return (
+    <div
+      class={listItemVariants({ focused: isFocused(), selected: false })}
+      onClick={() => {
+        props.setFocusedIndex(props.index);
+        props.onActivateItem();
+      }}
+      onMouseEnter={() => props.setFocusedIndex(props.index)}
+    >
+      <ItemIcon item={props.item} />
+      <span
+        class={listItemNameVariants({ focused: isFocused(), selected: false })}
+      >
+        {props.item.title}
+      </span>
+      <Show when={props.item.type === "note" && "syntax" in props.item}>
+        <span class="ml-auto text-xs text-base-content/50">
+          {(props.item as NoteListItem).syntax}
+        </span>
+      </Show>
+      <Show when={props.item.type === "folder"}>
+        <ChevronRight class="ml-auto w-4 h-4 text-base-content/30" />
+      </Show>
+    </div>
+  );
+}
+
+function PreviewColumn(props: {
+  class?: string;
+  focusedItem: Accessor<ListItem | undefined>;
+  previewItems: Accessor<ListItem[] | null | undefined>;
+  setPreviewColRef: (el: HTMLDivElement) => void;
+}) {
+  return (
+    <Column class={props.class} title="Preview">
+      <Suspense>
+        <Show when={props.focusedItem()} fallback={<EmptyState label="No selection" />}>
+          {(item) => (
+            <div ref={props.setPreviewColRef}>
+              <Show when={item().type === "folder"} fallback={<NotePreview item={item() as NoteListItem} />}>
+                <FolderPreview previewItems={props.previewItems} />
+              </Show>
+            </div>
+          )}
+        </Show>
+      </Suspense>
+    </Column>
+  );
+}
+
+function FolderPreview(props: { previewItems: Accessor<ListItem[] | null | undefined> }) {
+  return (
+    <Suspense>
+      <Show when={props.previewItems()} fallback={<EmptyState label="Empty folder" />}>
+        {(children) => (
+          <Show when={children().length > 0} fallback={<EmptyState label="Empty folder" />}>
+            <For each={children()}>{(child) => <FolderPreviewRow item={child} />}</For>
+          </Show>
+        )}
+      </Show>
+    </Suspense>
+  );
+}
+
+function FolderPreviewRow(props: { item: ListItem }) {
+  return (
+    <div class="flex items-center px-3 py-1.5 text-sm text-base-content/70">
+      <ItemIcon item={props.item} />
+      <span class="truncate">{props.item.title}</span>
+    </div>
+  );
+}
+
+function EmptyState(props: { label: string }) {
+  return (
+    <div class="flex items-center justify-center h-full text-base-content/40 text-sm">
+      {props.label}
+    </div>
+  );
+}
+
+function KeyboardHints() {
+  return (
+    <div class="flex items-center gap-4 px-4 py-2 bg-base-200 text-xs text-base-content/50 border-t border-base-300">
+      <span>
+        <kbd class="kbd kbd-xs">j</kbd>/<kbd class="kbd kbd-xs">k</kbd> navigate
+      </span>
+      <span>
+        <kbd class="kbd kbd-xs">l</kbd>/<kbd class="kbd kbd-xs">Enter</kbd> open
+      </span>
+      <span>
+        <kbd class="kbd kbd-xs">h</kbd>/<kbd class="kbd kbd-xs">Backspace</kbd> back
+      </span>
+      <span>
+        <kbd class="kbd kbd-xs">gg</kbd> top
+      </span>
+      <span>
+        <kbd class="kbd kbd-xs">G</kbd> bottom
+      </span>
+    </div>
+  );
+}
+
+// --- Shared components ---
 
 function Breadcrumb(props: {
   ref: (el: HTMLDivElement) => void;
-  path: { id: string; title: string }[];
+  path: FolderPathItem[];
   onNavigate: (id: string | null) => void;
 }) {
   return (
@@ -566,9 +660,9 @@ function ColumnHeader(props: { children: JSXElement }) {
   );
 }
 
-function Column(props: { title: string; children: JSXElement }) {
+function Column(props: { class?: string; title: string; children: JSXElement }) {
   return (
-    <div class="flex flex-col bg-base-100 min-h-0 overflow-hidden">
+    <div class={`flex flex-col bg-base-100 min-h-0 overflow-hidden ${props.class ?? ""}`}>
       <Show when={props.title}>
         <ColumnHeader>{props.title}</ColumnHeader>
       </Show>
@@ -628,15 +722,11 @@ function NotePreview(props: { item: NoteListItem }) {
       <div class="text-xs text-base-content/50 space-y-1">
         <div>Created: {formatDate(props.item.created_at)}</div>
         <div>
-          Updated: {formatDate(props.item.updated_at)}{" "}
-          {formatTime(props.item.updated_at)}
+          Updated: {formatDate(props.item.updated_at)} {formatTime(props.item.updated_at)}
         </div>
       </div>
 
-      <A
-        href={`/note/${props.item.id}`}
-        class="btn btn-primary btn-sm btn-block"
-      >
+      <A href={`/note/${props.item.id}`} class="btn btn-primary btn-sm btn-block">
         Open Note
       </A>
     </div>
