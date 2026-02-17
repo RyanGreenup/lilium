@@ -14,6 +14,7 @@ import {
   ErrorBoundary,
   For,
   on,
+  onCleanup,
   Show,
   splitProps,
   Suspense,
@@ -228,8 +229,10 @@ export function ListViewer(props: ListViewerProps) {
   // Auto-select index note after navigating into a folder (when clicking a folder)
   createEffect(() => {
     if (list.autoSelectingIndex && indexNoteId()) {
+      // Reset both flags atomically before triggering navigation so the auto-expand
+      // effect (fired by the URL change) sees skipNextAutoExpand=true and skips.
+      update({ autoSelectingIndex: false, skipNextAutoExpand: true });
       selectIndex();
-      setList("autoSelectingIndex", false);
     }
   });
 
@@ -238,8 +241,8 @@ export function ListViewer(props: ListViewerProps) {
   createEffect(
     on(
       () => props.currentNoteId?.(),
-      async (noteId) => {
-        // Skip if this was triggered by internal folder index selection (Enter on folder)
+      (noteId) => {
+        // Skip if this was triggered by internal navigation (clicking folder, pressing 0, etc.)
         if (list.skipNextAutoExpand) {
           setList("skipNextAutoExpand", false);
           return;
@@ -247,23 +250,33 @@ export function ListViewer(props: ListViewerProps) {
 
         if (!noteId) return;
 
-        // Fetch the note's folder path to know where to navigate
-        const pathInfo = await getNoteFolderPathQuery(noteId);
-        if (!pathInfo) return;
+        // Register cleanup so a stale in-flight fetch can't overwrite a newer navigation.
+        // onCleanup runs synchronously here (before the async work starts) and fires when
+        // currentNoteId changes again, cancelling any pending result.
+        let cancelled = false;
+        onCleanup(() => {
+          cancelled = true;
+        });
 
-        // Build the history array (folder IDs from root to parent)
-        // folderPath now includes the parent folder itself (inclusive)
-        const newHistory = pathInfo.folderPath.map((f) => f.id);
+        getNoteFolderPathQuery(noteId)
+          .then((pathInfo) => {
+            if (cancelled || !pathInfo) return;
 
-        // Only update if we need to navigate to a different folder
-        const currentHistoryStr = JSON.stringify(list.history);
-        const newHistoryStr = JSON.stringify(newHistory);
-        if (currentHistoryStr !== newHistoryStr) {
-          update({
-            history: newHistory,
-            pathFocusIndex: newHistory.length,
+            // Build the history array (folder IDs from root to parent)
+            // folderPath now includes the parent folder itself (inclusive)
+            const newHistory = pathInfo.folderPath.map((f) => f.id);
+
+            // Only update if we need to navigate to a different folder
+            if (JSON.stringify(list.history) !== JSON.stringify(newHistory)) {
+              update({
+                history: newHistory,
+                pathFocusIndex: newHistory.length,
+              });
+            }
+          })
+          .catch((err) => {
+            if (!cancelled) console.error("Failed to fetch folder path:", err);
           });
-        }
       },
     ),
   );
@@ -309,6 +322,7 @@ export function ListViewer(props: ListViewerProps) {
       focusedIndex,
       pathFocusIndex: history.length,
       indexButtonFocused: false,
+      autoSelectingIndex: false,
     });
   };
 
@@ -432,6 +446,8 @@ export function ListViewer(props: ListViewerProps) {
 
     // Trigger navigation for index notes - URL change will drive selection state
     if (props.onNoteSelect) {
+      // Set flag before navigation so the auto-expand effect skips when currentNoteId changes
+      setList("skipNextAutoExpand", true);
       props.onNoteSelect(noteId);
       props.onSelectIndex?.(noteId);
       return;
@@ -462,6 +478,7 @@ export function ListViewer(props: ListViewerProps) {
         revalidate("list-children"),
         revalidate("index-note-id"),
       ]);
+      setList("skipNextAutoExpand", true);
       props.onNoteSelect?.(newNote.id);
     } catch (error) {
       console.error("Failed to create index note:", error);
