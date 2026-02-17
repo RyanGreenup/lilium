@@ -18,6 +18,7 @@ import { createSignal, type Accessor } from "solid-js";
 import { PaletteModal } from "./PaletteModal";
 import { NotePalette } from "./NotePaletteContent";
 import { formatNoteLink } from "~/lib/linkFormat";
+import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import type { NoteSyntax } from "~/lib/db/types";
 import type { NoteWithPath } from "~/lib/db/notes/search";
 
@@ -101,10 +102,14 @@ export interface UseLinkPaletteOptions {
   parentId?: Accessor<string | null>;
   /** Called when a link should be inserted */
   onInsertLink: (linkText: string, note: NoteWithPath) => void;
+  /** Whether the palette keybinding (Ctrl+K) is enabled (default: always enabled) */
+  enabled?: Accessor<boolean>;
 }
 
 /**
- * Hook to manage LinkPalette state
+ * Hook to manage LinkPalette state and keybinding
+ *
+ * Automatically registers Ctrl+K keybinding when enabled.
  *
  * Returns:
  * - isOpen: Signal for palette visibility
@@ -117,9 +122,8 @@ export interface UseLinkPaletteOptions {
  * const linkPalette = useLinkPalette({
  *   syntax: () => currentNote()?.syntax ?? "md",
  *   onInsertLink: (text) => insertTextAtCursor(text),
+ *   enabled: isEditing, // Only active when editing
  * });
- *
- * useKeybinding({ key: "k", ctrl: true }, linkPalette.open);
  *
  * <LinkPalette {...linkPalette.paletteProps} />
  * ```
@@ -131,6 +135,14 @@ export function useLinkPalette(options: UseLinkPaletteOptions) {
   const close = () => setIsOpen(false);
 
   const parentId = options.parentId ?? (() => null);
+  const enabled = options.enabled ?? (() => true);
+
+  // Register Ctrl+K keybinding - handler only executes when enabled
+  useKeybinding({ key: "k", ctrl: true }, () => {
+    if (enabled()) {
+      open();
+    }
+  });
 
   const paletteProps: LinkPaletteProps = {
     open: isOpen,

@@ -233,15 +233,8 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
     syntax: () => currentNote()?.syntax ?? defaultSyntax,
     parentId: () => null, // Global search - FUTURE: may use URL param for virtual root
     onInsertLink: (linkText) => insertTextAtCursor(linkText),
+    enabled: isEditing, // Only enable Ctrl+K when editing
   });
-
-  // Ctrl+K to open link palette (only when editing)
-  const handleLinkPaletteKeybind = () => {
-    if (isEditing()) {
-      linkPalette.open();
-    }
-  };
-  useKeybinding({ key: "k", ctrl: true }, handleLinkPaletteKeybind);
 
   return (
     <Show
