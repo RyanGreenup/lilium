@@ -3,6 +3,8 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import FileText from "lucide-solid/icons/file-text";
 import FolderIcon from "lucide-solid/icons/folder";
 import Home from "lucide-solid/icons/home";
+import { animate } from "motion/mini";
+import { stagger } from "motion";
 import {
   For,
   JSXElement,
@@ -11,6 +13,7 @@ import {
   createEffect,
   createMemo,
   createSignal,
+  on,
   onCleanup,
   onMount,
   startTransition,
@@ -31,6 +34,47 @@ export const route = {
   },
 } satisfies RouteDefinition;
 
+// Animation constants
+const SLIDE_PX = 24;
+const SLIDE_DURATION = 0.18;
+const STAGGER_DELAY = 0.02;
+const STAGGER_DURATION = 0.12;
+const FADE_DURATION = 0.14;
+const EASE_OUT: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
+
+type NavDirection = "deeper" | "shallower";
+
+/** Animate a column container + stagger its children in from a direction */
+function animateColumnIn(el: HTMLElement | undefined, direction: NavDirection) {
+  if (!el) return;
+  const dx = direction === "deeper" ? SLIDE_PX : -SLIDE_PX;
+  animate(
+    el,
+    { opacity: [0.4, 1], transform: [`translateX(${dx}px)`, "translateX(0)"] },
+    { duration: SLIDE_DURATION, ease: EASE_OUT },
+  );
+  if (el.children.length > 0) {
+    animate(
+      Array.from(el.children),
+      {
+        opacity: [0, 1],
+        transform: ["translateY(4px)", "translateY(0)"],
+      },
+      {
+        delay: stagger(STAGGER_DELAY),
+        duration: STAGGER_DURATION,
+        ease: EASE_OUT,
+      },
+    );
+  }
+}
+
+/** Quick crossfade for preview content */
+function animateFade(el: HTMLElement | undefined) {
+  if (!el) return;
+  animate(el, { opacity: [0, 1] }, { duration: FADE_DURATION, ease: EASE_OUT });
+}
+
 export default function Sandbox() {
   const navigate = useNavigate();
 
@@ -43,6 +87,7 @@ export default function Sandbox() {
   );
   const [focusedIndex, setFocusedIndex] = createSignal(0);
   const [gPressed, setGPressed] = createSignal(false);
+  const [navDirection, setNavDirection] = createSignal<NavDirection>("deeper");
 
   // Derived parent ID signal — decoupled from async folderPath so that
   // parentItems fetcher never reads a suspended createAsync directly.
@@ -59,7 +104,6 @@ export default function Sandbox() {
   );
 
   // When folderPath resolves, derive the parent ID into a plain signal.
-  // This breaks the async chain: parentItems reads a signal, not a createAsync.
   createEffect(() => {
     const path = folderPath();
     if (!path) return;
@@ -85,7 +129,6 @@ export default function Sandbox() {
   });
 
   // Derived focused folder ID signal — decoupled from async currentItems
-  // so previewItems fetcher never reads a suspended memo/createAsync.
   const [resolvedFocusedFolderId, setResolvedFocusedFolderId] = createSignal<
     string | null
   >(null);
@@ -112,13 +155,58 @@ export default function Sandbox() {
     setFocusedIndex(0);
   });
 
+  // --- Animation refs ---
+  let leftColRef: HTMLDivElement | undefined;
+  let middleColRef: HTMLDivElement | undefined;
+  let previewColRef: HTMLDivElement | undefined;
+  let breadcrumbRef: HTMLDivElement | undefined;
+
+  // Animate columns when current items change (folder navigation)
+  createEffect(
+    on(
+      () => currentItems(),
+      () => {
+        const dir = navDirection();
+        requestAnimationFrame(() => {
+          animateColumnIn(middleColRef, dir);
+          animateColumnIn(leftColRef, dir);
+          if (breadcrumbRef) {
+            animate(
+              breadcrumbRef,
+              { opacity: [0.5, 1] },
+              { duration: SLIDE_DURATION, ease: EASE_OUT },
+            );
+          }
+        });
+      },
+      { defer: true },
+    ),
+  );
+
+  // Animate preview when focused item changes
+  createEffect(
+    on(
+      () => focusedItem()?.id,
+      () => {
+        requestAnimationFrame(() => animateFade(previewColRef));
+      },
+      { defer: true },
+    ),
+  );
+
   // Navigation helpers — wrapped in startTransition to keep old UI
   // visible while new data loads, preventing Suspense re-trigger.
   const navigateToFolder = (folderId: string | null) => {
     startTransition(() => setCurrentFolderId(folderId));
   };
 
-  const goToParent = () => {
+  const goDeeper = (folderId: string) => {
+    setNavDirection("deeper");
+    navigateToFolder(folderId);
+  };
+
+  const goShallower = () => {
+    setNavDirection("shallower");
     const path = folderPath();
     if (!path || path.length <= 1) {
       navigateToFolder(null);
@@ -135,7 +223,7 @@ export default function Sandbox() {
     const item = focusedItem();
     if (!item) return;
     if (item.type === "folder") {
-      navigateToFolder(item.id);
+      goDeeper(item.id);
     } else {
       openNote(item.id);
     }
@@ -173,7 +261,7 @@ export default function Sandbox() {
       case "Backspace":
         e.preventDefault();
         setGPressed(false);
-        if (currentFolderId() !== null) goToParent();
+        if (currentFolderId() !== null) goShallower();
         break;
 
       case "l":
@@ -215,17 +303,17 @@ export default function Sandbox() {
   });
 
   // Scroll focused item into view
-  let middleColumnRef: HTMLDivElement | undefined;
+  let middleScrollRef: HTMLDivElement | undefined;
   createEffect(() => {
     const idx = focusedIndex();
-    if (!middleColumnRef) return;
-    const el = middleColumnRef.children[idx] as HTMLElement | undefined;
+    if (!middleColRef) return;
+    const el = middleColRef.children[idx] as HTMLElement | undefined;
     el?.scrollIntoView({ block: "nearest" });
   });
 
   return (
     <div class="flex flex-col h-full">
-      {/* Breadcrumb — own Suspense around folderPath() read */}
+      {/* Breadcrumb */}
       <Suspense
         fallback={
           <div class="flex items-center gap-1 px-4 py-2 bg-base-200 text-sm border-b border-base-300">
@@ -235,12 +323,20 @@ export default function Sandbox() {
         }
       >
         <Breadcrumb
+          ref={(el: HTMLDivElement) => (breadcrumbRef = el)}
           path={folderPath() ?? []}
-          onNavigate={(id) => navigateToFolder(id)}
+          onNavigate={(id) => {
+            // Breadcrumb click: determine direction from depth
+            const path = folderPath();
+            const currentDepth = path?.length ?? 0;
+            const targetIdx = id === null ? -1 : (path?.findIndex(f => f.id === id) ?? -1);
+            setNavDirection(targetIdx < currentDepth - 1 ? "shallower" : "deeper");
+            navigateToFolder(id);
+          }}
         />
       </Suspense>
 
-      {/* Three-column layout — grid is static, each column streams independently */}
+      {/* Three-column layout */}
       <div class="grid grid-cols-1 md:grid-cols-[1fr_1.5fr_1.5fr] flex-1 min-h-0 gap-px bg-base-300">
         {/* Left column: parent items */}
         <Column title={currentFolderId() === null ? "" : "Parent"}>
@@ -253,37 +349,38 @@ export default function Sandbox() {
             }
           >
             <Suspense>
-              <For each={parentItems()}>
-                {(item) => (
-                  <div
-                    class={listItemVariants({
-                      focused: false,
-                      selected: item.id === currentFolderId(),
-                    })}
-                    onClick={() => {
-                      if (item.type === "folder") navigateToFolder(item.id);
-                      else openNote(item.id);
-                    }}
-                  >
-                    <ItemIcon item={item} />
-                    <span
-                      class={listItemNameVariants({
+              <div ref={leftColRef}>
+                <For each={parentItems()}>
+                  {(item) => (
+                    <div
+                      class={listItemVariants({
                         focused: false,
                         selected: item.id === currentFolderId(),
                       })}
+                      onClick={() => {
+                        if (item.type === "folder") goDeeper(item.id);
+                        else openNote(item.id);
+                      }}
                     >
-                      {item.title}
-                    </span>
-                  </div>
-                )}
-              </For>
+                      <ItemIcon item={item} />
+                      <span
+                        class={listItemNameVariants({
+                          focused: false,
+                          selected: item.id === currentFolderId(),
+                        })}
+                      >
+                        {item.title}
+                      </span>
+                    </div>
+                  )}
+                </For>
+              </div>
             </Suspense>
           </Show>
         </Column>
 
-        {/* Middle column — inlined so title and content get separate Suspense */}
+        {/* Middle column */}
         <div class="flex flex-col bg-base-100 min-h-0 overflow-hidden">
-          {/* Column title — Suspense only when reading async folderPath */}
           <Show
             when={currentFolderId() !== null}
             fallback={<ColumnHeader>Root</ColumnHeader>}
@@ -295,8 +392,7 @@ export default function Sandbox() {
             </Suspense>
           </Show>
 
-          {/* Column content — Suspense around currentItems() read */}
-          <div class="flex-1 overflow-y-auto min-h-0">
+          <div ref={middleScrollRef} class="flex-1 overflow-y-auto min-h-0">
             <Suspense>
               <Show
                 when={(currentItems()?.length ?? 0) > 0}
@@ -306,7 +402,7 @@ export default function Sandbox() {
                   </div>
                 }
               >
-                <div ref={middleColumnRef} class="flex flex-col space-y-0.5">
+                <div ref={middleColRef} class="flex flex-col space-y-0.5">
                   <For each={currentItems()}>
                     {(item, idx) => (
                       <div
@@ -348,7 +444,6 @@ export default function Sandbox() {
 
         {/* Right column: preview */}
         <Column title="Preview">
-          {/* Outer Suspense — catches focusedItem() which depends on currentItems() */}
           <Suspense>
             <Show
               when={focusedItem()}
@@ -359,49 +454,50 @@ export default function Sandbox() {
               }
             >
               {(item) => (
-                <Show
-                  when={item().type === "folder"}
-                  fallback={<NotePreview item={item() as NoteListItem} />}
-                >
-                  {/* Inner Suspense — previewItems() is an independent fetch */}
-                  <Suspense>
-                    <Show
-                      when={previewItems()}
-                      fallback={
-                        <div class="flex items-center justify-center h-full text-base-content/40 text-sm">
-                          Empty folder
-                        </div>
-                      }
-                    >
-                      {(children) => (
-                        <Show
-                          when={children().length > 0}
-                          fallback={
-                            <div class="flex items-center justify-center h-full text-base-content/40 text-sm">
-                              Empty folder
-                            </div>
-                          }
-                        >
-                          <For each={children()}>
-                            {(child) => (
-                              <div class="flex items-center px-3 py-1.5 text-sm text-base-content/70">
-                                <ItemIcon item={child} />
-                                <span class="truncate">{child.title}</span>
+                <div ref={previewColRef}>
+                  <Show
+                    when={item().type === "folder"}
+                    fallback={<NotePreview item={item() as NoteListItem} />}
+                  >
+                    <Suspense>
+                      <Show
+                        when={previewItems()}
+                        fallback={
+                          <div class="flex items-center justify-center h-full text-base-content/40 text-sm">
+                            Empty folder
+                          </div>
+                        }
+                      >
+                        {(children) => (
+                          <Show
+                            when={children().length > 0}
+                            fallback={
+                              <div class="flex items-center justify-center h-full text-base-content/40 text-sm">
+                                Empty folder
                               </div>
-                            )}
-                          </For>
-                        </Show>
-                      )}
-                    </Show>
-                  </Suspense>
-                </Show>
+                            }
+                          >
+                            <For each={children()}>
+                              {(child) => (
+                                <div class="flex items-center px-3 py-1.5 text-sm text-base-content/70">
+                                  <ItemIcon item={child} />
+                                  <span class="truncate">{child.title}</span>
+                                </div>
+                              )}
+                            </For>
+                          </Show>
+                        )}
+                      </Show>
+                    </Suspense>
+                  </Show>
+                </div>
               )}
             </Show>
           </Suspense>
         </Column>
       </div>
 
-      {/* Keyboard hints — fully static, no Suspense needed */}
+      {/* Keyboard hints */}
       <div class="flex items-center gap-4 px-4 py-2 bg-base-200 text-xs text-base-content/50 border-t border-base-300">
         <span>
           <kbd class="kbd kbd-xs">j</kbd>/<kbd class="kbd kbd-xs">k</kbd>{" "}
@@ -429,11 +525,15 @@ export default function Sandbox() {
 // --- Sub-components ---
 
 function Breadcrumb(props: {
+  ref: (el: HTMLDivElement) => void;
   path: { id: string; title: string }[];
   onNavigate: (id: string | null) => void;
 }) {
   return (
-    <div class="flex items-center gap-1 px-4 py-2 bg-base-200 text-sm border-b border-base-300 overflow-x-auto">
+    <div
+      ref={props.ref}
+      class="flex items-center gap-1 px-4 py-2 bg-base-200 text-sm border-b border-base-300 overflow-x-auto"
+    >
       <button
         class="flex items-center gap-1 hover:text-primary transition-colors shrink-0"
         onClick={() => props.onNavigate(null)}
