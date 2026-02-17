@@ -12,6 +12,7 @@
     - [Streaming & Range Requests](./asset-streaming.md)
 - [Custom Hooks](./hooks.md)
 - [Ranger-Style File Browser](./ranger-file-browser.md)
+- [Finder Route Overview](./finder-route-overview.md)
 - [Sidebar Scroll Layout](./sidebar-scroll-layout.md)
 - [Notes List Viewer](./notes-list-viewer.md)
 - [Placeholder 1]()

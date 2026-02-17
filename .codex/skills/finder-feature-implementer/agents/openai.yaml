@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finder Feature Implementer"
+  short_description: "Implement Finder route features safely"
+  default_prompt: "Use this skill to implement or refactor Finder route features while preserving navigation, focus memory, persistence, and anti-jitter animation behavior."
