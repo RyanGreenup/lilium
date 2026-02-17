@@ -6,8 +6,10 @@ export default function KeyboardHints() {
         navigate
       </span>
       <span>
-        <kbd class="kbd kbd-xs">l</kbd>/<kbd class="kbd kbd-xs">Enter</kbd>{" "}
-        open
+        <kbd class="kbd kbd-xs">l</kbd> enter folder
+      </span>
+      <span>
+        <kbd class="kbd kbd-xs">Enter</kbd> open
       </span>
       <span>
         <kbd class="kbd kbd-xs">h</kbd>/
@@ -21,6 +23,10 @@ export default function KeyboardHints() {
       </span>
       <span>
         <kbd class="kbd kbd-xs">z</kbd> jump palette
+      </span>
+      <span>
+        <kbd class="kbd kbd-xs">u</kbd>/<kbd class="kbd kbd-xs">d</kbd>{" "}
+        preview scroll
       </span>
     </div>
   );

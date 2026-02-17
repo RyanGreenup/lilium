@@ -73,6 +73,7 @@ export default function Sandbox2() {
   // Refs
   let viewportRef: HTMLDivElement | undefined;
   let trackRef: HTMLDivElement | undefined;
+  let previewScrollRef: HTMLDivElement | undefined;
   // Keep a handle so we can stop previous slide before starting a new one.
   let trackSlide: ReturnType<typeof animate> | null = null;
   // Monotonic token guarding async finished() callbacks from stale/canceled animations.
@@ -517,6 +518,16 @@ export default function Sandbox2() {
     }
   };
 
+  const scrollPreview = (direction: "up" | "down") => {
+    if (!previewScrollRef) return false;
+    const maxScroll = previewScrollRef.scrollHeight - previewScrollRef.clientHeight;
+    if (maxScroll <= 0) return false;
+    const amount = Math.max(80, Math.floor(previewScrollRef.clientHeight * 0.8));
+    const delta = direction === "down" ? amount : -amount;
+    previewScrollRef.scrollBy({ top: delta, behavior: "auto" });
+    return true;
+  };
+
   const handleColumnItemClick = (
     colIdx: number,
     itemIdx: number,
@@ -578,7 +589,17 @@ export default function Sandbox2() {
         break;
 
       case "l":
-      case "ArrowRight":
+      case "ArrowRight": {
+        const item = focusedItem();
+        if (item?.type === "folder") {
+          e.preventDefault();
+          setGPressed(false);
+          goDeeper(item);
+        }
+        // No-op for notes: Right/l should not navigate to a note.
+        break;
+      }
+
       case "Enter":
         e.preventDefault();
         setGPressed(false);
@@ -606,6 +627,27 @@ export default function Sandbox2() {
         e.preventDefault();
         setGPressed(false);
         openJumpPalette();
+        break;
+
+      case "PageDown":
+      case "d":
+        console.log("Page Down Pressed at line 624 of ~/Sync/Projects/solid-js/lilium_dev/src/routes/(app)/finder.tsx");
+        if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+          console.log("About to call scrollPreview(\"down\");");
+          const didScroll = scrollPreview("down");
+          console.log("Called");
+          if (didScroll) e.preventDefault();
+        }
+        setGPressed(false);
+        break;
+
+      case "PageUp":
+      case "u":
+        if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+          const didScroll = scrollPreview("up");
+          if (didScroll) e.preventDefault();
+        }
+        setGPressed(false);
         break;
 
       default:
@@ -678,6 +720,9 @@ export default function Sandbox2() {
             isSliding={isSliding()}
             prefersReducedMotion={prefersReducedMotion()}
             disableAnimations={disableAnimations()}
+            onScrollContainerRef={(el) => {
+              previewScrollRef = el;
+            }}
           />
         </Suspense>
       </div>

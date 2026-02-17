@@ -10,7 +10,10 @@ import {
 import NoteContentPreview from "~/components/note/NoteContentPreview";
 import PreviewSkeleton from "./PreviewSkeleton";
 
-export default function NotePreview(props: { item: NoteListItem }) {
+export default function NotePreview(props: {
+  item: NoteListItem;
+  onContentAreaRef?: (el: HTMLDivElement | undefined) => void;
+}) {
   const note = createAsync(() => getNoteByIdQuery(props.item.id));
   const backlinks = createAsync(() => getBacklinksForDisplay(props.item.id));
   const forwardLinks = createAsync(() => getForwardLinksForDisplay(props.item.id));
@@ -72,12 +75,13 @@ export default function NotePreview(props: { item: NoteListItem }) {
               }
             >
               {(resolvedNote) => (
-                <NoteContentPreview
-                  class="p-4 h-full overflow-auto"
-                  content={resolvedNote().content}
-                  syntax={resolvedNote().syntax}
-                  emptyLabel="No content"
-                />
+              <NoteContentPreview
+                class="p-4 h-full overflow-auto"
+                content={resolvedNote().content}
+                syntax={resolvedNote().syntax}
+                emptyLabel="No content"
+                contentRef={props.onContentAreaRef}
+              />
               )}
             </Show>
           </Suspense>

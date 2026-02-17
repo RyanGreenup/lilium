@@ -1,5 +1,5 @@
 import { animate } from "motion/mini";
-import { For, Show, createEffect, on } from "solid-js";
+import { For, Show, createEffect, on, onCleanup } from "solid-js";
 import type { ListItem, NoteListItem } from "~/lib/db/types";
 import { FADE_DURATION, EASE_OUT } from "./constants";
 import ItemIcon from "./ItemIcon";
@@ -11,10 +11,21 @@ interface PreviewPanelProps {
   isSliding: boolean;
   prefersReducedMotion: boolean;
   disableAnimations: boolean;
+  onScrollContainerRef?: (el: HTMLDivElement | undefined) => void;
 }
 
 export default function PreviewPanel(props: PreviewPanelProps) {
   let innerRef: HTMLDivElement | undefined;
+  let outerScrollRef: HTMLDivElement | undefined;
+  let noteContentRef: HTMLDivElement | undefined;
+
+  onCleanup(() => {
+    props.onScrollContainerRef?.(undefined);
+  });
+
+  const syncScrollTarget = () => {
+    props.onScrollContainerRef?.(noteContentRef ?? outerScrollRef);
+  };
 
   // Fade preview when focused item changes.
   // Footgun: fading preview during horizontal track slide produced compositor
@@ -51,7 +62,15 @@ export default function PreviewPanel(props: PreviewPanelProps) {
       <div class="px-3 py-1.5 text-xs font-semibold text-base-content/50 uppercase tracking-wider border-b border-base-300">
         Preview
       </div>
-      <div ref={innerRef} class="overflow-y-auto flex-1 min-h-0">
+      <div
+        ref={(el) => {
+          const normalized = el ?? undefined;
+          innerRef = normalized;
+          outerScrollRef = normalized;
+          syncScrollTarget();
+        }}
+        class="overflow-y-auto flex-1 min-h-0"
+      >
         <Show
           when={props.focusedItem}
           fallback={
@@ -63,7 +82,15 @@ export default function PreviewPanel(props: PreviewPanelProps) {
           {(item) => (
             <Show
               when={item().type === "folder"}
-              fallback={<NotePreview item={item() as NoteListItem} />}
+              fallback={
+                <NotePreview
+                  item={item() as NoteListItem}
+                  onContentAreaRef={(el) => {
+                    noteContentRef = el;
+                    syncScrollTarget();
+                  }}
+                />
+              }
             >
               <Show
                 when={props.previewItems}

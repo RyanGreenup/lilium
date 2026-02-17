@@ -1,15 +1,16 @@
 # Implement Ranger
 
 
+0. [X] Scroll preview with keyboard
 0. Flat 0
-1. Jump to with a fzf like palette
+1. [X] Jump to with a fzf like palette
 2. [X] Show a preview of the content
   - [X] Include backlinks
-3. [X] Dynamic column count
+  - [X] Dynamic column count
 4. Vim-style navigation:
-   - `h` up/parent, `l` enter/open, `j/k` move, `gg/G` top/bottom
-   - `H/L` history back/forward
-5. Cursor and scroll behavior:
+   - [ ] `h` up/parent, `l` enter/open, `j/k` move, `gg/G` top/bottom
+   - [ ] `H/L` history back/forward
+5. [X] Cursor and scroll behavior:
    - Keep cursor visible while scrolling long columns
    - Optional wrap-around on top/bottom
 6. File operations:

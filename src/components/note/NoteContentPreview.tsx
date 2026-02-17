@@ -8,6 +8,7 @@ interface NoteContentPreviewProps {
   defaultSyntax?: NoteSyntax;
   emptyLabel?: string;
   class?: string;
+  contentRef?: (el: HTMLDivElement | undefined) => void;
 }
 
 export default function NoteContentPreview(props: NoteContentPreviewProps) {
@@ -15,7 +16,7 @@ export default function NoteContentPreview(props: NoteContentPreviewProps) {
   const hasContent = () => Boolean(props.content?.trim());
 
   return (
-    <div class={props.class}>
+    <div ref={(el) => props.contentRef?.(el ?? undefined)} class={props.class}>
       <Show
         when={hasContent()}
         fallback={
