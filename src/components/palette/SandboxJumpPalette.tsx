@@ -34,6 +34,7 @@ export function SandboxJumpPalette(props: SandboxJumpPaletteProps) {
   const [selectedIndex, setSelectedIndex] = createSignal(0);
 
   let inputRef: HTMLInputElement | undefined;
+  let listRef: HTMLDivElement | undefined;
 
   const items = createAsync(async () => {
     if (!props.open()) return [] as TreePaletteItem[];
@@ -119,6 +120,14 @@ export function SandboxJumpPalette(props: SandboxJumpPaletteProps) {
     }
   });
 
+  createEffect(() => {
+    if (!props.open() || !listRef) return;
+    const selectedEl = listRef.querySelector(
+      `[data-palette-index="${selectedIndex()}"]`,
+    ) as HTMLElement | null;
+    selectedEl?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  });
+
   const moveUp = () => setSelectedIndex((i) => Math.max(0, i - 1));
   const moveDown = () =>
     setSelectedIndex((i) => Math.min(filteredItems().length - 1, i + 1));
@@ -172,7 +181,7 @@ export function SandboxJumpPalette(props: SandboxJumpPaletteProps) {
             </div>
           }
         >
-          <div class="max-h-80 overflow-y-auto py-2">
+          <div ref={listRef} class="max-h-80 overflow-y-auto py-2">
             <Show
               when={filteredItems().length > 0}
               fallback={
@@ -186,6 +195,7 @@ export function SandboxJumpPalette(props: SandboxJumpPaletteProps) {
                   const isSelected = () => index() === selectedIndex();
                   return (
                     <div
+                      data-palette-index={index()}
                       class={
                         isSelected()
                           ? "flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors bg-primary/10 text-primary"
