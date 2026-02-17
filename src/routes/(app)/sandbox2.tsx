@@ -35,7 +35,6 @@ export const route = {
 export default function Sandbox2() {
   const navigate = useNavigate();
   const SANDBOX2_STATE_KEY = "sandbox2:list-state:v1";
-  const DEBUG_SANDBOX2_RESTORE = true;
 
   // Route guard — deferStream blocks SSR until auth resolves
   createAsync(() => getUser(), { deferStream: true });
@@ -71,12 +70,6 @@ export default function Sandbox2() {
 
   const memoryKey = (folderId: string | null): string => folderId ?? "root";
 
-  const debugLog = (...args: unknown[]) => {
-    if (typeof window !== "undefined" && DEBUG_SANDBOX2_RESTORE) {
-      console.log("[sandbox2 restore]", ...args);
-    }
-  };
-
   interface PersistedSandbox2State {
     path: string[];
     focusedByFolder: Record<string, number>;
@@ -91,7 +84,6 @@ export default function Sandbox2() {
     if (typeof window === "undefined") return null;
     try {
       const raw = window.sessionStorage.getItem(SANDBOX2_STATE_KEY);
-      debugLog("readPersistedState raw:", raw);
       if (!raw) return null;
       const parsed = JSON.parse(raw) as Partial<PersistedSandbox2State>;
       if (!parsed || typeof parsed !== "object") return null;
@@ -108,7 +100,6 @@ export default function Sandbox2() {
                 .map(([key, value]) => [key, value as number]),
             )
           : {};
-      debugLog("readPersistedState parsed:", { path, focusedByFolder });
       return { path, focusedByFolder };
     } catch (error) {
       console.warn("Failed to parse persisted sandbox2 state:", error);
@@ -119,7 +110,6 @@ export default function Sandbox2() {
   const writePersistedState = (state: PersistedSandbox2State) => {
     if (typeof window === "undefined") return;
     try {
-      debugLog("writePersistedState:", state);
       window.sessionStorage.setItem(SANDBOX2_STATE_KEY, JSON.stringify(state));
     } catch (error) {
       console.warn("Failed to persist sandbox2 state:", error);
@@ -130,10 +120,6 @@ export default function Sandbox2() {
     rootItems: ListItem[],
     persisted: PersistedSandbox2State | null,
   ): Promise<ColumnEntry[]> => {
-    debugLog("buildInitialColumns start:", {
-      rootCount: rootItems.length,
-      hasPersisted: !!persisted,
-    });
     const rootCol: ColumnEntry = {
       folderId: null,
       items: rootItems,
@@ -147,10 +133,6 @@ export default function Sandbox2() {
     const rootSavedFocus = persisted.focusedByFolder[memoryKey(null)];
     if (Number.isInteger(rootSavedFocus)) {
       columnsFromState[0]!.focusedIndex = clampIndex(rootSavedFocus, rootItems.length);
-      debugLog("restored root focus:", {
-        saved: rootSavedFocus,
-        applied: columnsFromState[0]!.focusedIndex,
-      });
     }
 
     for (const folderId of persisted.path) {
@@ -160,14 +142,7 @@ export default function Sandbox2() {
       const folderIdx = parentCol.items.findIndex(
         (item) => item.type === "folder" && item.id === folderId,
       );
-      if (folderIdx < 0) {
-        debugLog("stopping rehydrate; folder not found in parent items:", {
-          folderId,
-          parentTitle: parentCol.title,
-          parentFolderId: parentCol.folderId,
-        });
-        break;
-      }
+      if (folderIdx < 0) break;
 
       // Keep the active path visibly selected in ancestor columns.
       parentCol.focusedIndex = folderIdx;
@@ -178,13 +153,6 @@ export default function Sandbox2() {
       const children = await getChildrenQuery(folderItem.id);
       const savedFocus = persisted.focusedByFolder[memoryKey(folderItem.id)] ?? 0;
       const appliedFocus = clampIndex(savedFocus, children.length);
-      debugLog("rehydrated folder column:", {
-        folderId: folderItem.id,
-        folderTitle: folderItem.title,
-        childrenCount: children.length,
-        savedFocus,
-        appliedFocus,
-      });
       columnsFromState.push({
         folderId: folderItem.id,
         items: children,
@@ -193,14 +161,6 @@ export default function Sandbox2() {
       });
     }
 
-    debugLog("buildInitialColumns result:", {
-      columns: columnsFromState.map((c) => ({
-        folderId: c.folderId,
-        title: c.title,
-        focusedIndex: c.focusedIndex,
-        itemCount: c.items.length,
-      })),
-    });
     return columnsFromState;
   };
 
@@ -249,27 +209,17 @@ export default function Sandbox2() {
 
   // ─── Initialization ──────────────────────────────────────
   onMount(async () => {
-    debugLog("onMount start");
     const hasInitialMeasurement = measureColWidth();
-    debugLog("initial measurement:", {
-      hasInitialMeasurement,
-      colWidthPx: colWidthPx(),
-    });
 
     const rootItems = await getChildrenQuery(null);
-    debugLog("fetched root items:", rootItems.length);
     const persisted = readPersistedState();
     setFocusMemory(persisted?.focusedByFolder ?? {});
     const initialColumns = await buildInitialColumns(rootItems, persisted);
     batch(() => {
       setColumns(initialColumns);
       setDepth(initialColumns.length - 1);
-      debugLog("applied initial columns/depth:", {
-        depth: initialColumns.length - 1,
-      });
       if (hasInitialMeasurement || measureColWidth()) {
         setLayoutReady(true);
-        debugLog("layout marked ready");
       }
     });
 
@@ -403,13 +353,6 @@ export default function Sandbox2() {
     if (colIdx < 0 || colIdx >= columns.length) return;
     const folderId = columns[colIdx]?.folderId ?? null;
     const key = memoryKey(folderId);
-    debugLog("setFocusedIndex:", {
-      depth: colIdx,
-      from: columns[colIdx]?.focusedIndex,
-      to: idx,
-      folderId,
-      title: columns[colIdx]?.title,
-    });
     batch(() => {
       setColumns(colIdx, "focusedIndex", idx);
       setFocusMemory((prev) => ({ ...prev, [key]: idx }));
@@ -425,22 +368,11 @@ export default function Sandbox2() {
   const goDeeper = async (item: ListItem) => {
     if (item.type !== "folder" || isNavigating()) return;
     const fromDepth = depth();
-    debugLog("goDeeper start:", {
-      fromDepth,
-      folderId: item.id,
-      folderTitle: item.title,
-    });
     setIsNavigating(true);
     try {
       const children = await getChildrenQuery(item.id);
       const rememberedFocus = focusMemory()[memoryKey(item.id)] ?? 0;
       const restoredFocus = clampIndex(rememberedFocus, children.length);
-      debugLog("goDeeper fetched children:", {
-        folderId: item.id,
-        childrenCount: children.length,
-        rememberedFocus,
-        restoredFocus,
-      });
 
       // Critical sequencing:
       // update columns + depth in one batch so we do not render an intermediate
@@ -463,9 +395,6 @@ export default function Sandbox2() {
         }));
         setDepth(targetDepth);
       });
-      debugLog("goDeeper applied:", {
-        newDepth: targetDepth,
-      });
     } catch (e) {
       console.error("Failed to navigate deeper:", e);
     } finally {
@@ -475,14 +404,12 @@ export default function Sandbox2() {
 
   const goShallower = () => {
     if (depth() <= 0 || isNavigating()) return;
-    debugLog("goShallower:", { fromDepth: depth(), toDepth: depth() - 1 });
     setDepth((d) => d - 1);
   };
 
   const goToDepth = (targetDepth: number) => {
     if (targetDepth < 0 || targetDepth >= columns.length || isNavigating())
       return;
-    debugLog("goToDepth:", { fromDepth: depth(), toDepth: targetDepth });
     setDepth(targetDepth);
   };
 
