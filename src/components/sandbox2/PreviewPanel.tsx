@@ -1,0 +1,88 @@
+import { animate } from "motion/mini";
+import { For, Show, createEffect, on } from "solid-js";
+import type { ListItem, NoteListItem } from "~/lib/db/types";
+import { FADE_DURATION, EASE_OUT } from "./constants";
+import ItemIcon from "./ItemIcon";
+import NotePreview from "./NotePreview";
+
+interface PreviewPanelProps {
+  focusedItem: ListItem | undefined;
+  previewItems: ListItem[] | null;
+}
+
+export default function PreviewPanel(props: PreviewPanelProps) {
+  let innerRef: HTMLDivElement | undefined;
+
+  // Fade preview when focused item changes
+  createEffect(
+    on(
+      () => props.focusedItem?.id,
+      () => {
+        requestAnimationFrame(() => {
+          if (innerRef) {
+            animate(
+              innerRef,
+              { opacity: [0, 1] },
+              { duration: FADE_DURATION, ease: EASE_OUT },
+            );
+          }
+        });
+      },
+      { defer: true },
+    ),
+  );
+
+  return (
+    <div class="bg-base-100 overflow-y-auto">
+      <div class="px-3 py-1.5 text-xs font-semibold text-base-content/50 uppercase tracking-wider border-b border-base-300">
+        Preview
+      </div>
+      <div ref={innerRef}>
+        <Show
+          when={props.focusedItem}
+          fallback={
+            <div class="flex items-center justify-center h-32 text-base-content/40 text-sm">
+              No selection
+            </div>
+          }
+        >
+          {(item) => (
+            <Show
+              when={item().type === "folder"}
+              fallback={<NotePreview item={item() as NoteListItem} />}
+            >
+              <Show
+                when={props.previewItems}
+                fallback={
+                  <div class="flex items-center justify-center h-32 text-base-content/40 text-sm">
+                    Empty folder
+                  </div>
+                }
+              >
+                {(children) => (
+                  <Show
+                    when={children().length > 0}
+                    fallback={
+                      <div class="flex items-center justify-center h-32 text-base-content/40 text-sm">
+                        Empty folder
+                      </div>
+                    }
+                  >
+                    <For each={children()}>
+                      {(child) => (
+                        <div class="flex items-center px-3 py-1.5 text-sm text-base-content/70">
+                          <ItemIcon item={child} />
+                          <span class="truncate">{child.title}</span>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                )}
+              </Show>
+            </Show>
+          )}
+        </Show>
+      </div>
+    </div>
+  );
+}
