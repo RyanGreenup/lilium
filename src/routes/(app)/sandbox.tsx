@@ -13,6 +13,7 @@ import {
   createSignal,
   onCleanup,
   onMount,
+  startTransition,
 } from "solid-js";
 import { getUser } from "~/lib/auth";
 import { getChildrenQuery, getFolderPathQuery } from "~/lib/db/api";
@@ -34,7 +35,7 @@ export default function Sandbox() {
   const navigate = useNavigate();
 
   // Route guard — deferStream blocks SSR until auth resolves
-  const user = createAsync(() => getUser(), { deferStream: true });
+  createAsync(() => getUser(), { deferStream: true });
 
   // State
   const [currentFolderId, setCurrentFolderId] = createSignal<string | null>(
@@ -42,6 +43,12 @@ export default function Sandbox() {
   );
   const [focusedIndex, setFocusedIndex] = createSignal(0);
   const [gPressed, setGPressed] = createSignal(false);
+
+  // Derived parent ID signal — decoupled from async folderPath so that
+  // parentItems fetcher never reads a suspended createAsync directly.
+  const [resolvedParentId, setResolvedParentId] = createSignal<string | null>(
+    null,
+  );
 
   // Data fetching — no deferStream, each streams independently
   const folderPath = createAsync(() =>
@@ -51,18 +58,23 @@ export default function Sandbox() {
     getChildrenQuery(currentFolderId() ?? null),
   );
 
-  const parentId = createMemo(() => {
+  // When folderPath resolves, derive the parent ID into a plain signal.
+  // This breaks the async chain: parentItems reads a signal, not a createAsync.
+  createEffect(() => {
     const path = folderPath();
-    if (!path || path.length < 2) return null;
-    return path[path.length - 2]?.id ?? null;
+    if (!path) return;
+    if (path.length < 2) {
+      setResolvedParentId(null);
+    } else {
+      setResolvedParentId(path[path.length - 2]?.id ?? null);
+    }
   });
 
+  // parentItems depends only on plain signals — no async reads in fetcher
   const parentItems = createAsync(() => {
     const cfid = currentFolderId();
     if (cfid === null) return Promise.resolve([] as ListItem[]);
-    const path = folderPath();
-    if (!path || path.length <= 1) return getChildrenQuery(null);
-    return getChildrenQuery(parentId());
+    return getChildrenQuery(resolvedParentId());
   });
 
   const focusedItem = createMemo(() => {
@@ -72,10 +84,26 @@ export default function Sandbox() {
     return items[Math.min(idx, items.length - 1)];
   });
 
-  const previewItems = createAsync(() => {
+  // Derived focused folder ID signal — decoupled from async currentItems
+  // so previewItems fetcher never reads a suspended memo/createAsync.
+  const [resolvedFocusedFolderId, setResolvedFocusedFolderId] = createSignal<
+    string | null
+  >(null);
+
+  createEffect(() => {
     const item = focusedItem();
-    if (!item || item.type !== "folder") return Promise.resolve(null);
-    return getChildrenQuery(item.id);
+    if (item?.type === "folder") {
+      setResolvedFocusedFolderId(item.id);
+    } else {
+      setResolvedFocusedFolderId(null);
+    }
+  });
+
+  // previewItems depends only on a plain signal
+  const previewItems = createAsync(() => {
+    const fid = resolvedFocusedFolderId();
+    if (!fid) return Promise.resolve(null);
+    return getChildrenQuery(fid);
   });
 
   // Reset focus when folder changes
@@ -84,17 +112,18 @@ export default function Sandbox() {
     setFocusedIndex(0);
   });
 
-  // Navigation helpers
-  const enterFolder = (folderId: string) => {
-    setCurrentFolderId(folderId);
+  // Navigation helpers — wrapped in startTransition to keep old UI
+  // visible while new data loads, preventing Suspense re-trigger.
+  const navigateToFolder = (folderId: string | null) => {
+    startTransition(() => setCurrentFolderId(folderId));
   };
 
   const goToParent = () => {
     const path = folderPath();
     if (!path || path.length <= 1) {
-      setCurrentFolderId(null);
+      navigateToFolder(null);
     } else {
-      setCurrentFolderId(path[path.length - 2]?.id ?? null);
+      navigateToFolder(path[path.length - 2]?.id ?? null);
     }
   };
 
@@ -106,7 +135,7 @@ export default function Sandbox() {
     const item = focusedItem();
     if (!item) return;
     if (item.type === "folder") {
-      enterFolder(item.id);
+      navigateToFolder(item.id);
     } else {
       openNote(item.id);
     }
@@ -207,7 +236,7 @@ export default function Sandbox() {
       >
         <Breadcrumb
           path={folderPath() ?? []}
-          onNavigate={(id) => setCurrentFolderId(id)}
+          onNavigate={(id) => navigateToFolder(id)}
         />
       </Suspense>
 
@@ -232,7 +261,7 @@ export default function Sandbox() {
                       selected: item.id === currentFolderId(),
                     })}
                     onClick={() => {
-                      if (item.type === "folder") enterFolder(item.id);
+                      if (item.type === "folder") navigateToFolder(item.id);
                       else openNote(item.id);
                     }}
                   >
