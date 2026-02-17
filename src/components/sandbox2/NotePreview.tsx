@@ -1,9 +1,10 @@
 import FileText from "lucide-solid/icons/file-text";
 import { createAsync } from "@solidjs/router";
-import { Show } from "solid-js";
+import { Show, Suspense } from "solid-js";
 import type { NoteListItem } from "~/lib/db/types";
 import { getNoteByIdQuery } from "~/lib/db/notes/read";
 import NoteContentPreview from "~/components/note/NoteContentPreview";
+import PreviewSkeleton from "./PreviewSkeleton";
 
 export default function NotePreview(props: { item: NoteListItem }) {
   const note = createAsync(() => getNoteByIdQuery(props.item.id));
@@ -55,13 +56,8 @@ export default function NotePreview(props: { item: NoteListItem }) {
           Content
         </h4>
         <div class="rounded border border-base-300 bg-base-200/30 flex-1 min-h-0 overflow-hidden">
-          <Show
-            when={note() !== undefined}
-            fallback={
-              <div class="h-full flex items-center justify-center p-4">
-                <span class="loading loading-spinner loading-sm" />
-              </div>
-            }
+          <Suspense
+            fallback={<PreviewSkeleton mode="content" />}
           >
             <Show
               when={note()}
@@ -80,7 +76,7 @@ export default function NotePreview(props: { item: NoteListItem }) {
                 />
               )}
             </Show>
-          </Show>
+          </Suspense>
         </div>
       </div>
 

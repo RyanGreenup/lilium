@@ -3,6 +3,7 @@ import { animate } from "motion/mini";
 import {
   For,
   Show,
+  Suspense,
   batch,
   createEffect,
   createMemo,
@@ -24,6 +25,7 @@ import Breadcrumb from "~/components/sandbox2/Breadcrumb";
 import Column from "~/components/sandbox2/Column";
 import KeyboardHints from "~/components/sandbox2/KeyboardHints";
 import PreviewPanel from "~/components/sandbox2/PreviewPanel";
+import PreviewSkeleton from "~/components/sandbox2/PreviewSkeleton";
 import {
   SandboxJumpPalette,
   type SandboxJumpSelection,
@@ -667,13 +669,17 @@ export default function Sandbox2() {
           </Show>
         </div>
 
-        <PreviewPanel
-          focusedItem={focusedItem()}
-          previewItems={previewItems()}
-          isSliding={isSliding()}
-          prefersReducedMotion={prefersReducedMotion()}
-          disableAnimations={disableAnimations()}
-        />
+        <Suspense
+          fallback={<PreviewSkeleton />}
+        >
+          <PreviewPanel
+            focusedItem={focusedItem()}
+            previewItems={previewItems()}
+            isSliding={isSliding()}
+            prefersReducedMotion={prefersReducedMotion()}
+            disableAnimations={disableAnimations()}
+          />
+        </Suspense>
       </div>
 
       <KeyboardHints />
