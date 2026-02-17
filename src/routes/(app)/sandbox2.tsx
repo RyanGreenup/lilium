@@ -45,6 +45,10 @@ export default function Sandbox2() {
   // Global "transition lock" for side effects that can fight horizontal track motion.
   // Footgun: preview fades/fetches and scrollIntoView during track movement caused visible jitter.
   const [isSliding, setIsSliding] = createSignal(false);
+  // Click interactions can trigger multiple state updates in quick succession.
+  // We disable motion for click-driven nav to avoid perceived jitter.
+  const [disableAnimations, setDisableAnimations] = createSignal(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = createSignal(false);
   const [gPressed, setGPressed] = createSignal(false);
   const [colWidthPx, setColWidthPx] = createSignal(0);
   const [layoutReady, setLayoutReady] = createSignal(false);
@@ -130,8 +134,16 @@ export default function Sandbox2() {
       onCleanup(() => ro.disconnect());
     }
 
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handleReducedMotionChange = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+    setPrefersReducedMotion(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleReducedMotionChange);
+
     document.addEventListener("keydown", handleKeyDown);
     onCleanup(() => {
+      mediaQuery.removeEventListener("change", handleReducedMotionChange);
       document.removeEventListener("keydown", handleKeyDown);
       trackSlide?.stop();
       trackSlide = null;
@@ -179,12 +191,14 @@ export default function Sandbox2() {
     const targetX = trackOffset();
     const depthChanged = d !== prevDepthForTrack;
     const widthChanged = width !== prevWidthForTrack;
+    const reducedMotion = prefersReducedMotion() || disableAnimations();
 
-    if (prevDepthForTrack < 0 || !depthChanged || widthChanged) {
+    if (prevDepthForTrack < 0 || !depthChanged || widthChanged || reducedMotion) {
       // Snap path:
       // - first sync after mount
       // - no-op depth updates
       // - width changes (resize)
+      // - reduced motion preference
       // Never animate these or we reintroduce "jelly" movement.
       trackSlide?.stop();
       trackSlide = null;
@@ -270,6 +284,15 @@ export default function Sandbox2() {
     navigate(`/note/${noteId}`);
   };
 
+  const runWithoutAnimations = async (fn: () => void | Promise<void>) => {
+    setDisableAnimations(true);
+    try {
+      await fn();
+    } finally {
+      requestAnimationFrame(() => setDisableAnimations(false));
+    }
+  };
+
   const activateItem = () => {
     const item = focusedItem();
     if (!item) return;
@@ -285,18 +308,21 @@ export default function Sandbox2() {
     itemIdx: number,
     item: ListItem,
   ) => {
-    if (colIdx === depth()) {
-      setFocusedIndex(itemIdx);
-      activateItem();
-    } else if (colIdx < depth()) {
-      setColumns(colIdx, "focusedIndex", itemIdx);
-      goToDepth(colIdx);
-      if (item.type === "folder") goDeeper(item);
-      else openNote(item.id);
-    }
+    void runWithoutAnimations(async () => {
+      if (colIdx === depth()) {
+        setFocusedIndex(itemIdx);
+        if (item.type === "folder") await goDeeper(item);
+        else openNote(item.id);
+      } else if (colIdx < depth()) {
+        setColumns(colIdx, "focusedIndex", itemIdx);
+        goToDepth(colIdx);
+        if (item.type === "folder") await goDeeper(item);
+        else openNote(item.id);
+      }
+    });
   };
 
-  const handleColumnItemHover = (colIdx: number, itemIdx: number) => {
+  const handleColumnItemMouseMove = (colIdx: number, itemIdx: number) => {
     if (colIdx === depth()) setFocusedIndex(itemIdx);
   };
 
@@ -412,8 +438,8 @@ export default function Sandbox2() {
                     onItemClick={(itemIdx, item) =>
                       handleColumnItemClick(colIdx(), itemIdx, item)
                     }
-                    onItemHover={(itemIdx) =>
-                      handleColumnItemHover(colIdx(), itemIdx)
+                    onItemMouseMove={(itemIdx) =>
+                      handleColumnItemMouseMove(colIdx(), itemIdx)
                     }
                   />
                 )}
@@ -426,6 +452,8 @@ export default function Sandbox2() {
           focusedItem={focusedItem()}
           previewItems={previewItems()}
           isSliding={isSliding()}
+          prefersReducedMotion={prefersReducedMotion()}
+          disableAnimations={disableAnimations()}
         />
       </div>
 

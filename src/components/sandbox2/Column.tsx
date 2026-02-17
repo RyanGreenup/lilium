@@ -11,7 +11,7 @@ interface ColumnProps {
   isSliding: boolean;
   nextColumnFolderId: string | null | undefined;
   onItemClick: (itemIdx: number, item: ListItem) => void;
-  onItemHover: (itemIdx: number) => void;
+  onItemMouseMove: (itemIdx: number) => void;
 }
 
 export default function Column(props: ColumnProps) {
@@ -66,7 +66,7 @@ export default function Column(props: ColumnProps) {
                 focused={isFocused()}
                 selected={isCurrentFolder()}
                 onClick={() => props.onItemClick(itemIdx(), item)}
-                onMouseEnter={() => props.onItemHover(itemIdx())}
+                onMouseMove={() => props.onItemMouseMove(itemIdx())}
               />
             );
           }}

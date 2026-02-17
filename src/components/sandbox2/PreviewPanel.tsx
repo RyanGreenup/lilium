@@ -9,6 +9,8 @@ interface PreviewPanelProps {
   focusedItem: ListItem | undefined;
   previewItems: ListItem[] | null;
   isSliding: boolean;
+  prefersReducedMotion: boolean;
+  disableAnimations: boolean;
 }
 
 export default function PreviewPanel(props: PreviewPanelProps) {
@@ -19,9 +21,15 @@ export default function PreviewPanel(props: PreviewPanelProps) {
   // contention and occasional overdraw artifacts. Pause fade while sliding.
   createEffect(
     on(
-      () => [props.focusedItem?.id, props.isSliding] as const,
-      ([, isSliding]) => {
-        if (isSliding) return;
+      () =>
+        [
+          props.focusedItem?.id,
+          props.isSliding,
+          props.prefersReducedMotion,
+          props.disableAnimations,
+        ] as const,
+      ([, isSliding, prefersReducedMotion, disableAnimations]) => {
+        if (isSliding || prefersReducedMotion || disableAnimations) return;
         requestAnimationFrame(() => {
           if (innerRef) {
             animate(

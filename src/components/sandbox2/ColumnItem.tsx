@@ -12,7 +12,7 @@ interface ColumnItemProps {
   focused: boolean;
   selected: boolean;
   onClick: () => void;
-  onMouseEnter: () => void;
+  onMouseMove: () => void;
 }
 
 export default function ColumnItem(props: ColumnItemProps) {
@@ -24,7 +24,7 @@ export default function ColumnItem(props: ColumnItemProps) {
         selected: props.selected,
       })} transition-none`}
       onClick={props.onClick}
-      onMouseEnter={props.onMouseEnter}
+      onMouseMove={props.onMouseMove}
     >
       <ItemIcon item={props.item} />
       <span
