@@ -1,4 +1,4 @@
-import { RouteDefinition, createAsync, useNavigate } from "@solidjs/router";
+import { RouteDefinition, createAsync, revalidate, useNavigate } from "@solidjs/router";
 import { animate } from "motion/mini";
 import {
   For,
@@ -14,7 +14,7 @@ import {
 } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import { getUser } from "~/lib/auth";
-import { getChildrenQuery } from "~/lib/db/api";
+import { getChildrenQuery, LIST_CHILDREN_KEY, moveItem } from "~/lib/db/api";
 import type { ListItem } from "~/lib/db/types";
 import {
   type ColumnEntry,
@@ -69,6 +69,10 @@ export default function Sandbox2() {
     null,
   );
   const [jumpPaletteBaseDepth, setJumpPaletteBaseDepth] = createSignal(0);
+  // Cut/paste state: tracks the item staged for a move operation.
+  const [cutItem, setCutItem] = createSignal<ListItem | null>(null);
+  // The folderId the cut item currently lives in (so we can reload that column after paste).
+  const [cutItemSourceFolderId, setCutItemSourceFolderId] = createSignal<string | null | undefined>(undefined);
 
   // Refs
   let viewportRef: HTMLDivElement | undefined;
@@ -518,6 +522,88 @@ export default function Sandbox2() {
     }
   };
 
+  // ─── Cut / Paste (move) ──────────────────────────────────
+
+  const cutFocusedItem = () => {
+    const item = focusedItem();
+    if (!item) return;
+    const col = currentColumn();
+    // Record the folder the item currently lives in so we can refresh it later.
+    setCutItemSourceFolderId(col?.folderId);
+    setCutItem(item);
+  };
+
+  /**
+   * Reload a single column by fetching fresh children for its folderId.
+   * If the column is no longer in the columns store, this is a no-op.
+   */
+  const reloadColumn = async (colIdx: number) => {
+    const col = columns[colIdx];
+    if (!col) return;
+    const freshItems = await getChildrenQuery(col.folderId);
+    setColumns(colIdx, "items", freshItems);
+    // Clamp focused index in case items were removed.
+    const clampedFocus = clampIndex(col.focusedIndex, freshItems.length);
+    if (clampedFocus !== col.focusedIndex) {
+      setColumns(colIdx, "focusedIndex", clampedFocus);
+    }
+  };
+
+  const pasteItem = async () => {
+    const item = cutItem();
+    if (!item) return;
+
+    const destCol = currentColumn();
+    const d = depth();
+    if (!destCol || d < 0) return;
+
+    // Destination parent: the folderId of the currently active column.
+    // (Items get pasted *into* the current column, i.e. become children of destCol.folderId.)
+    const targetParentId = destCol.folderId;
+
+    // Refuse a no-op move (item is already here).
+    if (item.parent_id === targetParentId || (!item.parent_id && targetParentId === null)) {
+      setCutItem(null);
+      setCutItemSourceFolderId(undefined);
+      return;
+    }
+
+    try {
+      const success = await moveItem(item.id, item.type, targetParentId);
+      if (!success) {
+        // Server refused (e.g. cycle detection) — clear cut state without moving.
+        setCutItem(null);
+        setCutItemSourceFolderId(undefined);
+        return;
+      }
+    } catch (e) {
+      console.error("Failed to move item:", e);
+      setCutItem(null);
+      setCutItemSourceFolderId(undefined);
+      return;
+    }
+
+    // Find the source column index so we can reload it.
+    const sourceFolderId = cutItemSourceFolderId();
+    const sourceColIdx = columns.findIndex((col) => col.folderId === sourceFolderId);
+
+    // Clear cut state before refreshing so UI updates atomically.
+    setCutItem(null);
+    setCutItemSourceFolderId(undefined);
+
+    // Invalidate the list-children query cache so that subsequent
+    // getChildrenQuery() calls fetch fresh data from the server rather than
+    // returning stale cached results from before the move.
+    await revalidate(LIST_CHILDREN_KEY);
+
+    // Refresh both source and destination columns now that the cache is clear.
+    const refreshPromises: Promise<void>[] = [reloadColumn(d)];
+    if (sourceColIdx >= 0 && sourceColIdx !== d) {
+      refreshPromises.push(reloadColumn(sourceColIdx));
+    }
+    await Promise.all(refreshPromises);
+  };
+
   const scrollPreview = (direction: "up" | "down") => {
     if (!previewScrollRef) return false;
     const maxScroll = previewScrollRef.scrollHeight - previewScrollRef.clientHeight;
@@ -650,6 +736,28 @@ export default function Sandbox2() {
         setGPressed(false);
         break;
 
+      case "x":
+        e.preventDefault();
+        setGPressed(false);
+        cutFocusedItem();
+        break;
+
+      case "p":
+        e.preventDefault();
+        setGPressed(false);
+        void pasteItem();
+        break;
+
+      case "Escape":
+        e.preventDefault();
+        setGPressed(false);
+        // Cancel a pending cut operation.
+        if (cutItem()) {
+          setCutItem(null);
+          setCutItemSourceFolderId(undefined);
+        }
+        break;
+
       default:
         setGPressed(false);
         break;
@@ -698,6 +806,7 @@ export default function Sandbox2() {
                         ? columns[colIdx() + 1]?.folderId
                         : undefined
                     }
+                    cutItemId={cutItem()?.id ?? null}
                     onItemClick={(itemIdx, item) =>
                       handleColumnItemClick(colIdx(), itemIdx, item)
                     }
@@ -727,7 +836,7 @@ export default function Sandbox2() {
         </Suspense>
       </div>
 
-      <KeyboardHints />
+      <KeyboardHints cutPending={cutItem() !== null} />
 
       <SandboxJumpPalette
         open={isJumpPaletteOpen}

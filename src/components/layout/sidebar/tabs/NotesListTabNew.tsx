@@ -26,6 +26,7 @@ import {
   getFolderPathQuery,
   getIndexNoteIdQuery,
   getNoteFolderPathQuery,
+  LIST_CHILDREN_KEY,
 } from "~/lib/db/api";
 import { createNewNote } from "~/lib/db/notes/create";
 import type { ListItem } from "~/lib/db/types";
@@ -517,7 +518,7 @@ export function ListViewer(props: ListViewerProps) {
       const newNote = await createNewNote("index", "", parentId);
       // Revalidate both queries so UI updates
       await Promise.all([
-        revalidate("list-children"),
+        revalidate(LIST_CHILDREN_KEY),
         revalidate("index-note-id"),
       ]);
       setList("skipNextAutoExpand", true);

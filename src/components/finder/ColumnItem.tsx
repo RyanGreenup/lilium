@@ -11,6 +11,7 @@ interface ColumnItemProps {
   item: ListItem;
   focused: boolean;
   selected: boolean;
+  isCut: boolean;
   onClick: () => void;
   onMouseMove: () => void;
 }
@@ -22,7 +23,7 @@ export default function ColumnItem(props: ColumnItemProps) {
       class={`${listItemVariants({
         focused: props.focused,
         selected: props.selected,
-      })} transition-none`}
+      })} transition-none ${props.isCut ? "opacity-40 italic border border-dashed border-warning/60" : ""}`}
       onClick={props.onClick}
       onMouseMove={props.onMouseMove}
     >

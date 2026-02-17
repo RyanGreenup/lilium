@@ -7,8 +7,8 @@
 2. [X] Show a preview of the content
   - [X] Include backlinks
   - [X] Dynamic column count
-4. Vim-style navigation:
-   - [ ] `h` up/parent, `l` enter/open, `j/k` move, `gg/G` top/bottom
+4. [-] Vim-style navigation:
+   - [X] `h` up/parent, `l` enter/open, `j/k` move, `gg/G` top/bottom
    - [ ] `H/L` history back/forward
 5. [X] Cursor and scroll behavior:
    - Keep cursor visible while scrolling long columns

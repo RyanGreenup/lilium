@@ -76,13 +76,16 @@ export async function getChildren(parentId: string | null): Promise<ListItem[]> 
   return [...folderItems, ...noteItems];
 }
 
+/** Cache key used by the list-children query. Import this instead of using the raw string. */
+export const LIST_CHILDREN_KEY = "list-children";
+
 /**
  * Query function to get children (for client-side use)
  */
 export const getChildrenQuery = query(async (parentId: string | null) => {
   "use server";
   return await getChildren(parentId);
-}, "list-children");
+}, LIST_CHILDREN_KEY);
 
 export interface TreePaletteItem {
   id: string;
@@ -340,3 +343,63 @@ export const getNoteFolderPathQuery = query(async (noteId: string) => {
   "use server";
   return await getNoteFolderPath(noteId);
 }, "note-folder-path");
+
+/**
+ * Move a note or folder to a new parent (cut & paste / reparent)
+ *
+ * Updates the parent_id of the given item. Pass null for targetParentId to
+ * move the item to the root level. The item must belong to the current user.
+ *
+ * @param itemId - The note or folder ID to move
+ * @param itemType - Whether the item is a "note" or "folder"
+ * @param targetParentId - The destination folder ID, or null for root
+ * @returns true on success, false if the item was not found / not owned
+ */
+export async function moveItem(
+  itemId: string,
+  itemType: "note" | "folder",
+  targetParentId: string | null,
+): Promise<boolean> {
+  "use server";
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  const table = itemType === "note" ? "notes" : "folders";
+
+  // Guard: prevent moving a folder into itself or its own descendant.
+  // Walk up the target's ancestor chain and make sure itemId is not in it.
+  if (itemType === "folder" && targetParentId !== null) {
+    const ancestorStmt = db.prepare(`
+      WITH RECURSIVE ancestors AS (
+        SELECT id, parent_id FROM folders WHERE id = ? AND user_id = ?
+        UNION ALL
+        SELECT f.id, f.parent_id
+        FROM folders f
+        INNER JOIN ancestors a ON f.id = a.parent_id
+        WHERE f.user_id = ?
+      )
+      SELECT id FROM ancestors WHERE id = ?
+    `);
+    const cycle = ancestorStmt.get(targetParentId, user.id, user.id, itemId) as
+      | { id: string }
+      | undefined;
+    if (cycle) {
+      // Would create a cycle — refuse silently.
+      return false;
+    }
+  }
+
+  const stmt = db.prepare(
+    targetParentId
+      ? `UPDATE ${table} SET parent_id = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`
+      : `UPDATE ${table} SET parent_id = NULL, updated_at = datetime('now') WHERE id = ? AND user_id = ?`,
+  );
+
+  const result = targetParentId
+    ? stmt.run(targetParentId, itemId, user.id)
+    : stmt.run(itemId, user.id);
+
+  return result.changes > 0;
+}
