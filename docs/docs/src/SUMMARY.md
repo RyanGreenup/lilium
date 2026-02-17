@@ -11,6 +11,7 @@
 - [Asset Management](./asset-management.md)
     - [Streaming & Range Requests](./asset-streaming.md)
 - [Custom Hooks](./hooks.md)
+- [Ranger-Style File Browser](./ranger-file-browser.md)
 - [Sidebar Scroll Layout](./sidebar-scroll-layout.md)
 - [Notes List Viewer](./notes-list-viewer.md)
 - [Placeholder 1]()
