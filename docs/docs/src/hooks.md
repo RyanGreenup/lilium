@@ -121,6 +121,43 @@ export function useNoteBreadcrumb() {
 }
 ```
 
+## Keybinding Hooks
+
+When a hook manages a UI element that has a keybinding, register the keybinding **inside the hook** rather than in the caller. This prevents duplicate registration when multiple components use the same hook.
+
+Pass an `enabled` accessor to gate the handler:
+
+```typescript
+export interface UseLinkPaletteOptions {
+  onInsertLink: (linkText: string, note: NoteWithPath) => void;
+  /** Controls whether Ctrl+K opens the palette (default: always enabled) */
+  enabled?: Accessor<boolean>;
+}
+
+export function useLinkPalette(options: UseLinkPaletteOptions) {
+  const [isOpen, setIsOpen] = createSignal(false);
+  const open = () => setIsOpen(true);
+  const enabled = options.enabled ?? (() => true);
+
+  useKeybinding({ key: "k", ctrl: true }, () => {
+    if (enabled()) open();
+  });
+
+  // ...
+}
+```
+
+Usage — pass `enabled` to restrict the keybinding to the appropriate context:
+
+```typescript
+const linkPalette = useLinkPalette({
+  onInsertLink: (text) => insertTextAtCursor(text),
+  enabled: isEditing, // Ctrl+K only active when editing
+});
+```
+
+**Don't** call `useKeybinding` separately in the component as well — that registers two listeners and fires the handler twice.
+
 ## Mocking in Tests
 
 ```typescript

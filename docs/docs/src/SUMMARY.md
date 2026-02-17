@@ -12,6 +12,7 @@
     - [Streaming & Range Requests](./asset-streaming.md)
 - [Custom Hooks](./hooks.md)
 - [Sidebar Scroll Layout](./sidebar-scroll-layout.md)
+- [Notes List Viewer](./notes-list-viewer.md)
 - [Placeholder 1]()
 - [Placeholder 2]()
     - [Placeholder 2a]()
