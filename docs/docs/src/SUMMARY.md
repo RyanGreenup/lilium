@@ -15,6 +15,7 @@
 - [Finder Route Overview](./finder-route-overview.md)
 - [Sidebar Scroll Layout](./sidebar-scroll-layout.md)
 - [Notes List Viewer](./notes-list-viewer.md)
+- [Tiptap WYSIWYG Editor](./tiptap-editor.md)
 - [Placeholder 1]()
 - [Placeholder 2]()
     - [Placeholder 2a]()

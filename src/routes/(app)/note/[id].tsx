@@ -1,19 +1,26 @@
 import { createAsync, useParams } from "@solidjs/router";
-import { createSignal, createEffect, Show, Suspense, Accessor } from "solid-js";
+import { createSignal, createEffect, on, Show, Suspense, Accessor } from "solid-js";
 import { useCurrentNote, useNoteById } from "~/lib/hooks/useCurrentNote";
 import NoteContentPreview from "~/components/note/NoteContentPreview";
+import TiptapNoteEditor from "~/components/note/TiptapNoteEditor";
 import { updateNoteQuery } from "~/lib/db/notes/update";
 import { SYNTAX_OPTIONS, type Note, type NoteSyntax } from "~/lib/db/types";
+import {
+  convertOrgToMarkdownQuery,
+  convertMarkdownToOrgQuery,
+} from "~/lib/pandoc";
 import Save from "lucide-solid/icons/save";
 import Eye from "lucide-solid/icons/eye";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import NotebookPen from "lucide-solid/icons/notebook-pen";
 import Upload from "lucide-solid/icons/upload";
 import Link from "lucide-solid/icons/link";
+import Type from "lucide-solid/icons/type";
+import PenTool from "lucide-solid/icons/pen-tool";
 
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
-import { Select } from "~/solid-daisy-components/components/Select";
+import { SingleCombobox } from "~/solid-daisy-components/components/Combobox/SingleCombobox";
 import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
 import { Textarea } from "~/solid-daisy-components/components/Textarea";
 import { Input } from "~/solid-daisy-components/components/Input";
@@ -65,6 +72,13 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
   const [metadataExpanded, setMetadataExpanded] = createSignal(false);
   const [localNote, setLocalNote] = createSignal<Note | null>(null);
   const [uploading, setUploading] = createSignal(false);
+  const [editorMode, setEditorMode] = createSignal<"plain" | "tiptap">("plain");
+
+  // Org-mode pandoc conversion state: tiptap edits org notes as markdown,
+  // converting org→md on entry and md→org on save/exit.
+  const [tiptapContent, setTiptapContent] = createSignal<string | null>(null);
+  const [convertingContent, setConvertingContent] = createSignal(false);
+  const isOrgNote = () => (currentNote()?.syntax ?? defaultSyntax) === "org";
 
   let textareaRef: HTMLTextAreaElement | undefined;
 
@@ -75,6 +89,29 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
       setLocalNote(currentNote);
     }
   });
+
+  // When a different note is loaded, clear stale tiptap state and
+  // re-convert if still in tiptap mode with an org note.
+  // Tracks localNote().id so it fires after the copy-from-note effect
+  // above has set localNote with the new note's data.
+  createEffect(
+    on(
+      () => localNote()?.id,
+      (id) => {
+        if (!id) return;
+        setTiptapContent(null);
+        const local = localNote();
+        if (editorMode() === "tiptap" && local?.syntax === "org") {
+          setConvertingContent(true);
+          convertOrgToMarkdownQuery(local.content || "").then((md) => {
+            setTiptapContent(md);
+            setConvertingContent(false);
+          });
+        }
+      },
+      { defer: true },
+    ),
+  );
 
   // Get current note data or fallback to local note
   const currentNote = () => localNote() || note();
@@ -87,14 +124,31 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
     setUnsavedChanges(true);
   };
 
+  // Convert tiptap markdown back to org and sync into localNote.
+  // Returns the converted org content, or null if no conversion was needed.
+  const syncOrgFromTiptap = async (): Promise<string | null> => {
+    const md = tiptapContent();
+    if (!isOrgNote() || md === null) return null;
+    const org = await convertMarkdownToOrgQuery(md);
+    setLocalNote((prev) => (prev ? { ...prev, content: org } : null));
+    return org;
+  };
+
   const saveNote = async () => {
     const id = noteId();
-    const local = localNote();
     const original = note();
 
-    if (!id || !local || !original) return;
+    if (!id || !original) return;
 
     try {
+      // If editing org in tiptap, convert markdown→org before diffing
+      if (editorMode() === "tiptap" && tiptapContent() !== null && isOrgNote()) {
+        await syncOrgFromTiptap();
+      }
+
+      const local = localNote();
+      if (!local) return;
+
       const updates: any = {};
       if (local.title !== original.title) updates.title = local.title;
       if (local.abstract !== original.abstract)
@@ -203,8 +257,34 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
     input.click();
   };
 
+  // Switch to tiptap mode; for org notes, convert org→md via pandoc first
+  const switchToTiptap = async () => {
+    setEditorMode("tiptap");
+    if (isOrgNote()) {
+      setConvertingContent(true);
+      const md = await convertOrgToMarkdownQuery(
+        currentNote()?.content || "",
+      );
+      setTiptapContent(md);
+      setConvertingContent(false);
+    }
+  };
+
+  // Switch to plain text mode; for org notes, convert md→org back first
+  const switchToPlain = async () => {
+    if (isOrgNote() && tiptapContent() !== null) {
+      await syncOrgFromTiptap();
+      setTiptapContent(null);
+    }
+    setEditorMode("plain");
+  };
+
   // Modular keybinding functions
-  const toggleEditMode = () => {
+  const toggleEditMode = async () => {
+    if (isEditing() && editorMode() === "tiptap" && isOrgNote() && tiptapContent() !== null) {
+      await syncOrgFromTiptap();
+      setTiptapContent(null);
+    }
     setIsEditing(!isEditing());
   };
 
@@ -354,16 +434,14 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
                   <div class="flex items-center gap-1 text-xs">
                     <span class="text-base-content/60">Syntax:</span>
 
-                    <Select
+                    <SingleCombobox
+                      options={syntaxOptions}
+                      optionValue="value"
+                      optionLabel="label"
                       value={currentNote()?.syntax || defaultSyntax}
-                      onChange={(e) =>
-                        updateNote("syntax", e.currentTarget.value)
-                      }
-                    >
-                      {syntaxOptions.map((option) => (
-                        <option value={option.value}>{option.label}</option>
-                      ))}
-                    </Select>
+                      onChange={(val) => updateNote("syntax", val)}
+                      triggerMode="focus"
+                    />
                   </div>
 
                   <div class="flex items-center gap-1 text-xs">
@@ -371,7 +449,7 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
                     <Toggle
                       size="sm"
                       checked={isEditing()}
-                      onChange={(e) => setIsEditing(e.currentTarget.checked)}
+                      onChange={() => toggleEditMode()}
                     />
                   </div>
                 </div>
@@ -382,17 +460,15 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
                 <div
                   class={`flex items-center ${metadataExpanded() ? "invisible" : ""}`}
                 >
-                  <Select
-                    size="xs"
+                  <SingleCombobox
+                    options={syntaxOptions}
+                    optionValue="value"
+                    optionLabel="label"
                     value={currentNote()?.syntax || defaultSyntax}
-                    onChange={(e) =>
-                      updateNote("syntax", e.currentTarget.value)
-                    }
-                  >
-                    {syntaxOptions.map((option) => (
-                      <option value={option.value}>{option.label}</option>
-                    ))}
-                  </Select>
+                    onChange={(val) => updateNote("syntax", val)}
+                    triggerMode="focus"
+                    class="w-40"
+                  />
                 </div>
 
                 {/* Right: Primary actions */}
@@ -408,6 +484,28 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
                     onUpload={triggerFileUpload}
                   />
 
+                  {/* Editor Mode Toggle (only when editing) */}
+                  <Show when={isEditing()}>
+                    <div class="join">
+                      <button
+                        class={`btn btn-xs join-item gap-1 ${editorMode() === "plain" ? "btn-active" : "btn-ghost"}`}
+                        onClick={switchToPlain}
+                        title="Plain text editor"
+                      >
+                        <Type class="w-3 h-3" />
+                        <span class="hidden sm:inline">Plain</span>
+                      </button>
+                      <button
+                        class={`btn btn-xs join-item gap-1 ${editorMode() === "tiptap" ? "btn-active" : "btn-ghost"}`}
+                        onClick={switchToTiptap}
+                        title="Rich text editor"
+                      >
+                        <PenTool class="w-3 h-3" />
+                        <span class="hidden sm:inline">Rich</span>
+                      </button>
+                    </div>
+                  </Show>
+
                   {/* Edit Toggle (hidden when metadata expanded) */}
                   <div
                     class={`flex items-center gap-1 px-2 py-1 rounded hover:bg-base-300/50 transition-colors ${metadataExpanded() ? "hidden" : "flex"}`}
@@ -416,7 +514,7 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
                     <Toggle
                       size="sm"
                       checked={isEditing()}
-                      onChange={(e) => setIsEditing(e.currentTarget.checked)}
+                      onChange={() => toggleEditMode()}
                     />
                   </div>
 
@@ -452,7 +550,7 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
           </div>
 
           {/* Content Area */}
-          <div class="flex-1 flex">
+          <div class="flex-1 flex min-h-0">
             <Show
               when={isEditing()}
               fallback={
@@ -464,17 +562,47 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
                 />
               }
             >
-              <textarea
-                ref={textareaRef}
-                value={currentNote()?.content || ""}
-                onInput={(e) => updateNote("content", e.currentTarget.value)}
-                onPaste={handlePaste}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                class="flex-1 p-6 textarea textarea-ghost resize-none border-none focus:outline-none text-sm font-mono leading-relaxed"
-                placeholder="Start writing your note..."
-                style={{ "field-sizing": "content" } as any}
-              />
+              <Show
+                when={editorMode() === "tiptap"}
+                fallback={
+                  <textarea
+                    ref={textareaRef}
+                    value={currentNote()?.content || ""}
+                    onInput={(e) => updateNote("content", e.currentTarget.value)}
+                    onPaste={handlePaste}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    class="flex-1 p-6 textarea textarea-ghost resize-none border-none focus:outline-none text-sm font-mono leading-relaxed"
+                    placeholder="Start writing your note..."
+                    style={{ "field-sizing": "content" } as any}
+                  />
+                }
+              >
+                <Show
+                  when={!convertingContent()}
+                  fallback={
+                    <div class="flex-1 flex items-center justify-center">
+                      <div class="loading loading-spinner loading-md"></div>
+                    </div>
+                  }
+                >
+                  {/* keyed on noteId so the editor remounts with fresh
+                      content when the user navigates to a different note */}
+                  <Show when={noteId()} keyed>
+                    {(_id) => (
+                      <TiptapNoteEditor
+                        content={isOrgNote() ? (tiptapContent() || "") : (currentNote()?.content || "")}
+                        syntax={isOrgNote() ? "md" : (currentNote()?.syntax || defaultSyntax)}
+                        onUpdate={isOrgNote()
+                          ? (md) => { setTiptapContent(md); setUnsavedChanges(true); }
+                          : (content) => updateNote("content", content)
+                        }
+                        placeholder="Start writing..."
+                      />
+                    )}
+                  </Show>
+                </Show>
+              </Show>
             </Show>
           </div>
 
