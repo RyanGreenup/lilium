@@ -25,56 +25,37 @@ export async function getChildren(parentId: string | null): Promise<ListItem[]> 
     throw redirect("/login");
   }
 
-  // Get child folders
-  const foldersStmt = db.prepare(`
-    SELECT
-      id,
-      title,
-      parent_id,
-      user_id,
-      created_at,
-      updated_at
-    FROM folders
-    WHERE ${parentId ? "parent_id = ?" : "parent_id IS NULL"}
-      AND user_id = ?
-    ORDER BY title ASC
+  const stmt = db.prepare(`
+    SELECT * FROM (
+      SELECT
+        id, title, parent_id, user_id, created_at, updated_at,
+        NULL as abstract, NULL as syntax,
+        'folder' as type
+      FROM folders
+      WHERE parent_id IS ?
+        AND user_id = ?
+
+      UNION ALL
+
+      SELECT
+        id, title, parent_id, user_id, created_at, updated_at,
+        abstract, syntax,
+        'note' as type
+      FROM notes
+      WHERE parent_id IS ?
+        AND user_id = ?
+        AND LOWER(TRIM(title)) != 'index'
+    )
+    ORDER BY
+      CASE type WHEN 'folder' THEN 0 ELSE 1 END,
+      title ASC
   `);
-  const folders = (parentId
-    ? foldersStmt.all(parentId, user.id)
-    : foldersStmt.all(user.id)
-  ) as Folder[];
 
-  // Get child notes (without content)
-  // Note: Index notes (title = "index") are excluded because they serve as
-  // folder landing pages and are accessed via the dedicated index button
-  // in the breadcrumb path, not through the file list.
-  const notesStmt = db.prepare(`
-    SELECT
-      id,
-      title,
-      abstract,
-      syntax,
-      parent_id,
-      user_id,
-      created_at,
-      updated_at
-    FROM notes
-    WHERE ${parentId ? "parent_id = ?" : "parent_id IS NULL"}
-      AND user_id = ?
-      AND LOWER(TRIM(title)) != 'index'
-    ORDER BY title ASC
-  `);
-  const notes = (parentId
-    ? notesStmt.all(parentId, user.id)
-    : notesStmt.all(user.id)
-  ) as NoteWithoutContent[];
-
-  // Combine with type discriminator: folders first, then notes
-  const folderItems: ListItem[] = folders.map(f => ({ ...f, type: "folder" as const }));
-  const noteItems: ListItem[] = notes.map(n => ({ ...n, type: "note" as const }));
-
-  return [...folderItems, ...noteItems];
+  return stmt.all(parentId, user.id, parentId, user.id) as ListItem[];
 }
+
+/** Cache key used by the list-children query. Import this instead of using the raw string. */
+export const LIST_CHILDREN_KEY = "list-children";
 
 /**
  * Query function to get children (for client-side use)
@@ -82,7 +63,112 @@ export async function getChildren(parentId: string | null): Promise<ListItem[]> 
 export const getChildrenQuery = query(async (parentId: string | null) => {
   "use server";
   return await getChildren(parentId);
-}, "list-children");
+}, LIST_CHILDREN_KEY);
+
+export interface TreePaletteItem {
+  id: string;
+  title: string;
+  parent_id: string | null;
+  type: "folder" | "note";
+  full_path: string;
+  display_path: string;
+}
+
+/**
+ * Get all folders and notes at the provided level or below.
+ *
+ * @param parentId - Current folder ID in sandbox2. null means root.
+ */
+export async function getTreeItemsForPalette(
+  parentId: string | null,
+): Promise<TreePaletteItem[]> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  let sql: string;
+  const params: (string | number)[] = [];
+
+  if (parentId) {
+    sql = `
+      WITH parent_path AS (
+        SELECT full_path || '/' as prefix
+        FROM mv_folder_paths
+        WHERE folder_id = ? AND user_id = ?
+      )
+      SELECT
+        f.id,
+        f.title,
+        f.parent_id,
+        'folder' as type,
+        fp.full_path,
+        SUBSTR(fp.full_path, LENGTH(pp.prefix) + 1) as display_path
+      FROM folders f
+      INNER JOIN mv_folder_paths fp ON fp.folder_id = f.id
+      CROSS JOIN parent_path pp
+      WHERE f.user_id = ?
+        AND fp.full_path LIKE pp.prefix || '%'
+
+      UNION ALL
+
+      SELECT
+        n.id,
+        n.title,
+        n.parent_id,
+        'note' as type,
+        np.full_path,
+        SUBSTR(np.full_path, LENGTH(pp.prefix) + 1) as display_path
+      FROM notes n
+      INNER JOIN mv_note_paths np ON np.note_id = n.id
+      CROSS JOIN parent_path pp
+      WHERE n.user_id = ?
+        AND np.full_path LIKE pp.prefix || '%'
+        AND LOWER(TRIM(n.title)) != 'index'
+
+      ORDER BY display_path ASC
+    `;
+    params.push(parentId, user.id, user.id, user.id);
+  } else {
+    sql = `
+      SELECT
+        f.id,
+        f.title,
+        f.parent_id,
+        'folder' as type,
+        fp.full_path,
+        fp.full_path as display_path
+      FROM folders f
+      INNER JOIN mv_folder_paths fp ON fp.folder_id = f.id
+      WHERE f.user_id = ?
+
+      UNION ALL
+
+      SELECT
+        n.id,
+        n.title,
+        n.parent_id,
+        'note' as type,
+        np.full_path,
+        np.full_path as display_path
+      FROM notes n
+      INNER JOIN mv_note_paths np ON np.note_id = n.id
+      WHERE n.user_id = ?
+        AND LOWER(TRIM(n.title)) != 'index'
+
+      ORDER BY display_path ASC
+    `;
+    params.push(user.id, user.id);
+  }
+
+  const stmt = db.prepare(sql);
+  return stmt.all(...params) as TreePaletteItem[];
+}
+
+export const getTreeItemsForPaletteQuery = query(async (parentId: string | null) => {
+  "use server";
+  return await getTreeItemsForPalette(parentId);
+}, "tree-items-palette");
 
 /**
  * Get folder path for breadcrumb navigation
@@ -169,16 +255,13 @@ export async function getIndexNoteId(parentId: string | null): Promise<string | 
   const stmt = db.prepare(`
     SELECT id
     FROM notes
-    WHERE ${parentId ? "parent_id = ?" : "parent_id IS NULL"}
+    WHERE parent_id IS ?
       AND user_id = ?
       AND LOWER(TRIM(title)) = 'index'
     LIMIT 1
   `);
 
-  const result = (parentId
-    ? stmt.get(parentId, user.id)
-    : stmt.get(user.id)
-  ) as { id: string } | undefined;
+  const result = stmt.get(parentId, user.id) as { id: string } | undefined;
 
   return result?.id ?? null;
 }
@@ -235,3 +318,126 @@ export const getNoteFolderPathQuery = query(async (noteId: string) => {
   "use server";
   return await getNoteFolderPath(noteId);
 }, "note-folder-path");
+
+/**
+ * Move a note or folder to a new parent (cut & paste / reparent)
+ *
+ * Updates the parent_id of the given item. Pass null for targetParentId to
+ * move the item to the root level. The item must belong to the current user.
+ *
+ * @param itemId - The note or folder ID to move
+ * @param itemType - Whether the item is a "note" or "folder"
+ * @param targetParentId - The destination folder ID, or null for root
+ * @returns true on success, false if the item was not found / not owned
+ */
+export async function moveItem(
+  itemId: string,
+  itemType: "note" | "folder",
+  targetParentId: string | null,
+): Promise<boolean> {
+  "use server";
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  const table = itemType === "note" ? "notes" : "folders";
+
+  // Guard: prevent moving a folder into itself or its own descendant.
+  // Walk up the target's ancestor chain and make sure itemId is not in it.
+  if (itemType === "folder" && targetParentId !== null) {
+    const ancestorStmt = db.prepare(`
+      WITH RECURSIVE ancestors AS (
+        SELECT id, parent_id FROM folders WHERE id = ? AND user_id = ?
+        UNION ALL
+        SELECT f.id, f.parent_id
+        FROM folders f
+        INNER JOIN ancestors a ON f.id = a.parent_id
+        WHERE f.user_id = ?
+      )
+      SELECT id FROM ancestors WHERE id = ?
+    `);
+    const cycle = ancestorStmt.get(targetParentId, user.id, user.id, itemId) as
+      | { id: string }
+      | undefined;
+    if (cycle) {
+      // Would create a cycle — refuse silently.
+      return false;
+    }
+  }
+
+  const stmt = db.prepare(
+    `UPDATE ${table} SET parent_id = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`,
+  );
+
+  const result = stmt.run(targetParentId, itemId, user.id);
+
+  return result.changes > 0;
+}
+
+/**
+ * Move multiple items to a new parent in a single transaction.
+ *
+ * @param items - Array of { id, type } to move
+ * @param targetParentId - Destination folder ID, or null for root
+ * @returns Object with arrays of moved and failed item IDs
+ */
+export async function moveItems(
+  items: { id: string; type: "note" | "folder" }[],
+  targetParentId: string | null,
+): Promise<{ moved: string[]; failed: string[] }> {
+  "use server";
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  const moved: string[] = [];
+  const failed: string[] = [];
+
+  const ancestorStmt = db.prepare(`
+    WITH RECURSIVE ancestors AS (
+      SELECT id, parent_id FROM folders WHERE id = ? AND user_id = ?
+      UNION ALL
+      SELECT f.id, f.parent_id
+      FROM folders f
+      INNER JOIN ancestors a ON f.id = a.parent_id
+      WHERE f.user_id = ?
+    )
+    SELECT id FROM ancestors WHERE id = ?
+  `);
+
+  const updateNoteStmt = db.prepare(
+    `UPDATE notes SET parent_id = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`,
+  );
+  const updateFolderStmt = db.prepare(
+    `UPDATE folders SET parent_id = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`,
+  );
+
+  const runTransaction = db.transaction(() => {
+    for (const item of items) {
+      // Cycle detection for folders
+      if (item.type === "folder" && targetParentId !== null) {
+        const cycle = ancestorStmt.get(targetParentId, user.id, user.id, item.id) as
+          | { id: string }
+          | undefined;
+        if (cycle) {
+          failed.push(item.id);
+          continue;
+        }
+      }
+
+      const stmt = item.type === "note" ? updateNoteStmt : updateFolderStmt;
+      const result = stmt.run(targetParentId, item.id, user.id);
+
+      if (result.changes > 0) {
+        moved.push(item.id);
+      } else {
+        failed.push(item.id);
+      }
+    }
+  });
+
+  runTransaction();
+  return { moved, failed };
+}

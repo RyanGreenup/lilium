@@ -7,6 +7,7 @@ import Menu from "lucide-solid/icons/menu";
 
 import ToggleLeft from "lucide-solid/icons/toggle-left";
 import { Accessor, JSXElement, Show } from "solid-js";
+import { FinderOverlay } from "~/components/FinderOverlay";
 import { SidebarTabs } from "~/components/layout/sidebar/SidebarContent";
 import { UserDropdown } from "~/components/UserDrowDown";
 import { getUser } from "~/lib/auth";
@@ -60,6 +61,8 @@ export default function MainLayout(props: { children: JSXElement }) {
       <BottomDock>
         <DockContent />
       </BottomDock>
+
+      <FinderOverlay />
     </Layout>
   );
 }
@@ -152,3 +155,4 @@ const RightDrawerContent = () => {
     </div>
   );
 };
+

@@ -6,7 +6,7 @@ import { createNewNote, duplicateNoteQuery } from "~/lib/db/notes/create";
 import { createNewFolder, duplicateFolderQuery } from "~/lib/db/folders/create";
 import { renameNoteQuery } from "~/lib/db/notes/update_rename";
 import { renameFolderQuery } from "~/lib/db/folders/update_rename";
-import { getChildrenQuery } from "~/lib/db/api";
+import { getChildrenQuery, LIST_CHILDREN_KEY } from "~/lib/db/api";
 import { moveNoteQuery } from "~/lib/db/notes/update_move";
 import { moveFolderQuery } from "~/lib/db/folders/update_move";
 import { deleteNoteQuery } from "~/lib/db/notes/delete";
@@ -113,7 +113,7 @@ export function useListItemActions(): UseListItemActionsReturn {
       } else {
         await renameNoteQuery(item.id, newTitle);
       }
-      revalidate("list-children");
+      revalidate(LIST_CHILDREN_KEY);
     } catch (error) {
       console.error("Failed to rename:", error);
       alert("Failed to rename item");
@@ -138,7 +138,7 @@ export function useListItemActions(): UseListItemActionsReturn {
         newItem = await createNewFolder(title, parentId ?? undefined);
       }
 
-      await revalidate("list-children");
+      await revalidate(LIST_CHILDREN_KEY);
       setEditingItemId(newItem.id);
     } catch (error) {
       console.error("Failed to create item:", error);
@@ -161,7 +161,7 @@ export function useListItemActions(): UseListItemActionsReturn {
       }
 
       // Revalidate and wait for the DOM to update before enabling edit mode
-      await revalidate("list-children");
+      await revalidate(LIST_CHILDREN_KEY);
       // Wait for the next animation frame to ensure the reactive system has updated the DOM
       await new Promise(resolve => requestAnimationFrame(resolve));
       setEditingItemId(newItem.id);
@@ -186,7 +186,7 @@ export function useListItemActions(): UseListItemActionsReturn {
         newItem = await createNewFolder(title, parentId ?? undefined);
       }
 
-      await revalidate("list-children");
+      await revalidate(LIST_CHILDREN_KEY);
       await new Promise((resolve) => requestAnimationFrame(resolve));
       setEditingItemId(newItem.id);
     } catch (error) {
@@ -224,7 +224,7 @@ export function useListItemActions(): UseListItemActionsReturn {
       }
 
       // Revalidate and wait for the DOM to update before enabling edit mode
-      await revalidate("list-children");
+      await revalidate(LIST_CHILDREN_KEY);
       // Wait for the next animation frame to ensure the reactive system has updated the DOM
       await new Promise(resolve => requestAnimationFrame(resolve));
       setEditingItemId(newItem.id);
@@ -249,7 +249,7 @@ export function useListItemActions(): UseListItemActionsReturn {
       } else {
         await moveNoteQuery(itemToPaste.id, newParentId);
       }
-      revalidate("list-children");
+      revalidate(LIST_CHILDREN_KEY);
       setCutItem(null);
     } catch (error) {
       console.error("Failed to paste:", error);
@@ -269,7 +269,7 @@ export function useListItemActions(): UseListItemActionsReturn {
       } else {
         await moveNoteQuery(itemToPaste.id, newParentId);
       }
-      revalidate("list-children");
+      revalidate(LIST_CHILDREN_KEY);
       setCutItem(null);
     } catch (error) {
       console.error("Failed to paste:", error);
@@ -290,7 +290,7 @@ export function useListItemActions(): UseListItemActionsReturn {
       } else {
         await deleteNoteQuery(item.id);
       }
-      revalidate("list-children");
+      revalidate(LIST_CHILDREN_KEY);
     } catch (error) {
       console.error("Failed to delete:", error);
       alert(error instanceof Error ? error.message : "Failed to delete item");
@@ -306,7 +306,7 @@ export function useListItemActions(): UseListItemActionsReturn {
         return;
       }
 
-      revalidate("list-children");
+      revalidate(LIST_CHILDREN_KEY);
     } catch (error) {
       console.error("Failed to convert to folder:", error);
       alert(error instanceof Error ? error.message : "Failed to convert to folder");
@@ -321,7 +321,7 @@ export function useListItemActions(): UseListItemActionsReturn {
 
     try {
       await convertFolderToNoteQuery(item.id);
-      revalidate("list-children");
+      revalidate(LIST_CHILDREN_KEY);
     } catch (error) {
       console.error("Failed to convert to note:", error);
       alert(error instanceof Error ? error.message : "Failed to convert to note");
