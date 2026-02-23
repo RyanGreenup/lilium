@@ -1,4 +1,10 @@
 #+TITLE: Lilium
+
+semantic search with semantic space visualization
+Tree from /home/ryan/Sync/journals/2026/02/21/doc-searcher
+
+
+
 * Feature Goals
 ** TODO Multiple Inputs
 *** Overview

@@ -46,7 +46,7 @@ const App = (props: RouteSectionProps) => (
 // layout state (panel open/close, widths, bar visibility).
 const AppLayout: ParentComponent = (props) => {
     createProtectedRoute();
-  const { sidebar, rightPanel, statusBar, topBar, settingsLoaded, lastRoute, setLastRoute } =
+  const { sidebar, rightPanel, statusBar, topBar, keybindings, settingsLoaded, lastRoute, setLastRoute } =
     useAppSettings()
   const navigate = useNavigate()
 
@@ -94,7 +94,13 @@ const AppLayout: ParentComponent = (props) => {
 
   createGlobalKeybindings({
     isDrawerOverlayVisible: isOverlayVisible,
-    closeDrawers
+    closeDrawers,
+    actions: [
+      { binding: keybindings.toggleSidebar, action: sidebar.toggle },
+      { binding: keybindings.toggleRightPanel, action: rightPanel.toggle },
+      { binding: keybindings.toggleTopBar, action: topBar.toggle },
+      { binding: keybindings.toggleStatusBar, action: statusBar.toggle }
+    ]
   })
 
   createEffect(() => {
