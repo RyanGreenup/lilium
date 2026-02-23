@@ -1,5 +1,6 @@
 import { createAsync, useParams } from "@solidjs/router";
-import { createSignal, createEffect, on, Show, Suspense, Accessor } from "solid-js";
+import { createSignal, createEffect, on, onCleanup, Show, Suspense, Accessor } from "solid-js";
+import Popover from "corvu/popover";
 import { useCurrentNote, useNoteById } from "~/lib/hooks/useCurrentNote";
 import NoteContentPreview from "~/components/note/NoteContentPreview";
 import TiptapNoteEditor from "~/components/note/TiptapNoteEditor";
@@ -11,23 +12,26 @@ import {
 } from "~/lib/pandoc";
 import Save from "lucide-solid/icons/save";
 import Eye from "lucide-solid/icons/eye";
-import ChevronUp from "lucide-solid/icons/chevron-up";
 import NotebookPen from "lucide-solid/icons/notebook-pen";
 import Upload from "lucide-solid/icons/upload";
 import Link from "lucide-solid/icons/link";
 import Type from "lucide-solid/icons/type";
 import PenTool from "lucide-solid/icons/pen-tool";
+import Code from "lucide-solid/icons/code";
 
 import { Toggle } from "~/solid-daisy-components/components/Toggle";
-import { Collapsible } from "~/solid-daisy-components/components/Collapsible";
 import { SingleCombobox } from "~/solid-daisy-components/components/Combobox/SingleCombobox";
-import { Fieldset } from "~/solid-daisy-components/components/Fieldset";
 import { Textarea } from "~/solid-daisy-components/components/Textarea";
 import { Input } from "~/solid-daisy-components/components/Input";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import NoteBreadcrumbs from "~/components/NoteBreadcrumbs";
+import CodeMirrorEditor from "~/components/CodeMirrorEditor";
 import { getNotePathQuery } from "~/lib/db/notes/path";
 import { LinkPalette, useLinkPalette } from "~/components/palette";
+import { createProtectedRoute } from "~/lib/auth";
+import { useStatusBar } from "~/context/StatusBarContext";
+
+const HTML_SANITIZING = false;
 
 const uploadMarkup = (mimeType: string, url: string, name: string): string => {
   if (mimeType.startsWith("image/")) {
@@ -56,6 +60,7 @@ interface NoteEditorProps {
 }
 
 export default function NoteEditor(props: NoteEditorProps = {}) {
+    createProtectedRoute();
   // Use useNoteById directly when given a fixed ID, otherwise use route-aware useCurrentNote
   const { note, noteId, noteExists, noteLoaded } = props.noteId
     ? useNoteById(() => props.noteId)
@@ -69,10 +74,9 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
 
   const [isEditing, setIsEditing] = createSignal(false);
   const [unsavedChanges, setUnsavedChanges] = createSignal(false);
-  const [metadataExpanded, setMetadataExpanded] = createSignal(false);
   const [localNote, setLocalNote] = createSignal<Note | null>(null);
   const [uploading, setUploading] = createSignal(false);
-  const [editorMode, setEditorMode] = createSignal<"plain" | "tiptap">("plain");
+  const [editorMode, setEditorMode] = createSignal<"plain" | "tiptap" | "codemirror">("plain");
 
   // Org-mode pandoc conversion state: tiptap edits org notes as markdown,
   // converting org→md on entry and md→org on save/exit.
@@ -332,6 +336,22 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
   useKeybinding({ key: "/", ctrl: true }, focusTextarea);
   useKeybinding({ key: "u", ctrl: true }, handleUploadKeybind);
 
+  // Push stats into app-level status bar
+  const setStatusItems = useStatusBar();
+  createEffect(() => {
+    const n = currentNote();
+    const content = n?.content || "";
+    const lines = content.split("\n").length;
+    const chars = content.length;
+    const words = content.split(/\s+/).filter((w) => w.length > 0).length;
+    const syntaxLabel = syntaxOptions.find((opt) => opt.value === n?.syntax)?.label;
+    setStatusItems({
+      left: [`${lines}L`, `${chars}C`, `${words}W`],
+      right: { unsaved: unsavedChanges(), syntaxLabel },
+    });
+  });
+  onCleanup(() => setStatusItems(null));
+
   // Link palette for inserting links to notes (Ctrl+K when editing)
   // NOTE: parentId is null for global search. In the future, this may be
   // connected to a URL parameter for virtual root functionality.
@@ -367,195 +387,138 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
         }
       >
         <div class="h-full flex flex-col">
-          {/* Header */}
-          <div class="border-b border-base-300 bg-base-200">
-            {/* Title Section */}
-            <div class="px-4 pt-4 pb-3">
-              <div class="flex items-start gap-3">
-                <div class="flex-1 min-w-0">
-                  <Show
-                    when={!metadataExpanded()}
-                    fallback={
-                      <Fieldset class="bg-base-100 border-base-300 rounded-lg border">
-                        <Fieldset.Legend class="px-3 text-sm font-medium text-base-content">
-                          Note Metadata
-                        </Fieldset.Legend>
-
-                        <div class="p-6 space-y-6">
-                          <div class="space-y-2">
-                            <label class="block text-sm font-medium text-base-content">
-                              Title
-                            </label>
-                            <Input
-                              type="text"
-                              value={currentNote()?.title || ""}
-                              onInput={(e) =>
-                                updateNote("title", e.currentTarget.value)
-                              }
-                              size="sm"
-                              placeholder="Note title..."
-                              class="w-full"
-                            />
-                          </div>
-
-                          <div class="space-y-2">
-                            <label class="block text-sm font-medium text-base-content">
-                              Abstract
-                            </label>
-                            <Textarea
-                              value={currentNote()?.abstract || ""}
-                              onInput={(e) =>
-                                updateNote("abstract", e.currentTarget.value)
-                              }
-                              placeholder="Brief description of the note content..."
-                              size="sm"
-                              rows={3}
-                              class="w-full resize-none"
-                            />
-                          </div>
-                        </div>
-                      </Fieldset>
-                    }
-                  >
-                    <div>
-                      <h1
-                        class="text-lg font-semibold break-words"
-                        title={currentNote()?.title || ""}
-                      >
-                        {currentNote()?.title || "Untitled"}
-                      </h1>
-
-                      <p
-                        class="text-sm text-base-content/60 truncate mt-1"
-                        title={currentNote()?.abstract || ""}
-                      >
-                        {currentNote()?.abstract || "No description"}
-                      </p>
-                    </div>
-                  </Show>
-                </div>
-                <button
-                  onClick={() => setMetadataExpanded(!metadataExpanded())}
-                  class="btn btn-ghost btn-sm btn-circle flex-shrink-0"
-                  title={
-                    metadataExpanded() ? "Collapse metadata" : "Edit metadata"
-                  }
+          {/* Toolbar */}
+          <div class="border-b border-base-300 bg-base-200 px-4 py-2">
+            <div class="flex items-center justify-between gap-2">
+              {/* Left: Title + metadata popover */}
+              <div class="flex items-center gap-2 min-w-0 flex-1">
+                <Popover
+                  placement="bottom-start"
+                  floatingOptions={{ offset: 8, flip: true, shift: true }}
                 >
-                  {metadataExpanded() ? (
-                    <ChevronUp class="w-4 h-4" />
-                  ) : (
+                  <Popover.Trigger
+                    class="btn btn-ghost btn-sm btn-circle flex-shrink-0"
+                    title="Edit metadata"
+                  >
                     <NotebookPen class="w-4 h-4" />
-                  )}
-                </button>
+                  </Popover.Trigger>
+
+                  <Popover.Portal>
+                    <Popover.Content class="z-50 w-80 rounded-xl border border-base-300 bg-base-100 p-4 shadow-xl data-open:animate-in data-open:fade-in-50 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-50 data-closed:zoom-out-95">
+                      <div class="flex items-start justify-between gap-2 mb-3">
+                        <Popover.Label class="text-sm font-semibold">Note Metadata</Popover.Label>
+                        <Popover.Close class="btn btn-ghost btn-xs">Close</Popover.Close>
+                      </div>
+
+                      <div class="space-y-4">
+                        <div class="space-y-1.5">
+                          <label class="block text-xs font-medium text-base-content/70">Title</label>
+                          <Input
+                            type="text"
+                            value={currentNote()?.title || ""}
+                            onInput={(e) => updateNote("title", e.currentTarget.value)}
+                            size="sm"
+                            placeholder="Note title..."
+                            class="w-full"
+                          />
+                        </div>
+
+                        <div class="space-y-1.5">
+                          <label class="block text-xs font-medium text-base-content/70">Abstract</label>
+                          <Textarea
+                            value={currentNote()?.abstract || ""}
+                            onInput={(e) => updateNote("abstract", e.currentTarget.value)}
+                            placeholder="Brief description..."
+                            size="sm"
+                            rows={3}
+                            class="w-full resize-none"
+                          />
+                        </div>
+
+                        <div class="space-y-1.5">
+                          <label class="block text-xs font-medium text-base-content/70">Syntax</label>
+                          <SingleCombobox
+                            options={syntaxOptions}
+                            optionValue="value"
+                            optionLabel="label"
+                            value={currentNote()?.syntax || defaultSyntax}
+                            onChange={(val) => updateNote("syntax", val)}
+                            triggerMode="focus"
+                          />
+                        </div>
+                      </div>
+                    </Popover.Content>
+                  </Popover.Portal>
+                </Popover>
+
+                <div class="min-w-0 flex-1">
+                  <h1 class="text-sm font-semibold truncate" title={currentNote()?.title || ""}>
+                    {currentNote()?.title || "Untitled"}
+                  </h1>
+                </div>
               </div>
-            </div>
 
-            {/* Controls Bar */}
-            {/* TODO Consider Fieldset */}
+              {/* Right: Actions */}
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <LinkButton
+                  isEditing={isEditing}
+                  openLinkPalette={linkPalette.open}
+                />
 
-            <div class="px-4 pb-3">
-              <Show when={metadataExpanded()}>
-                <div class="flex flex-wrap gap-2 sm:gap-3 mb-3 pt-3 border-t border-base-300/50">
-                  {/* Mobile: Syntax and Edit controls in metadata */}
-                  <div class="flex items-center gap-1 text-xs">
-                    <span class="text-base-content/60">Syntax:</span>
+                <UploadButton
+                  isEditing={isEditing}
+                  uploading={uploading}
+                  onUpload={triggerFileUpload}
+                />
 
-                    <SingleCombobox
-                      options={syntaxOptions}
-                      optionValue="value"
-                      optionLabel="label"
-                      value={currentNote()?.syntax || defaultSyntax}
-                      onChange={(val) => updateNote("syntax", val)}
-                      triggerMode="focus"
-                    />
+                {/* Editor Mode Toggle (only when editing) */}
+                <Show when={isEditing()}>
+                  <div class="join">
+                    <button
+                      class={`btn btn-xs join-item gap-1 ${editorMode() === "plain" ? "btn-active" : "btn-ghost"}`}
+                      onClick={switchToPlain}
+                      title="Plain text editor"
+                    >
+                      <Type class="w-3 h-3" />
+                      <span class="hidden sm:inline">Plain</span>
+                    </button>
+                    <button
+                      class={`btn btn-xs join-item gap-1 ${editorMode() === "codemirror" ? "btn-active" : "btn-ghost"}`}
+                      onClick={() => setEditorMode("codemirror")}
+                      title="CodeMirror editor"
+                    >
+                      <Code class="w-3 h-3" />
+                      <span class="hidden sm:inline">Code</span>
+                    </button>
+                    <button
+                      class={`btn btn-xs join-item gap-1 ${editorMode() === "tiptap" ? "btn-active" : "btn-ghost"}`}
+                      onClick={switchToTiptap}
+                      title="Rich text editor"
+                    >
+                      <PenTool class="w-3 h-3" />
+                      <span class="hidden sm:inline">Rich</span>
+                    </button>
                   </div>
+                </Show>
 
-                  <div class="flex items-center gap-1 text-xs">
-                    <span class="text-base-content/60">Edit mode:</span>
-                    <Toggle
-                      size="sm"
-                      checked={isEditing()}
-                      onChange={() => toggleEditMode()}
-                    />
-                  </div>
-                </div>
-              </Show>
+                {/* Edit Toggle */}
+                <Toggle
+                  size="sm"
+                  checked={isEditing()}
+                  onChange={() => toggleEditMode()}
+                />
 
-              <div class="flex items-center justify-between">
-                {/* Left: Syntax selector (hidden when metadata expanded) */}
-                <div
-                  class={`flex items-center ${metadataExpanded() ? "invisible" : ""}`}
+                {/* Save Button */}
+                <button
+                  onClick={saveNote}
+                  class={`btn btn-sm ${unsavedChanges() ? "btn-primary" : "btn-ghost"} gap-1 h-8 min-h-8`}
+                  disabled={!unsavedChanges()}
                 >
-                  <SingleCombobox
-                    options={syntaxOptions}
-                    optionValue="value"
-                    optionLabel="label"
-                    value={currentNote()?.syntax || defaultSyntax}
-                    onChange={(val) => updateNote("syntax", val)}
-                    triggerMode="focus"
-                    class="w-40"
-                  />
-                </div>
-
-                {/* Right: Primary actions */}
-                <div class="flex items-center gap-2">
-                  <LinkButton
-                    isEditing={isEditing}
-                    openLinkPalette={linkPalette.open}
-                  />
-
-                  <UploadButton
-                    isEditing={isEditing}
-                    uploading={uploading}
-                    onUpload={triggerFileUpload}
-                  />
-
-                  {/* Editor Mode Toggle (only when editing) */}
-                  <Show when={isEditing()}>
-                    <div class="join">
-                      <button
-                        class={`btn btn-xs join-item gap-1 ${editorMode() === "plain" ? "btn-active" : "btn-ghost"}`}
-                        onClick={switchToPlain}
-                        title="Plain text editor"
-                      >
-                        <Type class="w-3 h-3" />
-                        <span class="hidden sm:inline">Plain</span>
-                      </button>
-                      <button
-                        class={`btn btn-xs join-item gap-1 ${editorMode() === "tiptap" ? "btn-active" : "btn-ghost"}`}
-                        onClick={switchToTiptap}
-                        title="Rich text editor"
-                      >
-                        <PenTool class="w-3 h-3" />
-                        <span class="hidden sm:inline">Rich</span>
-                      </button>
-                    </div>
-                  </Show>
-
-                  {/* Edit Toggle (hidden when metadata expanded) */}
-                  <div
-                    class={`flex items-center gap-1 px-2 py-1 rounded hover:bg-base-300/50 transition-colors ${metadataExpanded() ? "hidden" : "flex"}`}
-                  >
-                    <Eye class="w-3.5 h-3.5 text-base-content/60" />
-                    <Toggle
-                      size="sm"
-                      checked={isEditing()}
-                      onChange={() => toggleEditMode()}
-                    />
-                  </div>
-
-                  {/* Save Button */}
-                  <button
-                    onClick={saveNote}
-                    class={`btn btn-sm ${unsavedChanges() ? "btn-primary" : "btn-ghost"} gap-1 h-8 min-h-8`}
-                    disabled={!unsavedChanges()}
-                  >
-                    <Save class="w-3.5 h-3.5" />
-                    <span class="hidden sm:inline text-xs">
-                      {unsavedChanges() ? "Save" : "Saved"}
-                    </span>
-                  </button>
-                </div>
+                  <Save class="w-3.5 h-3.5" />
+                  <span class="hidden sm:inline text-xs">
+                    {unsavedChanges() ? "Save" : "Saved"}
+                  </span>
+                </button>
               </div>
             </div>
           </div>
@@ -585,23 +548,35 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
                   content={currentNote()?.content}
                   syntax={currentNote()?.syntax || defaultSyntax}
                   defaultSyntax={defaultSyntax}
+                  sanitize={HTML_SANITIZING}
                 />
               }
             >
               <Show
                 when={editorMode() === "tiptap"}
                 fallback={
-                  <textarea
-                    ref={textareaRef}
-                    value={currentNote()?.content || ""}
-                    onInput={(e) => updateNote("content", e.currentTarget.value)}
-                    onPaste={handlePaste}
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    class="flex-1 p-6 textarea textarea-ghost resize-none border-none focus:outline-none text-sm font-mono leading-relaxed"
-                    placeholder="Start writing your note..."
-                    style={{ "field-sizing": "content" } as any}
-                  />
+                  <Show
+                    when={editorMode() === "codemirror"}
+                    fallback={
+                      <textarea
+                        ref={textareaRef}
+                        value={currentNote()?.content || ""}
+                        onInput={(e) => updateNote("content", e.currentTarget.value)}
+                        onPaste={handlePaste}
+                        onDrop={handleDrop}
+                        onDragOver={handleDragOver}
+                        class="flex-1 p-6 textarea textarea-ghost resize-none border-none focus:outline-none text-sm font-mono leading-relaxed"
+                        placeholder="Start writing your note..."
+                        style={{ "field-sizing": "content" } as any}
+                      />
+                    }
+                  >
+                    <CodeMirrorEditor
+                      value={currentNote()?.content || ""}
+                      onInput={(content) => updateNote("content", content)}
+                      class="flex-1 overflow-hidden"
+                    />
+                  </Show>
                 }
               >
                 <Show
@@ -633,36 +608,6 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
             </Show>
           </div>
 
-          {/* Status Bar */}
-          <div class="px-4 py-2 bg-base-200 border-t border-base-300 text-xs text-base-content/60">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-4">
-                <span>{currentNote()?.content?.split("\n").length || 0}L</span>
-                <span>{currentNote()?.content?.length || 0}C</span>
-                <span>
-                  {currentNote()
-                    ?.content?.split(/\s+/)
-                    .filter((w) => w.length > 0).length || 0}
-                  W
-                </span>
-              </div>
-              <div class="flex items-center gap-3">
-                {unsavedChanges() && (
-                  <span class="text-warning flex items-center gap-1">
-                    <span class="w-1.5 h-1.5 bg-warning rounded-full"></span>
-                    <span class="hidden sm:inline">Unsaved</span>
-                  </span>
-                )}
-                <span class="text-base-content/40">
-                  {
-                    syntaxOptions.find(
-                      (opt) => opt.value === currentNote()?.syntax,
-                    )?.label
-                  }
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Link Palette - triggered with Ctrl+K when editing */}

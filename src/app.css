@@ -2,6 +2,13 @@
 @plugin "@tailwindcss/typography";
 @plugin "daisyui";
 
+@theme {
+  --spacing-top-bar: 3rem;
+  --spacing-status-bar: 1.75rem;
+  --duration-ui: 200ms;
+  --ease-ui: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /*
 -------------------------------------------------------------------------------
 MERMAID DIAGRAMS

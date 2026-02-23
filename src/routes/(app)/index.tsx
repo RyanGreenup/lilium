@@ -7,7 +7,7 @@ import Folder from "lucide-solid/icons/folder";
 
 import { createSignal, For, Suspense, Show } from "solid-js";
 import { NoteBreadcrumbsById } from "~/components/NoteBreadcrumbs";
-import { getUser } from "~/lib/auth";
+import { createProtectedRoute, getUser } from "~/lib/auth";
 import { getNotesStatsQuery } from "~/lib/db/noteStats";
 import { getLatestJournalPageQuery } from "~/lib/db/notes/journal";
 import { getRecentNotesQuery } from "~/lib/db/notes/search";
@@ -22,7 +22,6 @@ import {
   Stats,
 } from "~/solid-daisy-components/components/Stat";
 
-
 export const route = {
   preload() {
     getUser();
@@ -32,8 +31,8 @@ export const route = {
   },
 } satisfies RouteDefinition;
 
-
 export default function Home() {
+  createProtectedRoute();
   const stats = createAsync(() => getNotesStatsQuery());
   const recentNotes = createAsync(() => getRecentNotesQuery(4));
   const latestJournal = createAsync(() => getLatestJournalPageQuery());
@@ -50,10 +49,12 @@ export default function Home() {
   };
 
   return (
-    <div class="space-y-8 overflow-x-auto">
+    <div class="mx-auto max-w-4xl space-y-8 p-6">
       {/* Statistics Cards */}
       <div class="flex justify-center">
-        <Suspense fallback={<div class="loading loading-spinner loading-lg"></div>}>
+        <Suspense
+          fallback={<div class="loading loading-spinner loading-lg"></div>}
+        >
           <Show when={stats()}>
             {(statsData) => (
               <Stats class="shadow">
@@ -112,7 +113,9 @@ export default function Home() {
                 </Show>
                 <div class="flex justify-between items-center text-xs text-base-content/60">
                   <div class="flex-1 min-w-0">
-                    <NoteBreadcrumbsById noteId={createSignal(journal().id)[0]} />
+                    <NoteBreadcrumbsById
+                      noteId={createSignal(journal().id)[0]}
+                    />
                   </div>
                   <div class="text-right ml-4">
                     <div>{formatDate(journal().updated_at)}</div>
@@ -120,7 +123,10 @@ export default function Home() {
                   </div>
                 </div>
                 <Card.Actions class="justify-end mt-4">
-                  <A class="btn btn-primary btn-sm" href={`/note/${journal().id}`}>
+                  <A
+                    class="btn btn-primary btn-sm"
+                    href={`/note/${journal().id}`}
+                  >
                     Open Journal
                   </A>
                 </Card.Actions>
@@ -136,7 +142,9 @@ export default function Home() {
           <Clock class="w-6 h-6 mr-3" />
           Recent Notes
         </h2>
-        <Suspense fallback={<div class="loading loading-spinner loading-lg"></div>}>
+        <Suspense
+          fallback={<div class="loading loading-spinner loading-lg"></div>}
+        >
           <Show when={recentNotes()}>
             {(notes) => (
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -160,7 +168,9 @@ export default function Home() {
                         </Show>
                         <div class="flex justify-between items-center text-xs text-base-content/60 gap-4">
                           <div class="flex-1 min-w-0">
-                            <NoteBreadcrumbsById noteId={createSignal(note.id)[0]} />
+                            <NoteBreadcrumbsById
+                              noteId={createSignal(note.id)[0]}
+                            />
                           </div>
                           <div class="text-right">
                             <div>{formatDate(note.updated_at)}</div>
@@ -168,7 +178,10 @@ export default function Home() {
                           </div>
                         </div>
                         <Card.Actions class="justify-end mt-4">
-                          <A class="btn btn-primary btn-sm" href={`/note/${note.id}`}>
+                          <A
+                            class="btn btn-primary btn-sm"
+                            href={`/note/${note.id}`}
+                          >
                             Open
                           </A>
                         </Card.Actions>

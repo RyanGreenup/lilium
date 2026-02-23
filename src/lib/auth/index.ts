@@ -1,4 +1,4 @@
-import { action, query, redirect } from "@solidjs/router";
+import { action, createAsync, query, redirect } from "@solidjs/router";
 import { findUserById } from "./db";
 import {
   getSession,
@@ -8,6 +8,7 @@ import {
   validatePassword,
   validateUsername,
 } from "./server";
+import { Accessor } from "solid-js";
 
 export type User = {
   id: string;
@@ -100,3 +101,16 @@ export const logout = action(async () => {
   await logoutSession();
   return redirect("/login");
 });
+
+/** Auth gate — blocks streaming until auth resolves (clean 302 if unauth) */
+export function createProtectedRoute(): Accessor<User | undefined>;
+/** Auth gate + data loading in the same component */
+export function createProtectedRoute<T>(fetcher: () => Promise<T>): Accessor<T | undefined>;
+export function createProtectedRoute<T>(fetcher?: () => Promise<T>) {
+  const user = createAsync(() => getUser(), { deferStream: true });
+  // Keep auth-gated route data on the same streaming policy as auth itself.
+  // This avoids a class of SSR/client timing mismatches where auth blocks stream
+  // but feature data still streams in later and changes boundary structure.
+  if (fetcher) return createAsync(fetcher, { deferStream: true });
+  return user;
+}

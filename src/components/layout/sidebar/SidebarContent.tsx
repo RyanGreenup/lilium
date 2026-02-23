@@ -8,7 +8,15 @@ import {
   Search,
   Sparkles,
 } from "lucide-solid";
-import { createSignal, createMemo, For, onMount, onCleanup, Show, Suspense } from "solid-js";
+import {
+  createSignal,
+  createMemo,
+  For,
+  onMount,
+  onCleanup,
+  Show,
+  Suspense,
+} from "solid-js";
 import { Tabs } from "~/solid-daisy-components/components/Tabs";
 import { useKeybinding } from "~/solid-daisy-components/utilities/useKeybinding";
 import {
@@ -28,6 +36,7 @@ import type { ListItem } from "~/lib/db/types";
 import { ITEM_KEYBINDINGS } from "~/lib/keybindings";
 import { useListItemActions } from "~/lib/hooks/useListItemActions";
 import { OpenNotePalette, useOpenNotePalette } from "~/components/palette";
+import { MaskWithSkeleton } from "../MaskComponent";
 
 // Delayed fallback component to avoid flickering loading states for fast operations
 function DelayedFallback(props: { delay?: number; children: any }) {
@@ -111,7 +120,9 @@ export const SidebarTabs = () => {
   // For now, it's derived from the sidebar's navigation state. as the API
   // has not yet been implemented.
 
-  const currentFileBrowserParent = createMemo(() => notesHistory().at(-1) ?? null);
+  const currentFileBrowserParent = createMemo(
+    () => notesHistory().at(-1) ?? null,
+  );
 
   // Open note palette with scoped search (uses file browser's current folder)
   const openPaletteScoped = useOpenNotePalette({
@@ -179,22 +190,87 @@ export const SidebarTabs = () => {
   const buildItemMenu = (item: ListItem): ContextMenuItem[] => {
     const isFolder = item.type === "folder";
     return [
-      { id: "rename", label: ITEM_KEYBINDINGS.rename.label, keybind: ITEM_KEYBINDINGS.rename.key, onClick: () => handleStartEdit(item) },
-      { id: "create-sibling", label: ITEM_KEYBINDINGS.createSibling.label, keybind: ITEM_KEYBINDINGS.createSibling.key, onClick: () => handleCreateSibling(item, "note") },
-      { id: "create-sibling-folder", label: ITEM_KEYBINDINGS.createSiblingFolder.label, keybind: ITEM_KEYBINDINGS.createSiblingFolder.key, onClick: () => handleCreateSibling(item, "folder") },
-      { id: "create-child", label: ITEM_KEYBINDINGS.createChild.label, keybind: ITEM_KEYBINDINGS.createChild.key, onClick: () => handleCreateChild(item, "note") },
-      { id: "create-child-folder", label: ITEM_KEYBINDINGS.createChildFolder.label, keybind: ITEM_KEYBINDINGS.createChildFolder.key, onClick: () => handleCreateChild(item, "folder") },
+      {
+        id: "rename",
+        label: ITEM_KEYBINDINGS.rename.label,
+        keybind: ITEM_KEYBINDINGS.rename.key,
+        onClick: () => handleStartEdit(item),
+      },
+      {
+        id: "create-sibling",
+        label: ITEM_KEYBINDINGS.createSibling.label,
+        keybind: ITEM_KEYBINDINGS.createSibling.key,
+        onClick: () => handleCreateSibling(item, "note"),
+      },
+      {
+        id: "create-sibling-folder",
+        label: ITEM_KEYBINDINGS.createSiblingFolder.label,
+        keybind: ITEM_KEYBINDINGS.createSiblingFolder.key,
+        onClick: () => handleCreateSibling(item, "folder"),
+      },
+      {
+        id: "create-child",
+        label: ITEM_KEYBINDINGS.createChild.label,
+        keybind: ITEM_KEYBINDINGS.createChild.key,
+        onClick: () => handleCreateChild(item, "note"),
+      },
+      {
+        id: "create-child-folder",
+        label: ITEM_KEYBINDINGS.createChildFolder.label,
+        keybind: ITEM_KEYBINDINGS.createChildFolder.key,
+        onClick: () => handleCreateChild(item, "folder"),
+      },
       { id: "sep1", label: "", separator: true },
-      { id: "copy-link", label: ITEM_KEYBINDINGS.copyLink.label, keybind: ITEM_KEYBINDINGS.copyLink.key, onClick: () => handleCopyLink(item) },
-      { id: "duplicate", label: ITEM_KEYBINDINGS.duplicate.label, keybind: ITEM_KEYBINDINGS.duplicate.key, onClick: () => handleDuplicate(item) },
+      {
+        id: "copy-link",
+        label: ITEM_KEYBINDINGS.copyLink.label,
+        keybind: ITEM_KEYBINDINGS.copyLink.key,
+        onClick: () => handleCopyLink(item),
+      },
+      {
+        id: "duplicate",
+        label: ITEM_KEYBINDINGS.duplicate.label,
+        keybind: ITEM_KEYBINDINGS.duplicate.key,
+        onClick: () => handleDuplicate(item),
+      },
       isFolder
-        ? { id: "make-note", label: ITEM_KEYBINDINGS.makeNote.label, keybind: ITEM_KEYBINDINGS.makeNote.key, onClick: () => handleMakeNote(item) }
-        : { id: "make-folder", label: ITEM_KEYBINDINGS.makeFolder.label, keybind: ITEM_KEYBINDINGS.makeFolder.key, onClick: () => handleMakeFolder(item) },
-      { id: "cut", label: ITEM_KEYBINDINGS.cut.label, keybind: ITEM_KEYBINDINGS.cut.key, onClick: () => handleCut(item) },
-      { id: "paste", label: ITEM_KEYBINDINGS.paste.label, keybind: ITEM_KEYBINDINGS.paste.key, onClick: () => handlePaste(item) },
-      { id: "paste-child", label: ITEM_KEYBINDINGS.pasteChild.label, keybind: ITEM_KEYBINDINGS.pasteChild.key, onClick: () => handlePasteChild(item) },
+        ? {
+            id: "make-note",
+            label: ITEM_KEYBINDINGS.makeNote.label,
+            keybind: ITEM_KEYBINDINGS.makeNote.key,
+            onClick: () => handleMakeNote(item),
+          }
+        : {
+            id: "make-folder",
+            label: ITEM_KEYBINDINGS.makeFolder.label,
+            keybind: ITEM_KEYBINDINGS.makeFolder.key,
+            onClick: () => handleMakeFolder(item),
+          },
+      {
+        id: "cut",
+        label: ITEM_KEYBINDINGS.cut.label,
+        keybind: ITEM_KEYBINDINGS.cut.key,
+        onClick: () => handleCut(item),
+      },
+      {
+        id: "paste",
+        label: ITEM_KEYBINDINGS.paste.label,
+        keybind: ITEM_KEYBINDINGS.paste.key,
+        onClick: () => handlePaste(item),
+      },
+      {
+        id: "paste-child",
+        label: ITEM_KEYBINDINGS.pasteChild.label,
+        keybind: ITEM_KEYBINDINGS.pasteChild.key,
+        onClick: () => handlePasteChild(item),
+      },
       { id: "sep2", label: "", separator: true },
-      { id: "delete", label: ITEM_KEYBINDINGS.delete.label, keybind: ITEM_KEYBINDINGS.delete.key, onClick: () => handleDelete(item) },
+      {
+        id: "delete",
+        label: ITEM_KEYBINDINGS.delete.label,
+        keybind: ITEM_KEYBINDINGS.delete.key,
+        onClick: () => handleDelete(item),
+      },
     ];
   };
 
@@ -327,8 +403,43 @@ export const SidebarTabs = () => {
     }
   });
 
+  const NoteSidebar: Component = () => {
+    return (
+      <div class="h-full" classList={{ hidden: activeTab() !== 0 }}>
+        <Suspense fallback={<SidebarLoadingIndicator />}>
+          <ListViewer
+            focusTrigger={notesFocusTrigger}
+            currentNoteId={currentNoteId}
+            onNoteSelect={handleNoteSelect}
+            onContextMenu={handleContextMenu}
+            onEmptyAreaContextMenu={handleEmptyAreaContextMenu}
+            editingItemId={editingItemId}
+            onRename={handleRename}
+            onCancelRename={handleCancelRename}
+            onCreateSibling={handleCreateSibling}
+            onCreateChild={handleCreateChild}
+            onStartEdit={handleStartEdit}
+            onCopyLink={handleCopyLink}
+            onDuplicate={handleDuplicate}
+            cutItemId={() => cutItem()?.id ?? null}
+            onCut={handleCut}
+            onPaste={handlePaste}
+            onPasteChild={handlePasteChild}
+            onDelete={handleDelete}
+            onMakeFolder={handleMakeFolder}
+            onMakeNote={handleMakeNote}
+            persistedHistory={notesHistory()}
+            onHistoryChange={setNotesHistory}
+            persistedFocusMemory={notesFocusMemory()}
+            onFocusMemoryChange={setNotesFocusMemory}
+          />
+        </Suspense>
+      </div>
+    );
+  };
+
   return (
-    <div class="flex flex-col h-full">
+    <div class="flex flex-col h-full p-2 pt-3">
       <Tabs style="lift">
         <For each={tabs}>
           {(tab) => (
@@ -342,38 +453,9 @@ export const SidebarTabs = () => {
         </For>
       </Tabs>
 
-      <div class="mt-4 relative flex-1 min-h-0">
+      <div class="mt-2 relative flex-1 min-h-0">
         {/* Notes Tab */}
-        <div class="h-full" classList={{ hidden: activeTab() !== 0 }}>
-          <Suspense fallback={<SidebarLoadingIndicator />}>
-            <ListViewer
-              focusTrigger={notesFocusTrigger}
-              currentNoteId={currentNoteId}
-              onNoteSelect={handleNoteSelect}
-              onContextMenu={handleContextMenu}
-              onEmptyAreaContextMenu={handleEmptyAreaContextMenu}
-              editingItemId={editingItemId}
-              onRename={handleRename}
-              onCancelRename={handleCancelRename}
-              onCreateSibling={handleCreateSibling}
-              onCreateChild={handleCreateChild}
-              onStartEdit={handleStartEdit}
-              onCopyLink={handleCopyLink}
-              onDuplicate={handleDuplicate}
-              cutItemId={() => cutItem()?.id ?? null}
-              onCut={handleCut}
-              onPaste={handlePaste}
-              onPasteChild={handlePasteChild}
-              onDelete={handleDelete}
-              onMakeFolder={handleMakeFolder}
-              onMakeNote={handleMakeNote}
-              persistedHistory={notesHistory()}
-              onHistoryChange={setNotesHistory}
-              persistedFocusMemory={notesFocusMemory()}
-              onFocusMemoryChange={setNotesFocusMemory}
-            />
-          </Suspense>
-        </div>
+        <NoteSidebar />
 
         {/* Recent Tab */}
         <div class="h-full" classList={{ hidden: activeTab() !== 1 }}>
