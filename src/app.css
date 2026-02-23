@@ -304,3 +304,75 @@ end
 
 */
 
+/*
+-------------------------------------------------------------------------------
+Tiptap Editor
+-------------------------------------------------------------------------------
+*/
+
+/* Placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+    @apply text-base-content/30 float-left h-0 pointer-events-none;
+    content: attr(data-placeholder);
+}
+
+/* Task list checkboxes */
+.tiptap ul[data-type="taskList"] {
+    @apply list-none p-0;
+}
+
+.tiptap ul[data-type="taskList"] li {
+    @apply flex items-start gap-2;
+}
+
+.tiptap ul[data-type="taskList"] li > label {
+    @apply flex-shrink-0 mt-0.5;
+}
+
+.tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
+    @apply checkbox checkbox-sm checkbox-primary;
+}
+
+.tiptap ul[data-type="taskList"] li > div {
+    @apply flex-1;
+}
+
+/* Focus ring */
+.tiptap:focus-visible {
+    @apply outline-none;
+}
+
+/* Link styling in editor */
+.tiptap a {
+    @apply text-primary underline decoration-primary/40 hover:decoration-primary cursor-pointer;
+}
+
+/* Code block styling */
+.tiptap pre {
+    @apply bg-base-300 rounded-lg p-4 font-mono text-sm;
+}
+
+.tiptap pre code {
+    @apply bg-transparent p-0;
+}
+
+/* Highlight */
+.tiptap mark {
+    @apply bg-yellow-200 dark:bg-yellow-500/30 rounded px-0.5;
+}
+
+/* Horizontal rule */
+.tiptap hr {
+    @apply border-base-300 my-4;
+}
+
+/* Image */
+.tiptap img {
+    @apply max-w-full h-auto rounded-lg;
+}
+
+/* Safe area for mobile bottom toolbar */
+.safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
