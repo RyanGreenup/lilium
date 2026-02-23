@@ -120,26 +120,7 @@ export interface MarkdownHtmlProps extends JSX.HTMLAttributes<HTMLDivElement> {
   markdown: string;
   katex?: boolean;
   sanitize?: boolean;
-  executeScripts?: boolean;
   domPurifyConfig?: DOMPurifyConfig;
-}
-
-/**
- * Browsers ignore `<script>` tags inserted via innerHTML. This helper finds
- * them in the container and re-creates each one so the browser executes it.
- * Scripts inside `<pre>` or `<code>` (i.e. code examples) are skipped.
- */
-function activateScripts(container: HTMLElement) {
-  const scripts = container.querySelectorAll("script");
-  scripts.forEach((old) => {
-    if (old.closest("pre") || old.closest("code")) return;
-    const replacement = document.createElement("script");
-    for (const attr of old.attributes) {
-      replacement.setAttribute(attr.name, attr.value);
-    }
-    replacement.textContent = old.textContent;
-    old.parentNode!.replaceChild(replacement, old);
-  });
 }
 
 /**
@@ -148,17 +129,12 @@ function activateScripts(container: HTMLElement) {
  *
  * When `sanitize` is true (default), output is cleaned through DOMPurify.
  * Set `sanitize={false}` to allow raw HTML passthrough for trusted content.
- *
- * When `executeScripts` is true, `<script>` tags in the rendered HTML will
- * be re-created so the browser actually runs them. Requires `sanitize={false}`
- * since DOMPurify strips script tags.
  */
 export function MarkdownHtml(props: MarkdownHtmlProps) {
   const [local, divProps] = splitProps(props, [
     "markdown",
     "katex",
     "sanitize",
-    "executeScripts",
     "domPurifyConfig",
     "innerHTML",
   ]);
@@ -178,15 +154,6 @@ export function MarkdownHtml(props: MarkdownHtmlProps) {
           ? DOMPurify.sanitize(raw, local.domPurifyConfig)
           : raw,
       );
-    });
-
-    createEffect(() => {
-      // Re-run whenever html changes
-      html();
-      if (local.executeScripts && local.sanitize === false) {
-        // Wait for Solid to flush innerHTML to the DOM before activating
-        requestAnimationFrame(() => activateScripts(containerRef));
-      }
     });
   });
 

@@ -8,6 +8,7 @@ interface NoteContentPreviewProps {
   defaultSyntax?: NoteSyntax;
   emptyLabel?: string;
   class?: string;
+  sanitize?: boolean;
   contentRef?: (el: HTMLDivElement | undefined) => void;
 }
 
@@ -28,6 +29,7 @@ export default function NoteContentPreview(props: NoteContentPreviewProps) {
         <MarkdownRenderer
           content={() => props.content || ""}
           syntax={resolvedSyntax}
+          sanitize={props.sanitize}
         />
       </Show>
     </div>

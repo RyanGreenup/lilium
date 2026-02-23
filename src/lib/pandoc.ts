@@ -6,6 +6,14 @@ import { unlinkSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
+/**
+ * Strip `file://` protocol that pandoc's org reader prepends to absolute paths.
+ * e.g. `file:///api/assets/img.png` → `/api/assets/img.png`
+ */
+function stripFileProtocol(output: string): string {
+  return output.replaceAll("file:///", "/");
+}
+
 export async function renderWithPandoc(
   content: string,
   fromFormat: string,
@@ -28,7 +36,7 @@ export async function renderWithPandoc(
 
     unlinkSync(tempFile);
 
-    return htmlOutput;
+    return stripFileProtocol(htmlOutput);
   } catch (error) {
     console.error(`Failed to render ${fromFormat}:`, error);
     return `<pre>${content}</pre>`;
@@ -57,7 +65,7 @@ export async function convertToMarkdown(
 
     unlinkSync(tempFile);
 
-    return markdownOutput;
+    return stripFileProtocol(markdownOutput);
   } catch (error) {
     console.error(`Failed to convert ${fromFormat} to markdown:`, error);
     return content;
@@ -90,10 +98,44 @@ export async function renderTypst(typstContent: string): Promise<string> {
   return renderWithPandoc(typstContent, "typst", "typ");
 }
 
+export async function convertFromMarkdown(
+  content: string,
+  toFormat: string,
+): Promise<string> {
+  if (!content.trim()) return "";
+
+  try {
+    const tempFile = join(tmpdir(), `note-${Date.now()}.md`);
+
+    writeFileSync(tempFile, content);
+
+    const output = execSync(
+      `pandoc "${tempFile}" -f gfm -t ${toFormat}`,
+      {
+        encoding: "utf-8",
+        timeout: 10000,
+      },
+    );
+
+    unlinkSync(tempFile);
+
+    return output;
+  } catch (error) {
+    console.error(`Failed to convert markdown to ${toFormat}:`, error);
+    return content;
+  }
+}
+
 export async function convertOrgToMarkdown(
   orgContent: string,
 ): Promise<string> {
   return convertToMarkdown(orgContent, "org", "org");
+}
+
+export async function convertMarkdownToOrg(
+  mdContent: string,
+): Promise<string> {
+  return convertFromMarkdown(mdContent, "org");
 }
 
 export async function convertDokuWikiToMarkdown(
@@ -174,4 +216,12 @@ export const convertLatexToMarkdownQuery = query(
     return await convertLatexToMarkdown(latexContent);
   },
   "convert-latex-to-markdown",
+);
+
+export const convertMarkdownToOrgQuery = query(
+  async (mdContent: string) => {
+    "use server";
+    return await convertMarkdownToOrg(mdContent);
+  },
+  "convert-markdown-to-org",
 );
