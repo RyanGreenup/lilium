@@ -113,16 +113,3 @@ const CodeMirrorEditor: Component<CodeMirrorEditorProps> = (rawProps) => {
 };
 
 export default CodeMirrorEditor;
-
-/*
-
-              <CodeMirrorEditor
-                value={markdown()}
-                onInput={setMarkdown}
-                vim={vimMode()}
-                onTouch={() => {
-                  if (disableVimOnTouch()) setVimMode(false)
-                }}
-                class="flex-1 overflow-hidden"
-              />
-*/

@@ -1,5 +1,6 @@
 import HardDrive from 'lucide-solid/icons/hard-drive'
 import LayoutDashboard from 'lucide-solid/icons/layout-dashboard'
+import Keyboard from 'lucide-solid/icons/keyboard'
 
 import type { Component, JSX } from 'solid-js'
 import { Show } from 'solid-js'
@@ -47,7 +48,7 @@ const SettingsRow: Component<{
 /* ------------------------------------------------------------------ */
 
 const Settings: Component = () => {
-  const { sidebar, rightPanel, statusBar, topBar } = useAppSettings()
+  const { sidebar, rightPanel, statusBar, topBar, editor } = useAppSettings()
 
   return (
     <div class="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
@@ -101,6 +102,26 @@ const Settings: Component = () => {
             class="toggle toggle-primary toggle-sm"
             checked={statusBar.enabled()}
             onChange={() => statusBar.setEnabled((v) => !v)}
+          />
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection icon={Keyboard} title="Editor">
+        <SettingsRow label="Vim mode" description="Enable vim keybindings in the code editor">
+          <input
+            type="checkbox"
+            class="toggle toggle-primary toggle-sm"
+            checked={editor.vimMode()}
+            onChange={() => editor.setVimMode((v) => !v)}
+          />
+        </SettingsRow>
+
+        <SettingsRow label="Disable vim on touch" description="Automatically turn off vim mode when a touchscreen is used">
+          <input
+            type="checkbox"
+            class="toggle toggle-primary toggle-sm"
+            checked={editor.disableVimOnTouch()}
+            onChange={() => editor.setDisableVimOnTouch((v) => !v)}
           />
         </SettingsRow>
       </SettingsSection>

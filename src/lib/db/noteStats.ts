@@ -16,6 +16,12 @@ export interface NotesStats {
   syntax_breakdown: { syntax: string; count: number }[];
 }
 
+export interface DashboardStats extends NotesStats {
+  notes_created_by_month: { month: string; count: number }[];
+  notes_updated_by_day: { day: string; count: number }[];
+  top_folders: { name: string; value: number }[];
+}
+
 /**
  * Get summary statistics
  */
@@ -67,3 +73,69 @@ export const getNotesStatsQuery = query(async () => {
   "use server";
   return await getNotesStats();
 }, "notes-stats");
+
+/**
+ * Get dashboard statistics including chart data
+ */
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const user = await requireUser();
+  if (!user.id) {
+    throw redirect("/login");
+  }
+
+  const baseStats = await getNotesStats();
+
+  const createdByMonthStmt = db.prepare(`
+    SELECT strftime('%Y-%m', created_at) as month, COUNT(*) as count
+    FROM notes
+    WHERE user_id = ? AND created_at >= datetime('now', '-6 months')
+    GROUP BY month
+    ORDER BY month
+  `);
+
+  const updatedByDayStmt = db.prepare(`
+    SELECT date(updated_at) as day, COUNT(*) as count
+    FROM notes
+    WHERE user_id = ? AND updated_at >= datetime('now', '-14 days')
+    GROUP BY day
+    ORDER BY day
+  `);
+
+  const topFoldersStmt = db.prepare(`
+    SELECT f.title as name, COUNT(n.id) as value
+    FROM folders f
+    LEFT JOIN notes n ON n.parent_id = f.id AND n.user_id = ?
+    WHERE f.user_id = ?
+    GROUP BY f.id
+    ORDER BY value DESC
+    LIMIT 5
+  `);
+
+  const notesCreatedByMonth = createdByMonthStmt.all(user.id) as {
+    month: string;
+    count: number;
+  }[];
+  const notesUpdatedByDay = updatedByDayStmt.all(user.id) as {
+    day: string;
+    count: number;
+  }[];
+  const topFolders = topFoldersStmt.all(user.id, user.id) as {
+    name: string;
+    value: number;
+  }[];
+
+  return {
+    ...baseStats,
+    notes_created_by_month: notesCreatedByMonth,
+    notes_updated_by_day: notesUpdatedByDay,
+    top_folders: topFolders,
+  };
+}
+
+/**
+ * Query function to get dashboard statistics (for client-side use)
+ */
+export const getDashboardStatsQuery = query(async () => {
+  "use server";
+  return await getDashboardStats();
+}, "dashboard-stats");

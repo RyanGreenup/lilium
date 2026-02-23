@@ -1,5 +1,5 @@
 import { createAsync, useParams } from "@solidjs/router";
-import { createSignal, createEffect, on, onCleanup, Show, Suspense, Accessor } from "solid-js";
+import { createSignal, createEffect, on, onCleanup, Show, For, Suspense, Accessor, Component } from "solid-js";
 import Popover from "corvu/popover";
 import { useCurrentNote, useNoteById } from "~/lib/hooks/useCurrentNote";
 import NoteContentPreview from "~/components/note/NoteContentPreview";
@@ -18,8 +18,8 @@ import Link from "lucide-solid/icons/link";
 import Type from "lucide-solid/icons/type";
 import PenTool from "lucide-solid/icons/pen-tool";
 import Code from "lucide-solid/icons/code";
+import EllipsisVertical from "lucide-solid/icons/ellipsis-vertical";
 
-import { Toggle } from "~/solid-daisy-components/components/Toggle";
 import { SingleCombobox } from "~/solid-daisy-components/components/Combobox/SingleCombobox";
 import { Textarea } from "~/solid-daisy-components/components/Textarea";
 import { Input } from "~/solid-daisy-components/components/Input";
@@ -30,6 +30,7 @@ import { getNotePathQuery } from "~/lib/db/notes/path";
 import { LinkPalette, useLinkPalette } from "~/components/palette";
 import { createProtectedRoute } from "~/lib/auth";
 import { useStatusBar } from "~/context/StatusBarContext";
+import { useAppSettings } from "~/context/AppSettingsContext";
 
 const HTML_SANITIZING = false;
 
@@ -96,8 +97,6 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
 
   // When a different note is loaded, clear stale tiptap state and
   // re-convert if still in tiptap mode with an org note.
-  // Tracks localNote().id so it fires after the copy-from-note effect
-  // above has set localNote with the new note's data.
   createEffect(
     on(
       () => localNote()?.id,
@@ -129,7 +128,6 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
   };
 
   // Convert tiptap markdown back to org and sync into localNote.
-  // Returns the converted org content, or null if no conversion was needed.
   const syncOrgFromTiptap = async (): Promise<string | null> => {
     const md = tiptapContent();
     if (!isOrgNote() || md === null) return null;
@@ -145,7 +143,6 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
     if (!id || !original) return;
 
     try {
-      // If editing org in tiptap, convert markdown→org before diffing
       if (editorMode() === "tiptap" && tiptapContent() !== null && isOrgNote()) {
         await syncOrgFromTiptap();
       }
@@ -170,12 +167,10 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
   };
 
   const formatDate = (isoString: string) => {
-    // Append 'Z' if missing to ensure UTC interpretation
     const utcString = isoString.endsWith("Z") ? isoString : isoString + "Z";
     return new Date(utcString).toLocaleString();
   };
 
-  /** Core upload: sends file to server, returns URL + name or null on failure. */
   const uploadFile = async (
     file: File,
     customName?: string,
@@ -198,7 +193,6 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
     return null;
   };
 
-  /** Upload handler for the plain-text textarea (prompts for filename). */
   const handleFileUpload = async (file: File) => {
     if (!file) return;
 
@@ -219,7 +213,6 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
     }
   };
 
-  /** Upload handler for tiptap — uploads directly without name prompt. */
   const handleTiptapFileUpload = async (
     file: File,
   ): Promise<{ url: string; name: string } | null> => {
@@ -247,7 +240,6 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
       currentContent.substring(0, start) + text + currentContent.substring(end);
     updateNote("content", newContent);
 
-    // Set cursor position after inserted text
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(start + text.length, start + text.length);
@@ -257,7 +249,6 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
   const handlePaste = (e: ClipboardEvent) => {
     const file = e.clipboardData?.files?.[0];
     if (!file) return;
-
     e.preventDefault();
     handleFileUpload(file);
   };
@@ -265,7 +256,6 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
   const handleDrop = (e: DragEvent) => {
     const file = e.dataTransfer?.files?.[0];
     if (!file) return;
-
     e.preventDefault();
     handleFileUpload(file);
   };
@@ -277,7 +267,6 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
   const triggerFileUpload = () => {
     const input = document.createElement("input");
     input.type = "file";
-    // Accept all file types - users are trusted developers
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
@@ -287,7 +276,6 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
     input.click();
   };
 
-  // Switch to tiptap mode; for org notes, convert org→md via pandoc first
   const switchToTiptap = async () => {
     setEditorMode("tiptap");
     if (isOrgNote()) {
@@ -300,7 +288,6 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
     }
   };
 
-  // Switch to plain text mode; for org notes, convert md→org back first
   const switchToPlain = async () => {
     if (isOrgNote() && tiptapContent() !== null) {
       await syncOrgFromTiptap();
@@ -309,7 +296,6 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
     setEditorMode("plain");
   };
 
-  // Modular keybinding functions
   const toggleEditMode = async () => {
     if (isEditing() && editorMode() === "tiptap" && isOrgNote() && tiptapContent() !== null) {
       await syncOrgFromTiptap();
@@ -338,6 +324,7 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
 
   // Push stats into app-level status bar
   const setStatusItems = useStatusBar();
+  const { editor: editorSettings } = useAppSettings();
   createEffect(() => {
     const n = currentNote();
     const content = n?.content || "";
@@ -353,13 +340,11 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
   onCleanup(() => setStatusItems(null));
 
   // Link palette for inserting links to notes (Ctrl+K when editing)
-  // NOTE: parentId is null for global search. In the future, this may be
-  // connected to a URL parameter for virtual root functionality.
   const linkPalette = useLinkPalette({
     syntax: () => currentNote()?.syntax ?? defaultSyntax,
-    parentId: () => null, // Global search - FUTURE: may use URL param for virtual root
+    parentId: () => null,
     onInsertLink: (linkText) => insertTextAtCursor(linkText),
-    enabled: isEditing, // Only enable Ctrl+K when editing
+    enabled: isEditing,
   });
 
   return (
@@ -387,278 +372,508 @@ export default function NoteEditor(props: NoteEditorProps = {}) {
         }
       >
         <div class="h-full flex flex-col">
-          {/* Toolbar */}
-          <div class="border-b border-base-300 bg-base-200 px-4 py-2">
-            <div class="flex items-center justify-between gap-2">
-              {/* Left: Title + metadata popover */}
-              <div class="flex items-center gap-2 min-w-0 flex-1">
-                <Popover
-                  placement="bottom-start"
-                  floatingOptions={{ offset: 8, flip: true, shift: true }}
-                >
-                  <Popover.Trigger
-                    class="btn btn-ghost btn-sm btn-circle flex-shrink-0"
-                    title="Edit metadata"
-                  >
-                    <NotebookPen class="w-4 h-4" />
-                  </Popover.Trigger>
-
-                  <Popover.Portal>
-                    <Popover.Content class="z-50 w-80 rounded-xl border border-base-300 bg-base-100 p-4 shadow-xl data-open:animate-in data-open:fade-in-50 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-50 data-closed:zoom-out-95">
-                      <div class="flex items-start justify-between gap-2 mb-3">
-                        <Popover.Label class="text-sm font-semibold">Note Metadata</Popover.Label>
-                        <Popover.Close class="btn btn-ghost btn-xs">Close</Popover.Close>
-                      </div>
-
-                      <div class="space-y-4">
-                        <div class="space-y-1.5">
-                          <label class="block text-xs font-medium text-base-content/70">Title</label>
-                          <Input
-                            type="text"
-                            value={currentNote()?.title || ""}
-                            onInput={(e) => updateNote("title", e.currentTarget.value)}
-                            size="sm"
-                            placeholder="Note title..."
-                            class="w-full"
-                          />
-                        </div>
-
-                        <div class="space-y-1.5">
-                          <label class="block text-xs font-medium text-base-content/70">Abstract</label>
-                          <Textarea
-                            value={currentNote()?.abstract || ""}
-                            onInput={(e) => updateNote("abstract", e.currentTarget.value)}
-                            placeholder="Brief description..."
-                            size="sm"
-                            rows={3}
-                            class="w-full resize-none"
-                          />
-                        </div>
-
-                        <div class="space-y-1.5">
-                          <label class="block text-xs font-medium text-base-content/70">Syntax</label>
-                          <SingleCombobox
-                            options={syntaxOptions}
-                            optionValue="value"
-                            optionLabel="label"
-                            value={currentNote()?.syntax || defaultSyntax}
-                            onChange={(val) => updateNote("syntax", val)}
-                            triggerMode="focus"
-                          />
-                        </div>
-                      </div>
-                    </Popover.Content>
-                  </Popover.Portal>
-                </Popover>
-
-                <div class="min-w-0 flex-1">
-                  <h1 class="text-sm font-semibold truncate" title={currentNote()?.title || ""}>
-                    {currentNote()?.title || "Untitled"}
-                  </h1>
-                </div>
-              </div>
-
-              {/* Right: Actions */}
-              <div class="flex items-center gap-1.5 flex-shrink-0">
-                <LinkButton
-                  isEditing={isEditing}
-                  openLinkPalette={linkPalette.open}
-                />
-
-                <UploadButton
-                  isEditing={isEditing}
-                  uploading={uploading}
-                  onUpload={triggerFileUpload}
-                />
-
-                {/* Editor Mode Toggle (only when editing) */}
-                <Show when={isEditing()}>
-                  <div class="join">
-                    <button
-                      class={`btn btn-xs join-item gap-1 ${editorMode() === "plain" ? "btn-active" : "btn-ghost"}`}
-                      onClick={switchToPlain}
-                      title="Plain text editor"
-                    >
-                      <Type class="w-3 h-3" />
-                      <span class="hidden sm:inline">Plain</span>
-                    </button>
-                    <button
-                      class={`btn btn-xs join-item gap-1 ${editorMode() === "codemirror" ? "btn-active" : "btn-ghost"}`}
-                      onClick={() => setEditorMode("codemirror")}
-                      title="CodeMirror editor"
-                    >
-                      <Code class="w-3 h-3" />
-                      <span class="hidden sm:inline">Code</span>
-                    </button>
-                    <button
-                      class={`btn btn-xs join-item gap-1 ${editorMode() === "tiptap" ? "btn-active" : "btn-ghost"}`}
-                      onClick={switchToTiptap}
-                      title="Rich text editor"
-                    >
-                      <PenTool class="w-3 h-3" />
-                      <span class="hidden sm:inline">Rich</span>
-                    </button>
-                  </div>
-                </Show>
-
-                {/* Edit Toggle */}
-                <Toggle
-                  size="sm"
-                  checked={isEditing()}
-                  onChange={() => toggleEditMode()}
-                />
-
-                {/* Save Button */}
-                <button
-                  onClick={saveNote}
-                  class={`btn btn-sm ${unsavedChanges() ? "btn-primary" : "btn-ghost"} gap-1 h-8 min-h-8`}
-                  disabled={!unsavedChanges()}
-                >
-                  <Save class="w-3.5 h-3.5" />
-                  <span class="hidden sm:inline text-xs">
-                    {unsavedChanges() ? "Save" : "Saved"}
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Metadata */}
-          <div class="px-4 py-2 bg-base-100 border-b border-base-300">
-            <div class="flex items-center justify-between text-xs text-base-content/60">
-              <span class="font-mono truncate mr-4">
-                {notePath() || currentNote()?.id || ""}
-              </span>
-              <span class="whitespace-nowrap text-xs">
-                Modified{" "}
-                {currentNote()?.updated_at
-                  ? formatDate(currentNote()!.updated_at)
-                  : "Unknown"}
-              </span>
-            </div>
-          </div>
-
-          {/* Content Area */}
-          <div class="flex-1 flex min-h-0">
-            <Show
-              when={isEditing()}
-              fallback={
-                <NoteContentPreview
-                  class="flex-1 p-6 overflow-auto"
-                  content={currentNote()?.content}
-                  syntax={currentNote()?.syntax || defaultSyntax}
-                  defaultSyntax={defaultSyntax}
-                  sanitize={HTML_SANITIZING}
-                />
-              }
-            >
-              <Show
-                when={editorMode() === "tiptap"}
-                fallback={
-                  <Show
-                    when={editorMode() === "codemirror"}
-                    fallback={
-                      <textarea
-                        ref={textareaRef}
-                        value={currentNote()?.content || ""}
-                        onInput={(e) => updateNote("content", e.currentTarget.value)}
-                        onPaste={handlePaste}
-                        onDrop={handleDrop}
-                        onDragOver={handleDragOver}
-                        class="flex-1 p-6 textarea textarea-ghost resize-none border-none focus:outline-none text-sm font-mono leading-relaxed"
-                        placeholder="Start writing your note..."
-                        style={{ "field-sizing": "content" } as any}
-                      />
-                    }
-                  >
-                    <CodeMirrorEditor
-                      value={currentNote()?.content || ""}
-                      onInput={(content) => updateNote("content", content)}
-                      class="flex-1 overflow-hidden"
-                    />
-                  </Show>
-                }
-              >
-                <Show
-                  when={!convertingContent()}
-                  fallback={
-                    <div class="flex-1 flex items-center justify-center">
-                      <div class="loading loading-spinner loading-md"></div>
-                    </div>
-                  }
-                >
-                  {/* keyed on noteId so the editor remounts with fresh
-                      content when the user navigates to a different note */}
-                  <Show when={noteId()} keyed>
-                    {(_id) => (
-                      <TiptapNoteEditor
-                        content={isOrgNote() ? (tiptapContent() || "") : (currentNote()?.content || "")}
-                        syntax={isOrgNote() ? "md" : (currentNote()?.syntax || defaultSyntax)}
-                        onUpdate={isOrgNote()
-                          ? (md) => { setTiptapContent(md); setUnsavedChanges(true); }
-                          : (content) => updateNote("content", content)
-                        }
-                        onFileUpload={handleTiptapFileUpload}
-                        placeholder="Start writing..."
-                      />
-                    )}
-                  </Show>
-                </Show>
-              </Show>
-            </Show>
-          </div>
-
+          <NoteToolbar
+            currentNote={currentNote}
+            isEditing={isEditing}
+            unsavedChanges={unsavedChanges}
+            uploading={uploading}
+            editorMode={editorMode}
+            syntaxOptions={syntaxOptions}
+            defaultSyntax={defaultSyntax}
+            onToggleEdit={toggleEditMode}
+            onSave={saveNote}
+            onSwitchToPlain={switchToPlain}
+            onSwitchToCodemirror={() => setEditorMode("codemirror")}
+            onSwitchToTiptap={switchToTiptap}
+            onUpload={triggerFileUpload}
+            onOpenLinkPalette={linkPalette.open}
+            onUpdateNote={updateNote}
+          />                              {/* shrink-0 */}
+          <NoteMetadataBar
+            notePath={notePath}
+            currentNote={currentNote}
+            formatDate={formatDate}
+          />                              {/* shrink-0 */}
+          <NoteContent
+            isEditing={isEditing}
+            editorMode={editorMode}
+            currentNote={currentNote}
+            defaultSyntax={defaultSyntax}
+            convertingContent={convertingContent}
+            isOrgNote={isOrgNote}
+            tiptapContent={tiptapContent}
+            noteId={noteId}
+            textareaRef={textareaRef}
+            onSetTextareaRef={(el) => { textareaRef = el; }}
+            onUpdateNote={updateNote}
+            onPaste={handlePaste}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onTiptapUpdate={isOrgNote()
+              ? (md: string) => { setTiptapContent(md); setUnsavedChanges(true); }
+              : (content: string) => updateNote("content", content)
+            }
+            onTiptapFileUpload={handleTiptapFileUpload}
+            setTiptapContent={setTiptapContent}
+            setUnsavedChanges={setUnsavedChanges}
+            vimMode={editorSettings.vimMode}
+            disableVimOnTouch={editorSettings.disableVimOnTouch}
+            setVimMode={editorSettings.setVimMode}
+          />                              {/* flex-1 min-h-0 */}
         </div>
 
-        {/* Link Palette - triggered with Ctrl+K when editing */}
         <LinkPalette {...linkPalette.paletteProps} />
       </Show>
     </Show>
   );
 }
 
-/**
- * LinkButton - Opens the link palette for inserting note links.
- * Provides mobile-friendly access to the Ctrl+K keyboard shortcut.
- */
-const LinkButton = (props: {
+// ---------------------------------------------------------------------------
+// NoteToolbar — shrink-0, responsive navbar
+// ---------------------------------------------------------------------------
+
+interface NoteToolbarProps {
+  currentNote: Accessor<Note | undefined | null>;
   isEditing: Accessor<boolean>;
-  openLinkPalette: () => void;
-}) => (
-  <Show when={props.isEditing()}>
-    <button
-      onClick={props.openLinkPalette}
-      class="btn btn-sm btn-ghost gap-1 h-8 min-h-8"
-      title="Insert link (Ctrl+K)"
-    >
-      <Link class="w-3.5 h-3.5" />
-      <span class="hidden sm:inline text-xs">Link</span>
-    </button>
-  </Show>
+  unsavedChanges: Accessor<boolean>;
+  uploading: Accessor<boolean>;
+  editorMode: Accessor<"plain" | "tiptap" | "codemirror">;
+  syntaxOptions: typeof SYNTAX_OPTIONS;
+  defaultSyntax: NoteSyntax;
+  onToggleEdit: () => void;
+  onSave: () => void;
+  onSwitchToPlain: () => void;
+  onSwitchToCodemirror: () => void;
+  onSwitchToTiptap: () => void;
+  onUpload: () => void;
+  onOpenLinkPalette: () => void;
+  onUpdateNote: (field: keyof Note, value: any) => void;
+}
+
+const NoteToolbar: Component<NoteToolbarProps> = (props) => (
+  <div class="shrink-0 border-b border-base-300 bg-base-200 px-3 py-1.5">
+    <div class="flex items-center gap-2">
+      {/* Left: Metadata popover + title */}
+      <div class="flex items-center gap-2 min-w-0 flex-1">
+        <MetadataPopover
+          currentNote={props.currentNote}
+          syntaxOptions={props.syntaxOptions}
+          defaultSyntax={props.defaultSyntax}
+          onUpdateNote={props.onUpdateNote}
+        />
+
+        <div class="min-w-0 flex-1">
+          <h1 class="text-sm font-semibold truncate" title={props.currentNote()?.title || ""}>
+            {props.currentNote()?.title || "Untitled"}
+          </h1>
+        </div>
+      </div>
+
+      {/* Right: Desktop inline actions (hidden on mobile) */}
+      <div class="hidden sm:flex items-center gap-3 shrink-0">
+        <Show when={props.isEditing()}>
+          <EditorModeToggle
+            editorMode={props.editorMode}
+            onSwitchToPlain={props.onSwitchToPlain}
+            onSwitchToCodemirror={props.onSwitchToCodemirror}
+            onSwitchToTiptap={props.onSwitchToTiptap}
+          />
+
+          <LinkButton
+            onOpenLinkPalette={props.onOpenLinkPalette}
+          />
+
+          <UploadButton
+            uploading={props.uploading}
+            onUpload={props.onUpload}
+          />
+        </Show>
+
+        <label class="label cursor-pointer gap-2">
+          <span class="label-text text-sm">Edit</span>
+          <input
+            type="checkbox"
+            class="toggle toggle-primary toggle-sm"
+            checked={props.isEditing()}
+            onInput={() => props.onToggleEdit()}
+          />
+        </label>
+
+        <button
+          type="button"
+          class="btn btn-sm gap-1 h-8 min-h-8"
+          classList={{
+            'btn-primary': props.unsavedChanges(),
+            'btn-ghost': !props.unsavedChanges(),
+          }}
+          disabled={!props.unsavedChanges()}
+          onClick={props.onSave}
+        >
+          <Save class="w-3.5 h-3.5" />
+          <span class="text-xs">
+            {props.unsavedChanges() ? "Save" : "Saved"}
+          </span>
+        </button>
+      </div>
+
+      {/* Right: Mobile actions (visible only on mobile) */}
+      <div class="flex sm:hidden items-center gap-1 shrink-0">
+        <label class="label cursor-pointer gap-1">
+          <input
+            type="checkbox"
+            class="toggle toggle-primary toggle-sm"
+            checked={props.isEditing()}
+            onInput={() => props.onToggleEdit()}
+          />
+        </label>
+
+        <button
+          type="button"
+          class="btn btn-sm gap-1 h-8 min-h-8"
+          classList={{
+            'btn-primary': props.unsavedChanges(),
+            'btn-ghost': !props.unsavedChanges(),
+          }}
+          disabled={!props.unsavedChanges()}
+          onClick={props.onSave}
+        >
+          <Save class="w-3.5 h-3.5" />
+        </button>
+
+        {/* Overflow menu */}
+        <Popover
+          placement="bottom-end"
+          floatingOptions={{ offset: 8, flip: true, shift: true }}
+        >
+          <Popover.Trigger
+            class="btn btn-ghost btn-sm btn-circle"
+            title="More actions"
+          >
+            <EllipsisVertical class="w-4 h-4" />
+          </Popover.Trigger>
+
+          <Popover.Portal>
+            <Popover.Content class="z-50 rounded-xl border border-base-300 bg-base-100 shadow-xl p-2 data-open:animate-in data-open:fade-in-50 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-50 data-closed:zoom-out-95">
+              <ul class="menu menu-sm w-48">
+                <Show when={props.isEditing()}>
+                  <li class="menu-title text-xs">Editor Mode</li>
+                  <li>
+                    <button
+                      classList={{ active: props.editorMode() === "plain" }}
+                      onClick={props.onSwitchToPlain}
+                    >
+                      <Type class="w-4 h-4" /> Plain
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      classList={{ active: props.editorMode() === "codemirror" }}
+                      onClick={props.onSwitchToCodemirror}
+                    >
+                      <Code class="w-4 h-4" /> Code
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      classList={{ active: props.editorMode() === "tiptap" }}
+                      onClick={props.onSwitchToTiptap}
+                    >
+                      <PenTool class="w-4 h-4" /> Rich
+                    </button>
+                  </li>
+                  <li class="divider"></li>
+                  <li>
+                    <button onClick={props.onOpenLinkPalette}>
+                      <Link class="w-4 h-4" /> Insert Link
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={props.onUpload}
+                      disabled={props.uploading()}
+                    >
+                      <Upload class="w-4 h-4" />
+                      {props.uploading() ? "Uploading..." : "Upload File"}
+                    </button>
+                  </li>
+                </Show>
+              </ul>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover>
+      </div>
+    </div>
+  </div>
 );
 
-/**
- * UploadButton - Triggers file upload for embedding in notes.
- * Provides mobile-friendly access to the Ctrl+U keyboard shortcut.
- */
-const UploadButton = (props: {
+// ---------------------------------------------------------------------------
+// NoteMetadataBar — shrink-0
+// ---------------------------------------------------------------------------
+
+interface NoteMetadataBarProps {
+  notePath: Accessor<string | null | undefined>;
+  currentNote: Accessor<Note | undefined | null>;
+  formatDate: (iso: string) => string;
+}
+
+const NoteMetadataBar: Component<NoteMetadataBarProps> = (props) => (
+  <div class="shrink-0 px-4 py-2 bg-base-100 border-b border-base-300">
+    <div class="flex items-center justify-between text-xs text-base-content/60">
+      <span class="font-mono truncate mr-4">
+        {props.notePath() || props.currentNote()?.id || ""}
+      </span>
+      <span class="whitespace-nowrap text-xs">
+        Modified{" "}
+        {props.currentNote()?.updated_at
+          ? props.formatDate(props.currentNote()!.updated_at)
+          : "Unknown"}
+      </span>
+    </div>
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// NoteContent — flex-1 min-h-0
+// ---------------------------------------------------------------------------
+
+interface NoteContentProps {
   isEditing: Accessor<boolean>;
+  editorMode: Accessor<"plain" | "tiptap" | "codemirror">;
+  currentNote: Accessor<Note | undefined | null>;
+  defaultSyntax: NoteSyntax;
+  convertingContent: Accessor<boolean>;
+  isOrgNote: Accessor<boolean>;
+  tiptapContent: Accessor<string | null>;
+  noteId: Accessor<string | undefined>;
+  textareaRef: HTMLTextAreaElement | undefined;
+  onSetTextareaRef: (el: HTMLTextAreaElement) => void;
+  onUpdateNote: (field: keyof Note, value: any) => void;
+  onPaste: (e: ClipboardEvent) => void;
+  onDrop: (e: DragEvent) => void;
+  onDragOver: (e: DragEvent) => void;
+  onTiptapUpdate: (content: string) => void;
+  onTiptapFileUpload: (file: File) => Promise<{ url: string; name: string } | null>;
+  setTiptapContent: (v: string | null) => void;
+  setUnsavedChanges: (v: boolean) => void;
+  vimMode: Accessor<boolean>;
+  disableVimOnTouch: Accessor<boolean>;
+  setVimMode: (v: boolean) => void;
+}
+
+const NoteContent: Component<NoteContentProps> = (props) => (
+  <div class="flex-1 flex min-h-0">
+    <Show
+      when={props.isEditing()}
+      fallback={
+        <NoteContentPreview
+          class="flex-1 p-6 overflow-auto"
+          content={props.currentNote()?.content}
+          syntax={props.currentNote()?.syntax || props.defaultSyntax}
+          defaultSyntax={props.defaultSyntax}
+          sanitize={HTML_SANITIZING}
+        />
+      }
+    >
+      <Show
+        when={props.editorMode() === "tiptap"}
+        fallback={
+          <Show
+            when={props.editorMode() === "codemirror"}
+            fallback={
+              <textarea
+                ref={(el) => props.onSetTextareaRef(el)}
+                value={props.currentNote()?.content || ""}
+                onInput={(e) => props.onUpdateNote("content", e.currentTarget.value)}
+                onPaste={props.onPaste}
+                onDrop={props.onDrop}
+                onDragOver={props.onDragOver}
+                class="flex-1 p-6 textarea textarea-ghost resize-none border-none focus:outline-none text-sm font-mono leading-relaxed"
+                placeholder="Start writing your note..."
+                style={{ "field-sizing": "content" } as any}
+              />
+            }
+          >
+            <CodeMirrorEditor
+              value={props.currentNote()?.content || ""}
+              onInput={(content) => props.onUpdateNote("content", content)}
+              vim={props.vimMode()}
+              onTouch={() => {
+                if (props.disableVimOnTouch()) props.setVimMode(false);
+              }}
+              class="flex-1 overflow-hidden"
+            />
+          </Show>
+        }
+      >
+        <Show
+          when={!props.convertingContent()}
+          fallback={
+            <div class="flex-1 flex items-center justify-center">
+              <div class="loading loading-spinner loading-md"></div>
+            </div>
+          }
+        >
+          <Show when={props.noteId()} keyed>
+            {(_id) => (
+              <TiptapNoteEditor
+                content={props.isOrgNote() ? (props.tiptapContent() || "") : (props.currentNote()?.content || "")}
+                syntax={props.isOrgNote() ? "md" : (props.currentNote()?.syntax || props.defaultSyntax)}
+                onUpdate={props.isOrgNote()
+                  ? (md) => { props.setTiptapContent(md); props.setUnsavedChanges(true); }
+                  : (content) => props.onUpdateNote("content", content)
+                }
+                onFileUpload={props.onTiptapFileUpload}
+                placeholder="Start writing..."
+              />
+            )}
+          </Show>
+        </Show>
+      </Show>
+    </Show>
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Helper components
+// ---------------------------------------------------------------------------
+
+interface MetadataPopoverProps {
+  currentNote: Accessor<Note | undefined | null>;
+  syntaxOptions: typeof SYNTAX_OPTIONS;
+  defaultSyntax: NoteSyntax;
+  onUpdateNote: (field: keyof Note, value: any) => void;
+}
+
+const MetadataPopover: Component<MetadataPopoverProps> = (props) => (
+  <Popover
+    placement="bottom-start"
+    floatingOptions={{ offset: 8, flip: true, shift: true }}
+  >
+    <Popover.Trigger
+      class="btn btn-ghost btn-sm btn-circle shrink-0"
+      title="Edit metadata"
+    >
+      <NotebookPen class="w-4 h-4" />
+    </Popover.Trigger>
+
+    <Popover.Portal>
+      <Popover.Content class="z-50 w-80 rounded-xl border border-base-300 bg-base-100 p-4 shadow-xl data-open:animate-in data-open:fade-in-50 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-50 data-closed:zoom-out-95">
+        <div class="flex items-start justify-between gap-2 mb-3">
+          <Popover.Label class="text-sm font-semibold">Note Metadata</Popover.Label>
+          <Popover.Close class="btn btn-ghost btn-xs">Close</Popover.Close>
+        </div>
+
+        <div class="space-y-4">
+          <div class="space-y-1.5">
+            <label class="block text-xs font-medium text-base-content/70">Title</label>
+            <Input
+              type="text"
+              value={props.currentNote()?.title || ""}
+              onInput={(e) => props.onUpdateNote("title", e.currentTarget.value)}
+              size="sm"
+              placeholder="Note title..."
+              class="w-full"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="block text-xs font-medium text-base-content/70">Abstract</label>
+            <Textarea
+              value={props.currentNote()?.abstract || ""}
+              onInput={(e) => props.onUpdateNote("abstract", e.currentTarget.value)}
+              placeholder="Brief description..."
+              size="sm"
+              rows={3}
+              class="w-full resize-none"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="block text-xs font-medium text-base-content/70">Syntax</label>
+            <SingleCombobox
+              options={props.syntaxOptions}
+              optionValue="value"
+              optionLabel="label"
+              value={props.currentNote()?.syntax || props.defaultSyntax}
+              onChange={(val) => props.onUpdateNote("syntax", val)}
+              triggerMode="focus"
+            />
+          </div>
+        </div>
+      </Popover.Content>
+    </Popover.Portal>
+  </Popover>
+);
+
+const editorModeOptions = [
+  { value: "plain" as const, label: "Plain", icon: Type, title: "Plain text editor" },
+  { value: "codemirror" as const, label: "Code", icon: Code, title: "CodeMirror editor" },
+  { value: "tiptap" as const, label: "Rich", icon: PenTool, title: "Rich text editor" },
+];
+
+interface EditorModeToggleProps {
+  editorMode: Accessor<"plain" | "tiptap" | "codemirror">;
+  onSwitchToPlain: () => void;
+  onSwitchToCodemirror: () => void;
+  onSwitchToTiptap: () => void;
+}
+
+const editorModeSwitchers = {
+  plain: "onSwitchToPlain",
+  codemirror: "onSwitchToCodemirror",
+  tiptap: "onSwitchToTiptap",
+} as const;
+
+const EditorModeToggle: Component<EditorModeToggleProps> = (props) => (
+  <div class="join">
+    <For each={editorModeOptions}>
+      {(option) => (
+        <button
+          type="button"
+          class="btn btn-xs join-item gap-1"
+          classList={{
+            'btn-primary': props.editorMode() === option.value,
+            'btn-ghost': props.editorMode() !== option.value,
+          }}
+          onClick={props[editorModeSwitchers[option.value]]}
+          title={option.title}
+        >
+          <option.icon class="w-3 h-3" />
+          {option.label}
+        </button>
+      )}
+    </For>
+  </div>
+);
+
+const LinkButton: Component<{ onOpenLinkPalette: () => void }> = (props) => (
+  <button
+    onClick={props.onOpenLinkPalette}
+    class="btn btn-sm btn-ghost gap-1 h-8 min-h-8"
+    title="Insert link (Ctrl+K)"
+  >
+    <Link class="w-3.5 h-3.5" />
+    <span class="text-xs">Link</span>
+  </button>
+);
+
+const UploadButton: Component<{
   uploading: Accessor<boolean>;
   onUpload: () => void;
-}) => (
-  <Show when={props.isEditing()}>
-    <button
-      onClick={props.onUpload}
-      class={`btn btn-sm btn-ghost gap-1 h-8 min-h-8 ${props.uploading() ? "loading" : ""}`}
-      disabled={props.uploading()}
-      title="Upload file (Ctrl+U)"
-    >
-      <Show when={!props.uploading()}>
-        <Upload class="w-3.5 h-3.5" />
-      </Show>
-      <span class="hidden sm:inline text-xs">
-        {props.uploading() ? "Uploading..." : "Upload"}
-      </span>
-    </button>
-  </Show>
+}> = (props) => (
+  <button
+    type="button"
+    onClick={props.onUpload}
+    class="btn btn-sm btn-ghost gap-1 h-8 min-h-8"
+    classList={{ loading: props.uploading() }}
+    disabled={props.uploading()}
+    title="Upload file (Ctrl+U)"
+  >
+    <Show when={!props.uploading()}>
+      <Upload class="w-3.5 h-3.5" />
+    </Show>
+    <span class="text-xs">
+      {props.uploading() ? "Uploading..." : "Upload"}
+    </span>
+  </button>
 );

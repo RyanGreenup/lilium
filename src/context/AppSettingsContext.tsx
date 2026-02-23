@@ -26,11 +26,19 @@ interface PanelState {
   setWidth: Setter<number>
 }
 
+interface EditorSettings {
+  vimMode: Accessor<boolean>
+  setVimMode: Setter<boolean>
+  disableVimOnTouch: Accessor<boolean>
+  setDisableVimOnTouch: Setter<boolean>
+}
+
 interface AppSettings {
   sidebar: PanelState
   rightPanel: PanelState
   topBar: Omit<PanelState, 'width' | 'setWidth'>
   statusBar: Omit<PanelState, 'width' | 'setWidth'>
+  editor: EditorSettings
   settingsLoaded: Accessor<boolean>
   lastRoute: Accessor<string>
   setLastRoute: (path: string) => void
@@ -43,6 +51,7 @@ interface PersistedSettings {
   rightPanel: { open: boolean; enabled: boolean; width: number }
   topBar: { open: boolean; enabled: boolean }
   statusBar: { open: boolean; enabled: boolean }
+  editor: { vimMode: boolean; disableVimOnTouch: boolean }
   lastRoute: string
 }
 
@@ -51,6 +60,7 @@ const DEFAULTS: PersistedSettings = {
   rightPanel: { open: false, enabled: true, width: 350 },
   topBar: { open: true, enabled: true },
   statusBar: { open: true, enabled: true },
+  editor: { vimMode: true, disableVimOnTouch: true },
   lastRoute: '/'
 }
 
@@ -88,6 +98,10 @@ export const AppSettingsProvider: ParentComponent = (props) => {
   const [statusOpen, setStatusOpen] = createSignal(DEFAULTS.statusBar.open)
   const [statusEnabled, setStatusEnabled] = createSignal(DEFAULTS.statusBar.enabled)
 
+  // Editor
+  const [vimMode, setVimMode] = createSignal(DEFAULTS.editor.vimMode)
+  const [disableVimOnTouch, setDisableVimOnTouch] = createSignal(DEFAULTS.editor.disableVimOnTouch)
+
   onMount(() => {
     const s = loadSettings()
     setSidebarOpen(s.sidebar.open)
@@ -100,6 +114,8 @@ export const AppSettingsProvider: ParentComponent = (props) => {
     setTopEnabled(s.topBar.enabled)
     setStatusOpen(s.statusBar.open)
     setStatusEnabled(s.statusBar.enabled)
+    setVimMode(s.editor.vimMode)
+    setDisableVimOnTouch(s.editor.disableVimOnTouch)
     setLastRoute(s.lastRoute)
     setSettingsLoaded(true)
   })
@@ -110,6 +126,7 @@ export const AppSettingsProvider: ParentComponent = (props) => {
     rightPanel: { open: rightOpen(), enabled: rightEnabled(), width: rightWidth() },
     topBar: { open: topOpen(), enabled: topEnabled() },
     statusBar: { open: statusOpen(), enabled: statusEnabled() },
+    editor: { vimMode: vimMode(), disableVimOnTouch: disableVimOnTouch() },
     lastRoute: lastRoute()
   })
 
@@ -164,11 +181,19 @@ export const AppSettingsProvider: ParentComponent = (props) => {
     visible: () => statusEnabled() && statusOpen()
   }
 
+  const editor: EditorSettings = {
+    vimMode,
+    setVimMode,
+    disableVimOnTouch,
+    setDisableVimOnTouch
+  }
+
   const settings: AppSettings = {
     sidebar,
     rightPanel,
     topBar,
     statusBar,
+    editor,
     settingsLoaded,
     lastRoute,
     setLastRoute
