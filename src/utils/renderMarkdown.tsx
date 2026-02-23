@@ -1,35 +1,194 @@
-import { Accessor, createEffect, createSignal, Suspense } from "solid-js";
-import { Loading } from "~/solid-daisy-components/components/Loading";
+import DOMPurify, { type Config as DOMPurifyConfig } from "dompurify";
+import hljs from "highlight.js";
+import { Marked } from "marked";
+import markedAlert from "marked-alert";
+import markedFootnote from "marked-footnote";
+import { markedHighlight } from "marked-highlight";
+import markedKatex from "marked-katex-extension";
+import {
+  createEffect,
+  createSignal,
+  onCleanup,
+  onMount,
+  splitProps,
+  type JSX,
+} from "solid-js";
 
-export const renderMarkdown = async (
-  markdownContent: string,
-): Promise<string> => {
-  if (!markdownContent.trim()) return "No notes";
+// ---------------------------------------------------------------------------
+// Marked instances (module-level singletons)
+// ---------------------------------------------------------------------------
 
-  try {
-    // Dynamically import the marked library to parse markdown to HTML
-    const { marked } = await import("marked");
-    // Convert the markdown content to HTML and return it
-    return marked(markdownContent);
-  } catch (error) {
-    console.error("Failed to render markdown:", error);
-    return markdownContent; // Fallback to plain text
-  }
-};
+const sharedExtensions = [
+  markedHighlight({
+    emptyLangClass: "hljs",
+    langPrefix: "hljs language-",
+    highlight(code, lang) {
+      const language = hljs.getLanguage(lang) ? lang : "plaintext";
+      return hljs.highlight(code, { language }).value;
+    },
+  }),
+];
 
-export const MarkdownRenderer = (props: { content: Accessor<string> }) => {
-  const [renderedHtml, setRenderedHtml] = createSignal<string>("");
+const sharedPlugins = [
+  markedAlert(),
+  markedFootnote(),
+  {
+    renderer: {
+      code({ text, lang }: { text: string; lang?: string }) {
+        const id = crypto.randomUUID();
+        const langClass = lang ? `hljs language-${lang}` : "hljs";
+        return `<pre id="${id}"><code class="${langClass}">${text}</code></pre>\n`;
+      },
+    },
+  },
+];
 
-  createEffect(async () => {
-    const html = await renderMarkdown(props.content());
-    setRenderedHtml(html);
+const marked = new Marked(...sharedExtensions).use(...sharedPlugins);
+const markedWithKatex = new Marked(...sharedExtensions).use(
+  markedKatex({ throwOnError: false }),
+  ...sharedPlugins,
+);
+
+export function parseMarkdown(markdown: string, useKatex: boolean): string {
+  if (!markdown.trim()) return "";
+  const parser = useKatex ? markedWithKatex : marked;
+  return parser.parse(markdown, { async: false }) as string;
+}
+
+// ---------------------------------------------------------------------------
+// Code-block middle-click copy
+// ---------------------------------------------------------------------------
+
+function useCodeBlockMiddleClick(container: HTMLDivElement) {
+  const handler = (e: MouseEvent) => {
+    if (e.button !== 1) return;
+    const pre = (e.target as HTMLElement).closest("pre");
+    if (!pre || !container.contains(pre)) return;
+    const code = pre.querySelector("code");
+    if (code) {
+      e.preventDefault();
+      navigator.clipboard.writeText(code.textContent ?? "").then(() => {
+        pre.classList.remove("copied-flash");
+        void pre.offsetWidth;
+        pre.classList.add("copied-flash");
+        pre.addEventListener(
+          "animationend",
+          () => pre.classList.remove("copied-flash"),
+          { once: true },
+        );
+      });
+    }
+  };
+  container.addEventListener("auxclick", handler);
+  onCleanup(() => container.removeEventListener("auxclick", handler));
+}
+
+// ---------------------------------------------------------------------------
+// Hljs theme singleton management
+// ---------------------------------------------------------------------------
+
+let refCount = 0;
+let hljsStyle: HTMLStyleElement | null = null;
+
+function ensureHljsElements() {
+  if (refCount++ > 0) return;
+  hljsStyle = document.createElement("style");
+  hljsStyle.id = "hljs-overrides";
+  hljsStyle.textContent = [
+    ".hljs { background: transparent !important; }",
+    "@keyframes code-copied-pop {",
+    "  0%   { transform: scale(1); }",
+    "  40%  { transform: scale(1.05); }",
+    "  100% { transform: scale(1); }",
+    "}",
+    "pre.copied-flash { animation: code-copied-pop 0.35s ease-in-out; }",
+  ].join("\n");
+  document.head.appendChild(hljsStyle);
+}
+
+function releaseHljsElements() {
+  if (--refCount > 0) return;
+  hljsStyle?.remove();
+  hljsStyle = null;
+}
+
+// ---------------------------------------------------------------------------
+// MarkdownHtml component
+// ---------------------------------------------------------------------------
+
+export interface MarkdownHtmlProps extends JSX.HTMLAttributes<HTMLDivElement> {
+  markdown: string;
+  katex?: boolean;
+  sanitize?: boolean;
+  executeScripts?: boolean;
+  domPurifyConfig?: DOMPurifyConfig;
+}
+
+/**
+ * Browsers ignore `<script>` tags inserted via innerHTML. This helper finds
+ * them in the container and re-creates each one so the browser executes it.
+ * Scripts inside `<pre>` or `<code>` (i.e. code examples) are skipped.
+ */
+function activateScripts(container: HTMLElement) {
+  const scripts = container.querySelectorAll("script");
+  scripts.forEach((old) => {
+    if (old.closest("pre") || old.closest("code")) return;
+    const replacement = document.createElement("script");
+    for (const attr of old.attributes) {
+      replacement.setAttribute(attr.name, attr.value);
+    }
+    replacement.textContent = old.textContent;
+    old.parentNode!.replaceChild(replacement, old);
+  });
+}
+
+/**
+ * Client-only markdown renderer. Parses markdown to HTML with highlight.js,
+ * footnotes, alerts, and optional KaTeX support.
+ *
+ * When `sanitize` is true (default), output is cleaned through DOMPurify.
+ * Set `sanitize={false}` to allow raw HTML passthrough for trusted content.
+ *
+ * When `executeScripts` is true, `<script>` tags in the rendered HTML will
+ * be re-created so the browser actually runs them. Requires `sanitize={false}`
+ * since DOMPurify strips script tags.
+ */
+export function MarkdownHtml(props: MarkdownHtmlProps) {
+  const [local, divProps] = splitProps(props, [
+    "markdown",
+    "katex",
+    "sanitize",
+    "executeScripts",
+    "domPurifyConfig",
+    "innerHTML",
+  ]);
+  const [html, setHtml] = createSignal("");
+  let containerRef!: HTMLDivElement;
+
+  onMount(() => {
+    ensureHljsElements();
+    onCleanup(releaseHljsElements);
+    useCodeBlockMiddleClick(containerRef);
+
+    createEffect(() => {
+      const raw = parseMarkdown(local.markdown, !!local.katex);
+      const shouldSanitize = local.sanitize !== false;
+      setHtml(
+        shouldSanitize
+          ? DOMPurify.sanitize(raw, local.domPurifyConfig)
+          : raw,
+      );
+    });
+
+    createEffect(() => {
+      // Re-run whenever html changes
+      html();
+      if (local.executeScripts && local.sanitize === false) {
+        // Wait for Solid to flush innerHTML to the DOM before activating
+        requestAnimationFrame(() => activateScripts(containerRef));
+      }
+    });
   });
 
-  return (
-    <Suspense fallback={<Loading />}>
-      <div class="prose dark:prose-invert">
-        <div innerHTML={renderedHtml()} />
-      </div>
-    </Suspense>
-  );
-};
+  return <div {...divProps} ref={containerRef} innerHTML={html()} />;
+}
