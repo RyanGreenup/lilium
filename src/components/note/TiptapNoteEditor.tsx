@@ -1,7 +1,5 @@
 import {
   Show,
-  createEffect,
-  onCleanup,
   type JSXElement,
   type Accessor,
 } from "solid-js";
@@ -10,6 +8,8 @@ import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "@tiptap/markdown";
 import Placeholder from "@tiptap/extension-placeholder";
 import Highlight from "@tiptap/extension-highlight";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { common, createLowlight } from "lowlight";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
@@ -49,10 +49,15 @@ import ImageIcon from "lucide-solid/icons/image";
 import RemoveFormatting from "lucide-solid/icons/remove-formatting";
 import Minus from "lucide-solid/icons/minus";
 
+
+const lowlight = createLowlight(common);
+
 const baseExtensions = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3] },
   }),
+
+  CodeBlockLowlight.configure({ lowlight }),
   Highlight.configure({ multicolor: true }),
   Underline,
   Link.configure({ openOnClick: false }),
