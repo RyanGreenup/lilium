@@ -1,6 +1,9 @@
 services:
   lilium:
-    build: .
+    build:
+      context: .
+      tags:
+        - localhost/lilium:latest
     container_name: lilium
     ports:
       - "${PORT}:${PORT}"
@@ -8,10 +11,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./.data:/app/.data:Z
-      - ./${ASSETS_DIR}:/app/${ASSETS_DIR}:Z
-    security_opt:
-      - label=type:container_runtime_t
+      - ./.data:/app/.data:z
+      - ./${ASSETS_DIR}:/app/${ASSETS_DIR}:z
 
 ################################################################################
 ## Watch and Rebuild ###########################################################

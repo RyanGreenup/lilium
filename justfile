@@ -24,6 +24,13 @@ admin:
 watch:
     docker compose up --watch
 
+deploy:
+    mkdir -p $HOME/.config/containers/systemd/lilium
+    podlet -u lilium -i -a --skip-services-check --overwrite compose docker-compose.yml
+    systemctl --user daemon-reload
+    systemctl --user restart lilium
+    systemctl --user status lilium
+
 # dir := "$HOME/Notes/fuse_notes"
 # remote-fuse:
 #     @echo {{dir}}
